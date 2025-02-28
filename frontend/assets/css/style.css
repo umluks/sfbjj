@@ -1,0 +1,56 @@
+:root {
+  --color-primary: #212529;
+  --color-secondary: #1b2027;
+  --text-color-primary: #ffffff;
+  --text-color-secondary: #0d0d0d;
+}
+
+#home {
+  background-color: var(--color-secondary);
+}
+
+nav#menu-principal {
+  background-color: var(--color-primary);
+  padding: 1em 1em;
+
+  a {
+    display: inline;
+    margin-right: 2em;
+    color: var(--text-color-primary);
+    text-decoration: none;
+  }
+}
+
+.main-title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.main-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.main-video iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw; /* 16:9 aspect ratio */
+  min-height: 100vh;
+  min-width: 177.77vh; /* 16:9 aspect ratio */
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.1;
+}
