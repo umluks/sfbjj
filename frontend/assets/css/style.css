@@ -1,11 +1,13 @@
 :root {
   --color-primary: #212529;
   --color-secondary: #1b2027;
+  --color-terciary: #ffffff;
   --text-color-primary: #ffffff;
   --text-color-secondary: #0d0d0d;
 }
 
-#home {
+#home,
+#registre {
   background-color: var(--color-secondary);
 }
 
@@ -53,4 +55,38 @@ nav#menu-principal {
   transform: translate(-50%, -50%);
   pointer-events: none;
   opacity: 0.1;
+}
+
+main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .form-alunos {
+    background-color: var(--color-primary);
+    padding: 24px 24px;
+    border-radius: 12px;
+    color: var(--text-color-primary);
+  }
+}
+
+footer {
+  #map {
+    height: auto;
+    background-color: var(--color-primary);
+  }
+
+  #frase {
+    background-color: var(--color-secondary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 0;
+  }
+
+  p {
+    color: var(--text-color-primary);
+    text-align: center;
+    font-weight: bold;
+  }
 }
