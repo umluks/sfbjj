@@ -68,19 +68,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Brand/Logo Section */}
-        <div className="hidden md:flex items-center gap-3 px-6 py-8 border-b border-obsidian-700/30">
-          <div className="p-2 bg-gradient-to-br from-gold-400 to-gold-600 rounded-xl text-obsidian-950 shadow-md shadow-gold-950/20">
-            <Flame className="w-6 h-6 animate-pulse" />
+        <div className="flex flex-col items-center justify-center text-center p-2">
+          <div className="mb-2">
+            <img src='src/assets/logo-sfbjj.png' alt="Logo SFBJJ" width={150} height={150} />
+            {/* <Flame className="w-6 h-6 animate-pulse" /> */}
           </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-base tracking-wider text-slate-100 uppercase leading-none">
+          <div className="flex flex-col items-center">
+            <span className="font-extrabold tracking-wider text-slate-100 uppercase leading-none" style={{ fontSize: '20px' }}>
               Sagrada Família
             </span>
-            <span className="text-gold-500 font-bold tracking-widest text-xs uppercase mt-0.5">
+            <span className="text-gold-500 font-bold tracking-widest text-xs uppercase mt-0.5" style={{ fontSize: '12px' }}>
               Brasília - Jiu-Jitsu
             </span>
           </div>
         </div>
+
 
         {/* Navigation Items */}
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
@@ -115,10 +117,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
             © 2026 Sagrada Família BJJ
           </span>
           <span className="text-[9px] text-gold-500/60 block mt-0.5">
-            Admin Portal v1.0
+            Lucas dos Anjos
           </span>
         </div>
-      </aside>
+      </aside >
     </>
   );
 };
