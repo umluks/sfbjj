@@ -1,0 +1,9 @@
+services:
+  sfbjj-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sfbjj_container
+    ports:
+      - "8080:80"
+    restart: unless-stopped
