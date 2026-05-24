@@ -86,16 +86,18 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     return currentPayment;
   };
 
-  // Filter students based on current payment status & search
-  const filteredStudents = students.filter(student => {
-    const currentPayment = getCurrentPayment(student);
-    const matchesSearch = student.nome.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter and sort students alphabetically based on current payment status & search
+  const filteredStudents = students
+    .filter(student => {
+      const currentPayment = getCurrentPayment(student);
+      const matchesSearch = student.nome.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'Todos' ||
-      (currentPayment && currentPayment.status === statusFilter);
+      const matchesStatus = statusFilter === 'Todos' ||
+        (currentPayment && currentPayment.status === statusFilter);
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
   // Pagination calculations
   const totalItems = filteredStudents.length;

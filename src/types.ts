@@ -33,6 +33,7 @@ export interface Student {
   status: 'Ativo' | 'Inativo';
   totalTreinos: number; // Incrementado a cada presenca
   pagamentos: PaymentRecord[]; // Historico de pagamentos
+  senha?: string; // Senha customizada do aluno
 }
 
 export interface Attendance {
@@ -57,3 +58,10 @@ export interface Announcement {
   data: string; // YYYY-MM-DD ou data formatada
   fixado: boolean;
 }
+
+export interface LoggedUser {
+  role: 'admin' | 'student';
+  studentId?: string;
+  nome: string;
+}
+

@@ -5,7 +5,9 @@ import { StudentManager } from './components/StudentManager';
 import { FinancialManager } from './components/FinancialManager';
 import { AttendanceManager } from './components/AttendanceManager';
 import { ScheduleGrid } from './components/ScheduleGrid';
-import type { Student, Announcement, Attendance } from './types';
+import { Login } from './components/Login';
+import { StudentProfile } from './components/StudentProfile';
+import type { Student, Announcement, Attendance, LoggedUser } from './types';
 import { 
   INITIAL_STUDENTS, 
   INITIAL_ANNOUNCEMENTS, 
@@ -13,7 +15,19 @@ import {
 } from './mockData';
 
 function App() {
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [loggedUser, setLoggedUser] = useState<LoggedUser | null>(() => {
+    const saved = localStorage.getItem('sfbjj_logged_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    const saved = localStorage.getItem('sfbjj_logged_user');
+    if (saved) {
+      const user = JSON.parse(saved) as LoggedUser;
+      return user.role === 'admin' ? 'dashboard' : 'profile';
+    }
+    return 'dashboard';
+  });
 
   // Unified State with LocalStorage Persistence
   const [students, setStudents] = useState<Student[]>(() => {
@@ -35,6 +49,32 @@ function App() {
   useEffect(() => {
     localStorage.setItem('sfbjj_students', JSON.stringify(students));
   }, [students]);
+
+  // Adjust routing tab if role permissions mismatch
+  useEffect(() => {
+    if (loggedUser) {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule') {
+        setCurrentTab('profile');
+      } else if (loggedUser.role === 'admin' && currentTab === 'profile') {
+        setCurrentTab('dashboard');
+      }
+    }
+  }, [loggedUser, currentTab]);
+
+  const handleLoginSuccess = (user: LoggedUser) => {
+    localStorage.setItem('sfbjj_logged_user', JSON.stringify(user));
+    setLoggedUser(user);
+    if (user.role === 'admin') {
+      setCurrentTab('dashboard');
+    } else {
+      setCurrentTab('profile');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('sfbjj_logged_user');
+    setLoggedUser(null);
+  };
 
   useEffect(() => {
     localStorage.setItem('sfbjj_announcements', JSON.stringify(announcements));
@@ -80,6 +120,21 @@ function App() {
         );
       case 'schedule':
         return <ScheduleGrid />;
+      case 'profile':
+        if (loggedUser?.role === 'student' && loggedUser.studentId) {
+          return (
+            <StudentProfile 
+              studentId={loggedUser.studentId}
+              students={students}
+              setStudents={setStudents}
+            />
+          );
+        }
+        return (
+          <div className="text-center py-20 text-slate-500">
+            Acesso não autorizado.
+          </div>
+        );
       default:
         return (
           <div className="text-center py-20 text-slate-500">
@@ -89,10 +144,19 @@ function App() {
     }
   };
 
+  if (!loggedUser) {
+    return <Login students={students} onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-obsidian-900 text-slate-100">
       {/* Sidebar Navigation */}
-      <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <Sidebar 
+        currentTab={currentTab} 
+        setCurrentTab={setCurrentTab} 
+        loggedUser={loggedUser}
+        onLogout={handleLogout}
+      />
 
       {/* Main Workspace Container */}
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto h-screen relative">
@@ -108,5 +172,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;

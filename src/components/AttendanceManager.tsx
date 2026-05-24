@@ -56,8 +56,10 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Find class details
   const currentClass = INITIAL_SCHEDULE.find(s => s.id === selectedClassId) || INITIAL_SCHEDULE[0];
 
-  // Filter students: active only
-  const activeStudents = students.filter(s => s.status === 'Ativo');
+  // Filter active students and sort alphabetically
+  const activeStudents = students
+    .filter(s => s.status === 'Ativo')
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
   const toggleStudentPresence = (studentId: string) => {
     setPresentStudentIds(prev => 

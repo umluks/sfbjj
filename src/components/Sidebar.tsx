@@ -7,24 +7,35 @@ import {
   Calendar,
   Menu,
   X,
-  Flame
+  Flame,
+  User,
+  LogOut
 } from 'lucide-react';
+import type { LoggedUser } from '../types';
 
 interface SidebarProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+  loggedUser: LoggedUser;
+  onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, loggedUser, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'students', label: 'Gestão de Alunos', icon: Users },
-    { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
-    { id: 'attendance', label: 'Frequência (Presença)', icon: CheckSquare },
-    { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-  ];
+  // Role based navigation menu items
+  const menuItems = loggedUser.role === 'admin'
+    ? [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'students', label: 'Gestão de Alunos', icon: Users },
+        { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
+        { id: 'attendance', label: 'Frequência (Presença)', icon: CheckSquare },
+        { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
+      ]
+    : [
+        { id: 'profile', label: 'Meu Perfil', icon: User },
+        { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
+      ];
 
   const handleTabChange = (tabId: string) => {
     setCurrentTab(tabId);
@@ -111,8 +122,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           })}
         </nav>
 
+        {/* User Session Info & Logout */}
+        <div className="px-4 py-3 border-t border-obsidian-750/60 flex flex-col gap-2">
+          <div className="flex items-center gap-2.5 px-2 py-1.5">
+            <div className="w-8 h-8 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-xs font-bold text-gold-400">
+              {loggedUser.nome.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-200 truncate leading-tight border-b border-transparent">
+                {loggedUser.nome}
+              </p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-0.5">
+                {loggedUser.role === 'admin' ? 'Administrador' : 'Aluno'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              onLogout();
+              setIsOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-300 font-semibold text-xs border border-transparent hover:border-red-500/15"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sair da Conta</span>
+          </button>
+        </div>
+
         {/* Footer Brand Info */}
-        <div className="p-4 border-t border-obsidian-700/30 text-center">
+        <div className="p-4 border-t border-obsidian-700/30 text-center bg-obsidian-900/10">
           <span className="text-[10px] text-slate-500 tracking-wider block">
             © 2026 Sagrada Família BJJ
           </span>
@@ -124,3 +162,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
     </>
   );
 };
+

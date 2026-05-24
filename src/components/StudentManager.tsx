@@ -186,17 +186,19 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setStudentToDelete(null);
   };
 
-  // Filter students
-  const filteredStudents = students.filter(student => {
-    const matchesSearch =
-      student.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.cpf.includes(searchQuery);
+  // Filter and sort students alphabetically
+  const filteredStudents = students
+    .filter(student => {
+      const matchesSearch =
+        student.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        student.cpf.includes(searchQuery);
 
-    const matchesBelt = selectedBelt === 'Todos' || student.faixa === selectedBelt;
-    const matchesStatus = selectedStatus === 'Todos' || student.status === selectedStatus;
+      const matchesBelt = selectedBelt === 'Todos' || student.faixa === selectedBelt;
+      const matchesStatus = selectedStatus === 'Todos' || student.status === selectedStatus;
 
-    return matchesSearch && matchesBelt && matchesStatus;
-  });
+      return matchesSearch && matchesBelt && matchesStatus;
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
   // Calculate pagination
   const totalItems = filteredStudents.length;
