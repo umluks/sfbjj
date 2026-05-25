@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Lock, User, Eye, EyeOff, AlertCircle, Flame } from 'lucide-react';
 import type { Student, LoggedUser } from '../types';
 
+import logoSFBJJ from '../assets/logo-sfbjj.jpg';
+
 interface LoginProps {
   students: Student[];
   onLoginSuccess: (user: LoggedUser) => void;
@@ -104,7 +106,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess }) => {
             <div className="absolute -inset-0.5 bg-gradient-to-r from-gold-500 to-gold-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-500" />
             <div className="relative p-4 bg-obsidian-900 border border-obsidian-750 rounded-full flex items-center justify-center">
               <img
-                src="src/assets/logo-sfbjj.png"
+                src={logoSFBJJ}
                 alt="Sagrada Família BJJ Logo"
                 className="w-24 h-24 object-contain animate-float"
                 onError={(e) => {

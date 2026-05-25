@@ -34,6 +34,9 @@ export interface Student {
   totalTreinos: number; // Incrementado a cada presenca
   pagamentos: PaymentRecord[]; // Historico de pagamentos
   senha?: string; // Senha customizada do aluno
+  turma?: 'Kids' | 'Adulto';
+  fotoPerfil?: string; // Base64 data URI or avatar name
+  modalidadePagamento?: string; // Default payment modality (e.g. Mensal, Trimestral)
 }
 
 export interface Attendance {

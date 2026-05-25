@@ -3,15 +3,14 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { StudentManager } from './components/StudentManager';
 import { FinancialManager } from './components/FinancialManager';
-import { AttendanceManager } from './components/AttendanceManager';
 import { ScheduleGrid } from './components/ScheduleGrid';
 import { Login } from './components/Login';
 import { StudentProfile } from './components/StudentProfile';
-import type { Student, Announcement, Attendance, LoggedUser } from './types';
+import { Contact } from './components/Contact';
+import type { Student, Announcement, LoggedUser } from './types';
 import { 
   INITIAL_STUDENTS, 
-  INITIAL_ANNOUNCEMENTS, 
-  INITIAL_ATTENDANCES 
+  INITIAL_ANNOUNCEMENTS 
 } from './mockData';
 
 function App() {
@@ -32,7 +31,61 @@ function App() {
   // Unified State with LocalStorage Persistence
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('sfbjj_students');
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
+    let loadedStudents = INITIAL_STUDENTS;
+    if (saved) {
+      try {
+        const savedStudents: Student[] = JSON.parse(saved);
+        
+        // Map and update existing students with fields from INITIAL_STUDENTS if they exist
+        const merged = savedStudents.map(savedStudent => {
+          const initial = INITIAL_STUDENTS.find(i => 
+            i.id === savedStudent.id || 
+            i.nome.toLowerCase().trim() === savedStudent.nome.toLowerCase().trim()
+          );
+          if (initial) {
+            return {
+              ...savedStudent,
+              ...initial,
+              // Keep saved payments if there are any
+              pagamentos: savedStudent.pagamentos && savedStudent.pagamentos.length > 0 
+                ? savedStudent.pagamentos 
+                : initial.pagamentos
+            };
+          }
+          return savedStudent;
+        });
+
+        // Merge missing initial mock students by ID and Nome
+        INITIAL_STUDENTS.forEach(initial => {
+          const exists = merged.some(s => 
+            s.id === initial.id || 
+            s.nome.toLowerCase().trim() === initial.nome.toLowerCase().trim()
+          );
+          if (!exists) {
+            merged.push(initial);
+          }
+        });
+        loadedStudents = merged;
+      } catch (e) {
+        loadedStudents = INITIAL_STUDENTS;
+      }
+    }
+
+    // Ensure all students have the 'turma' field set (based on birth year if missing)
+    return loadedStudents.map(s => {
+      if (!s.turma) {
+        let isKids = false;
+        if (s.dataNascimento) {
+          const birthParts = s.dataNascimento.split('-');
+          const year = parseInt(birthParts[0], 10);
+          if (year >= 2010) {
+            isKids = true;
+          }
+        }
+        return { ...s, turma: isKids ? 'Kids' : 'Adulto' };
+      }
+      return s;
+    });
   });
 
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
@@ -40,10 +93,6 @@ function App() {
     return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
   });
 
-  const [attendances, setAttendances] = useState<Attendance[]>(() => {
-    const saved = localStorage.getItem('sfbjj_attendances');
-    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCES;
-  });
 
   // Sync state changes to localStorage
   useEffect(() => {
@@ -53,7 +102,7 @@ function App() {
   // Adjust routing tab if role permissions mismatch
   useEffect(() => {
     if (loggedUser) {
-      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule') {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact') {
         setCurrentTab('profile');
       } else if (loggedUser.role === 'admin' && currentTab === 'profile') {
         setCurrentTab('dashboard');
@@ -80,9 +129,7 @@ function App() {
     localStorage.setItem('sfbjj_announcements', JSON.stringify(announcements));
   }, [announcements]);
 
-  useEffect(() => {
-    localStorage.setItem('sfbjj_attendances', JSON.stringify(attendances));
-  }, [attendances]);
+
 
   // Render active tab view
   const renderContent = () => {
@@ -93,6 +140,7 @@ function App() {
             students={students} 
             announcements={announcements} 
             setAnnouncements={setAnnouncements} 
+            loggedUser={loggedUser}
           />
         );
       case 'students':
@@ -109,31 +157,20 @@ function App() {
             setStudents={setStudents} 
           />
         );
-      case 'attendance':
-        return (
-          <AttendanceManager 
-            students={students} 
-            setStudents={setStudents} 
-            attendances={attendances} 
-            setAttendances={setAttendances} 
-          />
-        );
+
+      case 'contact':
+        return <Contact />;
       case 'schedule':
         return <ScheduleGrid />;
       case 'profile':
-        if (loggedUser?.role === 'student' && loggedUser.studentId) {
-          return (
-            <StudentProfile 
-              studentId={loggedUser.studentId}
-              students={students}
-              setStudents={setStudents}
-            />
-          );
-        }
         return (
-          <div className="text-center py-20 text-slate-500">
-            Acesso não autorizado.
-          </div>
+          <StudentProfile 
+            studentId={loggedUser?.role === 'student' ? loggedUser.studentId : undefined}
+            students={students}
+            setStudents={setStudents}
+            loggedUser={loggedUser}
+            setLoggedUser={setLoggedUser}
+          />
         );
       default:
         return (

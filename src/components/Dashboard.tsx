@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type {
   Student,
-  Announcement
+  Announcement,
+  LoggedUser
 } from '../types';
 import {
   Users,
@@ -18,12 +19,14 @@ interface DashboardProps {
   students: Student[];
   announcements: Announcement[];
   setAnnouncements: React.Dispatch<React.SetStateAction<Announcement[]>>;
+  loggedUser: LoggedUser | null;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   students,
   announcements,
-  setAnnouncements
+  setAnnouncements,
+  loggedUser
 }) => {
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [newNoticeTitle, setNewNoticeTitle] = useState('');
@@ -37,11 +40,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
     s.status === 'Ativo' && s.pagamentos.some(p => p.status === 'Atrasado')
   ).length;
 
-  const currentMonthNum = '05'; // May, based on system local time: 2026-05-21
-  const birthdayStudents = students.filter(s => {
+  const todayDate = new Date();
+  const currentMonthNum = String(todayDate.getMonth() + 1).padStart(2, '0');
+  const currentDayNum = todayDate.getDate();
+
+  // All birthdays of the month (full count, no removal)
+  const allMonthBirthdayStudents = students.filter(s => {
     if (!s.dataNascimento) return false;
     const parts = s.dataNascimento.split('-');
-    return parts[1] === currentMonthNum;
+    const birthMonth = parts[1];
+    return birthMonth === currentMonthNum;
+  });
+
+  // Upcoming birthdays (only today and future days)
+  const upcomingBirthdayStudents = students.filter(s => {
+    if (!s.dataNascimento) return false;
+    const parts = s.dataNascimento.split('-');
+    const birthMonth = parts[1];
+    const birthDay = parseInt(parts[2], 10);
+    return birthMonth === currentMonthNum && birthDay >= currentDayNum;
   });
 
   const handleAddNotice = (e: React.FormEvent) => {
@@ -79,7 +96,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-          Olá, Professor 👋
+          Olá, Professor {loggedUser?.nome || 'Administrador'} 👋
         </h1>
         <p className="text-slate-400 text-sm mt-1">
           Visão geral e avisos da academia Sagrada Família BJJ.
@@ -131,10 +148,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               Aniversariantes do Mês
             </span>
             <span className="text-4xl font-black text-slate-100 mt-2 block">
-              {birthdayStudents.length}
+              {allMonthBirthdayStudents.length}
             </span>
             <span className="text-xs text-gold-400 font-medium mt-1 inline-flex items-center gap-1">
-              • Comemorações em Maio 🎂
+              • Comemorações em {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, (c) => c.toUpperCase())} 🎂
             </span>
           </div>
           <div className="p-4 bg-gold-500/10 rounded-2xl text-gold-500">
@@ -277,16 +294,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="card-premium bg-gradient-to-b from-obsidian-800 to-obsidian-850">
             <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 border-b border-obsidian-750 pb-3 mb-4">
               <Cake className="w-4 h-4 text-gold-500 animate-bounce" />
-              Aniversariantes (Maio)
+              Aniversariantes ({new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, (c) => c.toUpperCase())})
             </h2>
 
-            {birthdayStudents.length === 0 ? (
+            {upcomingBirthdayStudents.length === 0 ? (
               <p className="text-xs text-slate-500 text-center py-4">
                 Nenhum aluno faz aniversário este mês.
               </p>
             ) : (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                {birthdayStudents
+                {upcomingBirthdayStudents
                   .sort((a, b) => {
                     const diaA = parseInt(a.dataNascimento.split('-')[2], 10);
                     const diaB = parseInt(b.dataNascimento.split('-')[2], 10);

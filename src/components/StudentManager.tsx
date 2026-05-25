@@ -10,10 +10,10 @@ import {
   UserPlus,
   Shield,
   Phone,
-  MapPin,
   Calendar,
   Heart,
-  Plus
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface StudentManagerProps {
@@ -26,6 +26,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
+  const [selectedTurma, setSelectedTurma] = useState<string>('Todos');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,8 +35,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   // Modals state
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
+  // Import fields state
+  const [importText, setImportText] = useState('');
+  const [parsedImportRows, setParsedImportRows] = useState<any[]>([]);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Form fields state
   const [formNome, setFormNome] = useState('');
@@ -52,6 +59,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState('');
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
   const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>('Adulto');
 
   // Input formatting helpers
   const formatCPF = (value: string) => {
@@ -94,6 +102,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormContatoEmergenciaNome('');
     setFormContatoEmergenciaTel('');
     setFormStatus('Ativo');
+    setFormTurma('Adulto');
     setShowFormModal(true);
   };
 
@@ -114,6 +123,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormContatoEmergenciaNome(student.contatoEmergenciaNome || '');
     setFormContatoEmergenciaTel(formatPhone(student.contatoEmergenciaTel || ''));
     setFormStatus(student.status || 'Ativo');
+    setFormTurma(student.turma || 'Adulto');
     setShowFormModal(true);
   };
 
@@ -141,7 +151,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             dataUltimaGraduacao: formDataUltimaGraduacao,
             contatoEmergenciaNome: formContatoEmergenciaNome,
             contatoEmergenciaTel: formContatoEmergenciaTel,
-            status: formStatus
+            status: formStatus,
+            turma: formTurma
           };
         }
         return s;
@@ -164,12 +175,13 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         contatoEmergenciaNome: formContatoEmergenciaNome,
         contatoEmergenciaTel: formContatoEmergenciaTel,
         status: formStatus,
+        turma: formTurma,
         totalTreinos: 0,
         pagamentos: [
           {
             id: `pay_${Date.now()}`,
             mesRef: 'Maio/2026',
-            valor: 150,
+            valor: 100,
             status: 'Pendente',
             dataVencimento: '2026-05-30',
             dataPagamento: null
@@ -206,8 +218,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       const matchesBelt = selectedBelt === 'Todos' || student.faixa === selectedBelt;
       const matchesStatus = selectedStatus === 'Todos' || student.status === selectedStatus;
+      const matchesTurma = selectedTurma === 'Todos' || student.turma === selectedTurma;
 
-      return matchesSearch && matchesBelt && matchesStatus;
+      return matchesSearch && matchesBelt && matchesStatus && matchesTurma;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
@@ -303,29 +316,249 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     return dateStr;
   };
 
+  const parseData = (text: string) => {
+    setImportError(null);
+    if (!text.trim()) {
+      setParsedImportRows([]);
+      return;
+    }
+
+    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+    if (lines.length === 0) return;
+
+    // Detect delimiter
+    const firstLine = lines[0];
+    let delimiter = '\t';
+    if (firstLine.includes('\t')) {
+      delimiter = '\t';
+    } else if (firstLine.includes(';')) {
+      delimiter = ';';
+    } else if (firstLine.includes(',')) {
+      delimiter = ',';
+    }
+
+    // Parse headers
+    const rawHeaders = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+
+    // Map headers to Student fields
+    const mappings: { [key: string]: number } = {};
+    const clean = (h: string) => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+
+    rawHeaders.forEach((header, idx) => {
+      const hClean = clean(header);
+      if (hClean.includes('nome') || hClean.includes('name') || hClean.includes('membro') || hClean.includes('aluno')) {
+        mappings['nome'] = idx;
+      } else if (hClean.includes('cpf')) {
+        mappings['cpf'] = idx;
+      } else if (hClean.includes('nascimento') || hClean.includes('nasc') || hClean.includes('birth') || (hClean.includes('data') && hClean.includes('nasc')) || hClean.includes('idade')) {
+        mappings['dataNascimento'] = idx;
+      } else if (hClean.includes('telefone') || hClean.includes('tel') || hClean.includes('cel') || hClean.includes('fone') || hClean.includes('contato')) {
+        mappings['telefone'] = idx;
+      } else if (hClean.includes('email') || hClean.includes('mail')) {
+        mappings['email'] = idx;
+      } else if (hClean.includes('genero') || hClean.includes('sexo') || hClean.includes('gender')) {
+        mappings['genero'] = idx;
+      } else if (hClean.includes('bairro') || hClean.includes('endereco') || hClean.includes('local')) {
+        mappings['bairro'] = idx;
+      } else if (hClean.includes('faixa') || hClean.includes('belt') || hClean.includes('graduacao')) {
+        mappings['faixa'] = idx;
+      } else if (hClean.includes('grau') || hClean.includes('stripe')) {
+        mappings['graus'] = idx;
+      } else if (hClean.includes('turma') || hClean.includes('categoria') || hClean.includes('class') || hClean.includes('grupo')) {
+        mappings['turma'] = idx;
+      } else if (hClean.includes('emergencianome') || hClean.includes('emergenciacontato') || hClean.includes('responsavel')) {
+        mappings['contatoEmergenciaNome'] = idx;
+      } else if (hClean.includes('emergenciatel') || hClean.includes('emergenciatelefone')) {
+        mappings['contatoEmergenciaTel'] = idx;
+      } else if (hClean.includes('ultima') || (hClean.includes('data') && hClean.includes('grad'))) {
+        mappings['dataUltimaGraduacao'] = idx;
+      } else if (hClean.includes('matricula')) {
+        mappings['dataMatricula'] = idx;
+      }
+    });
+
+    // Parse data rows
+    const rows: any[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
+      // If the row has fewer elements than headers, fill with empty strings
+      while (parts.length < rawHeaders.length) {
+        parts.push('');
+      }
+
+      const getValue = (field: string) => {
+        const idx = mappings[field];
+        return idx !== undefined ? parts[idx] : '';
+      };
+
+      const rawNome = getValue('nome');
+      if (!rawNome) continue; // Skip empty rows
+
+      // Process gender
+      const rawGen = getValue('genero').toLowerCase();
+      let gender: Gender = 'Masculino';
+      if (rawGen.startsWith('f') || rawGen.includes('fem')) {
+        gender = 'Feminino';
+      } else if (rawGen.startsWith('o') || rawGen.includes('out')) {
+        gender = 'Outro';
+      }
+
+      // Process birth date
+      let rawBirth = getValue('dataNascimento');
+      let dataNasc = '';
+      if (rawBirth) {
+        // Handle DD/MM/YYYY or D/M/YYYY
+        if (rawBirth.includes('/')) {
+          const birthParts = rawBirth.split('/');
+          if (birthParts.length === 3) {
+            dataNasc = `${birthParts[2]}-${birthParts[1].padStart(2, '0')}-${birthParts[0].padStart(2, '0')}`;
+          }
+        } else if (rawBirth.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          dataNasc = rawBirth;
+        }
+      }
+
+      // If dataNasc is invalid or empty, set a default
+      if (!dataNasc) {
+        dataNasc = '2000-01-01'; // Fallback
+      }
+
+      // Process belt
+      const rawFaixa = getValue('faixa').toLowerCase();
+      let faixa: Belt = 'Branca';
+      const belts: Belt[] = ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
+      const foundBelt = belts.find(b => b.toLowerCase() === rawFaixa || rawFaixa.includes(b.toLowerCase()));
+      if (foundBelt) {
+        faixa = foundBelt;
+      }
+
+      // Process degrees
+      const rawGraus = parseInt(getValue('graus'), 10);
+      const graus: Degree = (rawGraus >= 0 && rawGraus <= 4) ? (rawGraus as Degree) : 0;
+
+      // Process class (turma)
+      const rawTurma = getValue('turma').toLowerCase();
+      let turma: 'Kids' | 'Adulto' = 'Adulto';
+      if (rawTurma.includes('kid') || rawTurma.includes('inf') || rawTurma.includes('cri')) {
+        turma = 'Kids';
+      } else {
+        // Check age based on birth year
+        const year = parseInt(dataNasc.split('-')[0], 10);
+        if (year >= 2010) {
+          turma = 'Kids';
+        }
+      }
+
+      // Process registration date
+      let rawMatr = getValue('dataMatricula');
+      let dataMatr = new Date().toISOString().split('T')[0];
+      if (rawMatr) {
+        if (rawMatr.includes('/')) {
+          const matrParts = rawMatr.split('/');
+          if (matrParts.length === 3) {
+            dataMatr = `${matrParts[2]}-${matrParts[1].padStart(2, '0')}-${matrParts[0].padStart(2, '0')}`;
+          }
+        } else if (rawMatr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          dataMatr = rawMatr;
+        }
+      }
+
+      rows.push({
+        nome: rawNome,
+        cpf: getValue('cpf') || `000.000.000-${Math.floor(Math.random() * 90 + 10)}`,
+        dataNascimento: dataNasc,
+        telefone: getValue('telefone'),
+        email: getValue('email') || `${rawNome.toLowerCase().replace(/\s+/g, '.')}@sfbjj.com.br`,
+        genero: gender,
+        dataMatricula: dataMatr,
+        bairro: getValue('bairro') || 'Asa Sul',
+        faixa: faixa,
+        graus: graus,
+        dataUltimaGraduacao: getValue('dataUltimaGraduacao') || '',
+        contatoEmergenciaNome: getValue('contatoEmergenciaNome') || '',
+        contatoEmergenciaTel: getValue('contatoEmergenciaTel') || '',
+        turma: turma,
+        status: 'Ativo',
+        totalTreinos: 0,
+        pagamentos: [
+          {
+            id: `pay_${Date.now()}_${i}`,
+            mesRef: 'Maio/2026',
+            valor: 100,
+            status: 'Pendente',
+            dataVencimento: '2026-05-30',
+            dataPagamento: null
+          }
+        ]
+      });
+    }
+
+    setParsedImportRows(rows);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setImportText(text);
+      parseData(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportConfirm = () => {
+    if (parsedImportRows.length === 0) {
+      setImportError('Nenhum dado válido para importar.');
+      return;
+    }
+
+    // Generate unique IDs for imported students
+    const studentsWithIds = parsedImportRows.map((student, index) => ({
+      ...student,
+      id: `std_imp_${Date.now()}_${index}`
+    }));
+
+    setStudents(prev => [...studentsWithIds, ...prev]);
+    setShowImportModal(false);
+    setImportText('');
+    setParsedImportRows([]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
-            <span className="text-gold-500">🥋</span> Gestão de Membros
+            <span className="text-gold-500">🥋</span> Gestão de Alunos
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             Cadastre, edite e acompanhe os alunos da Sagrada Família BJJ.
           </p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="btn-gold self-start sm:self-auto flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Cadastrar Membro
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
+          >
+            <Upload className="w-4 h-4" />
+            Importar Planilha
+          </button>
+          <button
+            onClick={handleOpenCreate}
+            className="btn-gold flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Cadastrar Membro
+          </button>
+        </div>
       </div>
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
         {/* Search */}
         <div className="sm:col-span-2 relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
@@ -365,6 +598,22 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           </select>
         </div>
 
+        {/* Turma Filter */}
+        <div>
+          <select
+            value={selectedTurma}
+            onChange={(e) => {
+              setSelectedTurma(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
+          >
+            <option value="Todos">Todas as Turmas</option>
+            <option value="Adulto">Adultos</option>
+            <option value="Kids">Kids</option>
+          </select>
+        </div>
+
         {/* Status Filter */}
         <div>
           <select
@@ -388,20 +637,20 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
+                <th className="px-4 py-4 text-center w-16">Status</th>
                 <th className="px-6 py-4">Membro</th>
                 <th className="px-6 py-4">Nascimento / Idade</th>
-                <th className="px-6 py-4">Bairro</th>
                 <th className="px-6 py-4">Faixa Atual</th>
+                <th className="px-6 py-4">Turma</th>
                 <th className="px-6 py-4">Última Graduação</th>
                 <th className="px-6 py-4">Contato</th>
-                <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={8} className="text-center py-10 text-slate-500 font-medium">
                     Nenhum aluno encontrado correspondente aos filtros.
                   </td>
                 </tr>
@@ -411,6 +660,18 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     key={student.id}
                     className="hover:bg-obsidian-700/20 transition-colors group"
                   >
+                    {/* Status */}
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-block w-3.5 h-3.5 rounded-full transition-all duration-300 ${
+                          student.status === 'Ativo'
+                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
+                            : 'bg-white border border-slate-300 shadow-[0_0_8px_rgba(255,255,255,0.4)]'
+                        }`}
+                        title={student.status}
+                      />
+                    </td>
+
                     {/* Membro */}
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-100 group-hover:text-gold-450 transition-colors">
@@ -442,41 +703,32 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       </div>
                     </td>
 
-                    {/* Bairro */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-xs text-slate-300">
-                        <MapPin className="w-3.5 h-3.5 text-gold-500/80" />
-                        <span>{student.bairro || '-'}</span>
-                      </div>
-                    </td>
-
                     {/* Faixa Atual */}
                     <td className="px-6 py-4">
                       {renderBeltBadge(student.faixa, student.graus)}
                     </td>
 
+                    {/* Turma */}
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.turma === 'Kids'
+                        ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                        }`}>
+                        {student.turma || 'Adulto'}
+                      </span>
+                    </td>
+
                     {/* Última Graduação */}
                     <td className="px-6 py-4 text-xs font-medium text-slate-300">
-                      {student.dataUltimaGraduacao || '-'}
+                      {formatDate(student.dataUltimaGraduacao)}
                     </td>
 
                     {/* Contato */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-xs text-slate-200">
-                        <Phone className="w-3.5 h-3.5 text-gold-500/80" />
+                    <td className="px-6 py-4 min-w-[160px] whitespace-nowrap">
+                      <div className="flex items-center gap-1 text-xs text-slate-200 whitespace-nowrap">
+                        <Phone className="w-3.5 h-3.5 text-gold-500/80 shrink-0" />
                         <span className="font-mono">{student.telefone ? formatPhone(student.telefone) : '-'}</span>
                       </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${student.status === 'Ativo'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-slate-700/10 text-slate-400 border border-slate-750'
-                        }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'Ativo' ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
-                        {student.status}
-                      </span>
                     </td>
 
                     {/* Ações */}
@@ -621,7 +873,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">CPF</label>
                     <input
@@ -642,6 +894,18 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
                       <option value="Outro">Outro</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Turma *</label>
+                    <select
+                      value={formTurma}
+                      onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
+                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold text-slate-200"
+                      required
+                    >
+                      <option value="Adulto">Adulto</option>
+                      <option value="Kids">Kids</option>
                     </select>
                   </div>
                 </div>
@@ -694,8 +958,17 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     <input
                       type="text"
                       value={formDataUltimaGraduacao}
-                      onChange={(e) => setFormDataUltimaGraduacao(e.target.value)}
-                      placeholder="Ex: 23/08/2025 ou 2025"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const formatted = val
+                          .replace(/\D/g, '')
+                          .replace(/(\d{2})(\d)/, '$1/$2')
+                          .replace(/(\d{2})(\d)/, '$1/$2')
+                          .replace(/(\d{4})(\d)/, '$1')
+                          .substring(0, 10);
+                        setFormDataUltimaGraduacao(formatted);
+                      }}
+                      placeholder="DD/MM/AAAA"
                       className="input-premium"
                     />
                   </div>
@@ -805,6 +1078,158 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 Confirmar Exclusão
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spreadsheet Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-obsidian-850 border border-obsidian-700/80 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-up">
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 sticky top-0 bg-obsidian-850 z-10">
+              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-gold-500" />
+                Importar Membros da Planilha
+              </h2>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportText('');
+                  setParsedImportRows([]);
+                }}
+                className="text-slate-400 hover:text-gold-500 p-1 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              <div className="text-sm text-slate-400 leading-relaxed">
+                Você pode importar membros de duas maneiras:
+                <ol className="list-decimal pl-5 mt-2 space-y-1">
+                  <li>Selecione um arquivo <strong className="text-slate-200">.CSV</strong> exportado do Google Sheets.</li>
+                  <li>Copie as linhas da sua tabela no Google Sheets (incluindo o cabeçalho) e <strong className="text-slate-200">cole diretamente</strong> na caixa de texto abaixo.</li>
+                </ol>
+              </div>
+
+              {/* File Upload Selector */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Opção 1: Enviar Arquivo CSV</span>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="csv-file-upload-input"
+                  />
+                  <label
+                    htmlFor="csv-file-upload-input"
+                    className="flex flex-col items-center justify-center border border-dashed border-obsidian-700 hover:border-gold-500/50 rounded-xl p-8 cursor-pointer bg-obsidian-900/40 hover:bg-obsidian-900/80 transition-all text-slate-400 hover:text-slate-200 h-40"
+                  >
+                    <Upload className="w-8 h-8 mb-2 text-gold-500" />
+                    <span className="text-sm font-semibold">Carregar Arquivo .CSV</span>
+                    <span className="text-xs text-slate-500 mt-1">Selecione seu arquivo local</span>
+                  </label>
+                </div>
+
+                <div className="flex flex-col">
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Opção 2: Copiar e Colar Linhas da Planilha</span>
+                  <textarea
+                    value={importText}
+                    onChange={(e) => {
+                      setImportText(e.target.value);
+                      parseData(e.target.value);
+                    }}
+                    placeholder="Cole aqui os dados copiados da planilha (com cabeçalho)...&#10;Ex:&#10;Nome&#9;Nascimento&#9;Faixa&#9;Bairro&#9;Turma&#10;Lucas dos Anjos&#9;18/03/1987&#9;Preta&#9;Guará&#9;Adulto"
+                    className="input-premium w-full h-40 font-mono text-[10px] leading-normal"
+                  />
+                </div>
+              </div>
+
+              {importError && (
+                <div className="p-3.5 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-sm">
+                  {importError}
+                </div>
+              )}
+
+              {/* Data Preview */}
+              {parsedImportRows.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest">
+                      Pré-visualização dos Dados ({parsedImportRows.length} linhas detectadas)
+                    </h3>
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase bg-obsidian-900 px-2 py-0.5 rounded border border-obsidian-800">
+                      Auto-mapeado com sucesso
+                    </span>
+                  </div>
+
+                  <div className="border border-obsidian-750 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-obsidian-900 text-slate-400 border-b border-obsidian-750 font-bold uppercase">
+                          <th className="px-4 py-2">Nome</th>
+                          <th className="px-4 py-2">Turma</th>
+                          <th className="px-4 py-2">Faixa</th>
+                          <th className="px-4 py-2">Nascimento</th>
+                          <th className="px-4 py-2">Bairro</th>
+                          <th className="px-4 py-2">Telefone</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-obsidian-750 text-slate-300">
+                        {parsedImportRows.slice(0, 10).map((row, idx) => (
+                          <tr key={idx} className="hover:bg-obsidian-750/30">
+                            <td className="px-4 py-2 font-semibold text-slate-100">{row.nome}</td>
+                            <td className="px-4 py-2">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${row.turma === 'Kids' ? 'bg-sky-500/10 text-sky-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
+                                {row.turma}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 font-medium">{row.faixa}</td>
+                            <td className="px-4 py-2 font-mono">{formatDate(row.dataNascimento)}</td>
+                            <td className="px-4 py-2">{row.bairro || '-'}</td>
+                            <td className="px-4 py-2 font-mono">{row.telefone || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {parsedImportRows.length > 10 && (
+                      <div className="bg-obsidian-900 text-center py-2 text-slate-500 text-[10px] font-medium border-t border-obsidian-750">
+                        E mais {parsedImportRows.length - 10} linhas ocultas...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-obsidian-750 bg-obsidian-850 z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportText('');
+                  setParsedImportRows([]);
+                }}
+                className="btn-obsidian"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleImportConfirm}
+                disabled={parsedImportRows.length === 0}
+                className="btn-gold px-6 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                Importar {parsedImportRows.length > 0 ? `${parsedImportRows.length} Alunos` : 'Membros'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}

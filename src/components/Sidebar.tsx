@@ -3,15 +3,16 @@ import {
   LayoutDashboard,
   Users,
   DollarSign,
-  CheckSquare,
   Calendar,
   Menu,
   X,
   Flame,
   User,
-  LogOut
+  LogOut,
+  Mail
 } from 'lucide-react';
 import type { LoggedUser } from '../types';
+import logoSFBJJ from '../assets/logo-sfbjj.jpg';
 
 interface SidebarProps {
   currentTab: string;
@@ -26,16 +27,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
   // Role based navigation menu items
   const menuItems = loggedUser.role === 'admin'
     ? [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'students', label: 'Gestão de Alunos', icon: Users },
-        { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
-        { id: 'attendance', label: 'Frequência (Presença)', icon: CheckSquare },
-        { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-      ]
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'students', label: 'Gestão de Alunos', icon: Users },
+      { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
+      { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
+      { id: 'contact', label: 'Contato', icon: Mail },
+    ]
     : [
-        { id: 'profile', label: 'Meu Perfil', icon: User },
-        { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-      ];
+      { id: 'profile', label: 'Meu Perfil', icon: User },
+      { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
+      { id: 'contact', label: 'Contato', icon: Mail },
+    ];
 
   const handleTabChange = (tabId: string) => {
     setCurrentTab(tabId);
@@ -81,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
         {/* Brand/Logo Section */}
         <div className="flex flex-col items-center justify-center text-center p-2">
           <div className="mb-2">
-            <img src='src/assets/logo-sfbjj.png' alt="Logo SFBJJ" width={150} height={150} />
+            <img src={logoSFBJJ} alt="Logo SFBJJ" width={150} height={150} />
             {/* <Flame className="w-6 h-6 animate-pulse" /> */}
           </div>
           <div className="flex flex-col items-center">

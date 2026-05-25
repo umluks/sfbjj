@@ -34,8 +34,7 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
   }
 ];
 
-export const INITIAL_STUDENTS: Student[] = [
-  {
+export const INITIAL_STUDENTS: Student[] = [{
     id: "1",
     nome: "Andrigo Rodrigues Ramos",
     cpf: "111.000.001-11",
@@ -52,9 +51,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2016",
     contatoEmergenciaNome: "Nitielma",
     contatoEmergenciaTel: "61 98427-6823",
-    pagamentos: [{ id: "p1", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p1", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "2",
     nome: "Arthur Antonoff Dos Santos",
     cpf: "111.000.002-22",
@@ -71,9 +71,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2020",
     contatoEmergenciaNome: "Isadora",
     contatoEmergenciaTel: "61 99649-0326",
-    pagamentos: [{ id: "p2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p2_1", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p2_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "3",
     nome: "Breno Carlos Soares Fernandes",
     cpf: "111.000.003-33",
@@ -90,9 +94,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Vanessa",
     contatoEmergenciaTel: "(61) 98290-7784",
-    pagamentos: [{ id: "p3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p3_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p3_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p3_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "4",
     nome: "Bruno Moreira Galvão Bello",
     cpf: "111.000.004-44",
@@ -109,9 +118,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "11/12/2025",
     contatoEmergenciaNome: "Ana Luísa",
     contatoEmergenciaTel: "(61) 99672-8888",
-    pagamentos: [{ id: "p4", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p4_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "5",
     nome: "Caio César Dias Barros",
     cpf: "111.000.005-55",
@@ -128,9 +140,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "02/08/2026",
     contatoEmergenciaNome: "Caio",
     contatoEmergenciaTel: "(61)98473-4874",
-    pagamentos: [{ id: "p5", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p5", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Kids"
   },
-  {
+{
     id: "6",
     nome: "Carlos Miranda Barbosa Soares",
     cpf: "111.000.006-66",
@@ -147,9 +160,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/8/2025",
     contatoEmergenciaNome: "Carlos",
     contatoEmergenciaTel: "(61)99999-5075",
-    pagamentos: [{ id: "p6", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p6_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "7",
     nome: "Daniel Costa Corrêa Leite Muniz",
     cpf: "111.000.007-77",
@@ -166,9 +182,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Jacqueline",
     contatoEmergenciaTel: "61 99800-2550",
-    pagamentos: [{ id: "p7", mesRef: "Maio/2026", valor: 100, status: "Pendente", dataVencimento: "2026-05-10", dataPagamento: null }]
+    pagamentos: [
+      { id: "p7_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p7_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p7_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "8",
     nome: "Daniel de Assis Nascimento",
     cpf: "111.000.008-88",
@@ -185,9 +206,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Angela",
     contatoEmergenciaTel: "(61) 99649-8901",
-    pagamentos: [{ id: "p8", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p8_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "9",
     nome: "Daniel dos Santos",
     cpf: "111.000.009-99",
@@ -204,9 +228,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "",
     contatoEmergenciaNome: "Diego(pai)",
     contatoEmergenciaTel: "61983669077",
-    pagamentos: [{ id: "p9", mesRef: "Maio/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-05-05", dataPagamento: null }]
+    pagamentos: [
+      { id: "p9_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "10",
     nome: "David de Souza Ferrer dos Santos",
     cpf: "111.000.010-10",
@@ -223,9 +250,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Carol",
     contatoEmergenciaTel: "61 98210-7184",
-    pagamentos: [{ id: "p10", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p10_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p10_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "11",
     nome: "Diogo Ferreira de Sousa",
     cpf: "111.000.011-11",
@@ -242,9 +273,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "02/10/2021",
     contatoEmergenciaNome: "Ellen",
     contatoEmergenciaTel: "61981572367",
-    pagamentos: [{ id: "p11", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p11_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "12",
     nome: "Ériclis Douglas dos Santos Araújo Carneiro",
     cpf: "111.000.012-12",
@@ -261,9 +295,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "26/11/2023",
     contatoEmergenciaNome: "Larissa",
     contatoEmergenciaTel: "(061) 99184-2003",
-    pagamentos: [{ id: "p12", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p12_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p12_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "13",
     nome: "Fabrício Jaime Saraiva do Nascimento",
     cpf: "111.000.013-13",
@@ -280,9 +318,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "29/10/2023",
     contatoEmergenciaNome: "",
     contatoEmergenciaTel: "",
-    pagamentos: [{ id: "p13", mesRef: "Maio/2026", valor: 100, status: "Pendente", dataVencimento: "2026-05-10", dataPagamento: null }]
+    pagamentos: [
+      { id: "p13_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "14",
     nome: "Felipe Debattisti dos Santos",
     cpf: "111.000.014-44",
@@ -299,9 +340,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "-",
     contatoEmergenciaNome: "Maria luiza",
     contatoEmergenciaTel: "(61) 984312386",
-    pagamentos: [{ id: "p14", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p14", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "15",
     nome: "Felipe Rocha Mendonça",
     cpf: "111.000.015-55",
@@ -318,9 +360,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "01/12/2015",
     contatoEmergenciaNome: "",
     contatoEmergenciaTel: "",
-    pagamentos: [{ id: "p15", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p15", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "16",
     nome: "Flávio de Arrida Ribeiro",
     cpf: "111.000.016-66",
@@ -337,9 +380,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "",
     contatoEmergenciaNome: "Vanessa",
     contatoEmergenciaTel: "(61) 993348343",
-    pagamentos: [{ id: "p16", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p16_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p16_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p16_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "17",
     nome: "Georsolei Loredo de Faria",
     cpf: "111.000.017-77",
@@ -356,9 +404,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Francine",
     contatoEmergenciaTel: "61-99949-9775",
-    pagamentos: [{ id: "p17", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p17_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p17_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p17_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "18",
     nome: "Guilherme Felisberto Mourão",
     cpf: "111.000.018-88",
@@ -375,9 +428,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "-",
     contatoEmergenciaNome: "",
     contatoEmergenciaTel: "",
-    pagamentos: [{ id: "p18", mesRef: "Maio/2026", valor: 100, status: "Pendente", dataVencimento: "2026-05-10", dataPagamento: null }]
+    pagamentos: [{ id: "p18", mesRef: "Maio/2026", valor: 100, status: "Pendente", dataVencimento: "2026-05-10", dataPagamento: null }],
+    turma: "Adulto"
   },
-  {
+{
     id: "19",
     nome: "Gustavo Santos das Neves",
     cpf: "111.000.019-99",
@@ -394,9 +448,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Thaiana",
     contatoEmergenciaTel: "(61)99522-3223",
-    pagamentos: [{ id: "p19", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p19_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "20",
     nome: "Herbert William Boger",
     cpf: "111.000.020-00",
@@ -413,9 +470,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "-",
     contatoEmergenciaNome: "Elizabete Boger",
     contatoEmergenciaTel: "(61)98127-1108",
-    pagamentos: [{ id: "p20", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p20", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "21",
     nome: "Ícaro Bernardes Barbosa",
     cpf: "111.000.021-11",
@@ -432,9 +490,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "",
     contatoEmergenciaNome: "thais santos",
     contatoEmergenciaTel: "61 981464448",
-    pagamentos: [{ id: "p21", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p21_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Kids"
   },
-  {
+{
     id: "22",
     nome: "João Alfredo dos Santos Araújo Carneiro",
     cpf: "111.000.022-22",
@@ -451,9 +512,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "-",
     contatoEmergenciaNome: "Éric",
     contatoEmergenciaTel: "(61) 99354-5902",
-    pagamentos: [{ id: "p22", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p22", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Kids"
   },
-  {
+{
     id: "23",
     nome: "José Antero Dias Neto",
     cpf: "111.000.023-33",
@@ -470,9 +532,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "02/08/2025",
     contatoEmergenciaNome: "Eliane",
     contatoEmergenciaTel: "(61)99171-0271",
-    pagamentos: [{ id: "p23", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p23", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "24",
     nome: "Leonardo Rocha Mendonça",
     cpf: "111.000.024-44",
@@ -489,9 +552,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "",
     contatoEmergenciaNome: "Zita (Mãe)",
     contatoEmergenciaTel: "61 99216-4873",
-    pagamentos: [{ id: "p24", mesRef: "Maio/2026", valor: 100, status: "Pendente", dataVencimento: "2026-05-10", dataPagamento: null }]
+    pagamentos: [{ id: "p24", mesRef: "Maio/2026", valor: 100, status: "Pendente", dataVencimento: "2026-05-10", dataPagamento: null }],
+    turma: "Adulto"
   },
-  {
+{
     id: "25",
     nome: "Lucas Santiago Gonçalves dos Anjos",
     cpf: "111.000.025-55",
@@ -508,9 +572,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "22/12/2024",
     contatoEmergenciaNome: "Eduarda",
     contatoEmergenciaTel: "61 98226 - 2607",
-    pagamentos: [{ id: "p25", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [{ id: "p25", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "26",
     nome: "Lucas Santos Lima do Nascimento",
     cpf: "111.000.026-66",
@@ -527,9 +592,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "23/08/2025",
     contatoEmergenciaNome: "Tássia",
     contatoEmergenciaTel: "61 98181-1799",
-    pagamentos: [{ id: "p26", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p26_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p26_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p26_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "27",
     nome: "Miguel Meireles Oliveira de Almeida",
     cpf: "111.000.012-12",
@@ -546,9 +616,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2019-12-14",
     contatoEmergenciaNome: "Débora",
     contatoEmergenciaTel: "(61) 98191-1859",
-    pagamentos: [{ id: "p27", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }]
+    pagamentos: [
+      { id: "p27_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "28",
     nome: "Paulo Marcilio Almeida de Carvalho",
     cpf: "111.000.013-13",
@@ -565,9 +638,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-08-23",
     contatoEmergenciaNome: "Aline",
     contatoEmergenciaTel: "(61) 98306-4082",
-    "pagamentos": [{ id: "p28_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-09" }]
+    pagamentos: [
+      { id: "p28_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p28_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "29",
     nome: "Pedro Henrique Barbosa Brandão",
     cpf: "111.000.014-44",
@@ -584,9 +661,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-08-23",
     contatoEmergenciaNome: "Taíse",
     contatoEmergenciaTel: "(68) 99230-7358",
-    "pagamentos": [{ id: "p29_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    pagamentos: [
+      { id: "p29_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p29_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p29_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "30",
     nome: "Pedro Kauã Veloso de Sousa",
     cpf: "111.000.015-55",
@@ -603,9 +685,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-12-12",
     contatoEmergenciaNome: "Camila (Mãe)",
     contatoEmergenciaTel: "(61) 98443-1616",
-    "pagamentos": [{ id: "p30_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    pagamentos: [
+      { id: "p30_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p30_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "31",
     nome: "Pedro Suhet Justino",
     cpf: "111.000.016-66",
@@ -622,9 +708,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-12-15",
     contatoEmergenciaNome: "Adriana",
     contatoEmergenciaTel: "(61) 99967-0271",
-    "pagamentos": [{ id: "p31_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-08" }]
+    pagamentos: [
+      { id: "p31_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "32",
     nome: "Rafael Goulart do Nascimento",
     cpf: "111.000.017-77",
@@ -641,9 +730,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2024-09-13",
     contatoEmergenciaNome: "Ana",
     contatoEmergenciaTel: "(61) 98148-2424",
-    "pagamentos": [{ id: "p32_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
+    pagamentos: [
+      { id: "p32_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "33",
     nome: "Raul Gonçalves de Moura",
     cpf: "111.000.018-88",
@@ -660,9 +752,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2022-12-03",
     contatoEmergenciaNome: "Isadora",
     contatoEmergenciaTel: "(61) 98214-9073",
-    "pagamentos": [{ id: "p33_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    pagamentos: [
+      { id: "p33_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p33_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "34",
     nome: "Rodrigo Rocha Mendonça",
     cpf: "111.000.019-99",
@@ -679,9 +775,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2020-11-01",
     contatoEmergenciaNome: "Não Informado",
     contatoEmergenciaTel: "",
-    "pagamentos": [{ id: "p34_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-09" }]
+    pagamentos: [
+      { id: "p34_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "35",
     nome: "Rodrigo Weber D'avila Valentim",
     cpf: "111.000.020-00",
@@ -698,9 +797,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2012-11-01",
     contatoEmergenciaNome: "Juliana",
     contatoEmergenciaTel: "(21) 99614-7333",
-    "pagamentos": [{ id: "p35_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    "pagamentos": [{ id: "p35_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }],
+    turma: "Adulto"
   },
-  {
+{
     id: "36",
     nome: "Thalles da Paz Moreira",
     cpf: "111.000.021-11",
@@ -717,9 +817,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2024-02-15",
     contatoEmergenciaNome: "Glauber (Irmão)",
     contatoEmergenciaTel: "(61) 98190-6570",
-    "pagamentos": [{ id: "p36_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    pagamentos: [
+      { id: "p36_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p36_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "37",
     nome: "Thiago Augusto Rodrigues",
     cpf: "111.000.022-22",
@@ -736,9 +840,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-08-23",
     contatoEmergenciaNome: "Thassia Costa",
     contatoEmergenciaTel: "(61) 99168-5854",
-    "pagamentos": [{ id: "p37_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    pagamentos: [
+      { id: "p37_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "38",
     nome: "Vinícius Gabriel Rodrigues da Silva Brito",
     cpf: "111.000.023-33",
@@ -755,9 +862,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-08-23",
     contatoEmergenciaNome: "Luana",
     contatoEmergenciaTel: "(61) 98480-2535",
-    "pagamentos": [{ id: "p38_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-08" }]
+    pagamentos: [
+      { id: "p38_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p38_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p38_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "39",
     nome: "Vinicius Tadeu Uliana Cavalcante",
     cpf: "111.000.024-44",
@@ -774,9 +886,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-08-23",
     contatoEmergenciaNome: "Lidmylla",
     contatoEmergenciaTel: "(62) 99297-9178",
-    "pagamentos": [{ id: "p39_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-10" }]
+    pagamentos: [
+      { id: "p39_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p39_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p39_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "40",
     nome: "Vitor Patrick Alves Tavares",
     cpf: "111.000.025-55",
@@ -793,9 +910,14 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-12-15",
     contatoEmergenciaNome: "Valdemar (Avô)",
     contatoEmergenciaTel: "(61) 99115-5476",
-    "pagamentos": [{ id: "p40_1", "mesRef": "Maio/2026", "valor": 100, status: "Pago", "dataVencimento": "2026-05-10", "dataPagamento": "2026-05-09" }]
+    pagamentos: [
+      { id: "p40_1", mesRef: "Março/2026", valor: 100, status: "Atrasado", dataVencimento: "2026-03-10", dataPagamento: null },
+      { id: "p40_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p40_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "41",
     nome: "Willian Kaizer Stambassi",
     cpf: "111.000.026-66",
@@ -812,9 +934,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2025-06-01",
     contatoEmergenciaNome: "Não Informado",
     contatoEmergenciaTel: "",
-    pagamentos: [{ id: "p41_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
+    pagamentos: [
+      { id: "p41_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" }
+    ],
+    turma: "Adulto"
   },
-  {
+{
     id: "42",
     nome: "Alice Naves dos Santos",
     cpf: "",
@@ -831,9 +956,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2026-03-16",
     contatoEmergenciaNome: "Felipe (Pai)",
     contatoEmergenciaTel: "(61) 98431-6561",
-    pagamentos: [{ id: "p42_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
+    pagamentos: [
+      { id: "p42_1", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p42_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Kids"
   },
-  {
+{
     id: "43",
     nome: "Bento Naves dos Santos",
     cpf: "",
@@ -850,9 +979,13 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2026-03-16",
     contatoEmergenciaNome: "Felipe (Pai)",
     contatoEmergenciaTel: "(61) 98431-6561",
-    pagamentos: [{ id: "p43_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
+    pagamentos: [
+      { id: "p43_1", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p43_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Kids"
   },
-  {
+{
     id: "44",
     nome: "Isaac Mendes Campos",
     cpf: "",
@@ -869,9 +1002,10 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2026-03-07",
     contatoEmergenciaNome: "Thacia (Tia)",
     contatoEmergenciaTel: "(61) 98199-5336",
-    pagamentos: [{ id: "p44_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
+    pagamentos: [{ id: "p44_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }],
+    turma: "Kids"
   },
-  {
+{
     id: "45",
     nome: "João Marcelo Izaga Coutinho de Oliveira",
     cpf: "",
@@ -888,9 +1022,12 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2026-03-15",
     contatoEmergenciaNome: "Não Informado",
     contatoEmergenciaTel: "(61) 99221-1223",
-    pagamentos: [{ id: "p45_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
+    pagamentos: [
+      { id: "p45_1", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" }
+    ],
+    turma: "Kids"
   },
-  {
+{
     id: "46",
     nome: "Laura Araújo Luz",
     cpf: "",
@@ -907,9 +1044,59 @@ export const INITIAL_STUDENTS: Student[] = [
     dataUltimaGraduacao: "2026-03-06",
     contatoEmergenciaNome: "Reberty Pereira Luz (Pai)",
     contatoEmergenciaTel: "(61) 99643-5138",
-    pagamentos: [{ id: "p46_1", "mesRef": "Maio/2026", "valor": 100, status: "Pendente", "dataVencimento": "2026-05-10", "dataPagamento": null }]
-  }
-];
+    pagamentos: [
+      { id: "p46_1", mesRef: "Março/2026", valor: 100, status: "Pago", dataVencimento: "2026-03-10", dataPagamento: "2026-03-10" },
+      { id: "p46_2", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p46_3", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Kids"
+  },
+  {
+    id: "47",
+    nome: "Moises",
+    cpf: "",
+    dataNascimento: "2015-06-15",
+    telefone: "(61) 99999-0047",
+    email: "moises@sfbjj.com",
+    genero: "Masculino",
+    dataMatricula: "2026-03-10",
+    faixa: "Branca",
+    graus: 0,
+    status: "Ativo",
+    totalTreinos: 0,
+    bairro: "",
+    dataUltimaGraduacao: "2026-03-10",
+    contatoEmergenciaNome: "Responsável",
+    contatoEmergenciaTel: "(61) 99999-0047",
+    pagamentos: [
+      { id: "p47_1", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p47_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Kids"
+  },
+  {
+    id: "48",
+    nome: "Ezequiel",
+    cpf: "",
+    dataNascimento: "2016-08-20",
+    telefone: "(61) 99999-0048",
+    email: "ezequiel@sfbjj.com",
+    genero: "Masculino",
+    dataMatricula: "2026-03-10",
+    faixa: "Branca",
+    graus: 0,
+    status: "Ativo",
+    totalTreinos: 0,
+    bairro: "",
+    dataUltimaGraduacao: "2026-03-10",
+    contatoEmergenciaNome: "Responsável",
+    contatoEmergenciaTel: "(61) 99999-0048",
+    pagamentos: [
+      { id: "p48_1", mesRef: "Abril/2026", valor: 100, status: "Pago", dataVencimento: "2026-04-10", dataPagamento: "2026-04-10" },
+      { id: "p48_2", mesRef: "Maio/2026", valor: 100, status: "Pago", dataVencimento: "2026-05-10", dataPagamento: "2026-05-10" }
+    ],
+    turma: "Kids"
+  }];
 
 export const INITIAL_ATTENDANCES: Attendance[] = [
   {

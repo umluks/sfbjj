@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import type { Student, Belt, Degree, Gender } from '../types';
+import type { Student, Belt, Degree, Gender, LoggedUser } from '../types';
 import { 
   User, 
-  ShieldAlert, 
   Lock, 
-  Flame, 
   CheckCircle2, 
   AlertCircle,
   Eye,
@@ -13,15 +11,24 @@ import {
 
 
 interface StudentProfileProps {
-  studentId: string;
+  studentId?: string;
   students: Student[];
   setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  loggedUser: LoggedUser | null;
+  setLoggedUser?: React.Dispatch<React.SetStateAction<LoggedUser | null>>;
 }
 
-export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, students, setStudents }) => {
+export const StudentProfile: React.FC<StudentProfileProps> = ({ 
+  studentId, 
+  students, 
+  setStudents, 
+  loggedUser, 
+  setLoggedUser 
+}) => {
+  const isEditingAdmin = !studentId && loggedUser?.role === 'admin';
   const student = students.find(s => s.id === studentId);
 
-  if (!student) {
+  if (!isEditingAdmin && !student) {
     return (
       <div className="text-center py-20 text-slate-500 card-premium">
         Aluno não encontrado no sistema.
@@ -29,18 +36,37 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
     );
   }
 
+  // Helper to format date as DD/MM/AAAA
+  const formatToDDMMAAAA = (dateStr: string) => {
+    if (!dateStr) return '';
+    if (dateStr.includes('/')) return dateStr;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   // Active Tab: 'profile' or 'password'
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password'>('profile');
 
-  // Personal Info Form State
-  const [formNome, setFormNome] = useState(student.nome);
-  const [formDataNascimento, setFormDataNascimento] = useState(student.dataNascimento);
-  const [formTelefone, setFormTelefone] = useState(student.telefone);
-  const [formEmail, setFormEmail] = useState(student.email);
-  const [formGenero, setFormGenero] = useState<Gender>(student.genero);
-  const [formBairro, setFormBairro] = useState(student.bairro || '');
-  const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState(student.contatoEmergenciaNome || '');
-  const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState(student.contatoEmergenciaTel || '');
+  // Form States (conditional for admin/student)
+  const [formNome, setFormNome] = useState(isEditingAdmin ? (loggedUser?.nome || 'Administrador') : (student?.nome || ''));
+  const [formCpf, setFormCpf] = useState(isEditingAdmin ? '' : (student?.cpf || ''));
+  const [formDataNascimento, setFormDataNascimento] = useState(isEditingAdmin ? '' : (student?.dataNascimento || ''));
+  const [formTelefone, setFormTelefone] = useState(isEditingAdmin ? '' : (student?.telefone || ''));
+  const [formEmail, setFormEmail] = useState(isEditingAdmin ? '' : (student?.email || ''));
+  const [formGenero, setFormGenero] = useState<Gender>(isEditingAdmin ? 'Masculino' : (student?.genero || 'Masculino'));
+  const [formBairro, setFormBairro] = useState(isEditingAdmin ? '' : (student?.bairro || ''));
+  const [formDataMatricula, setFormDataMatricula] = useState(isEditingAdmin ? '' : (student?.dataMatricula || ''));
+  const [formFaixa, setFormFaixa] = useState<Belt>(isEditingAdmin ? 'Branca' : (student?.faixa || 'Branca'));
+  const [formGraus, setFormGraus] = useState<Degree>(isEditingAdmin ? 0 : (student?.graus || 0));
+  const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>(isEditingAdmin ? 'Adulto' : (student?.turma || 'Adulto'));
+  const [formModalidade, setFormModalidade] = useState(isEditingAdmin ? 'Mensal' : (student?.modalidadePagamento || 'Mensal'));
+  const [formUltimaGraduacao, setFormUltimaGraduacao] = useState(isEditingAdmin ? '' : (student ? formatToDDMMAAAA(student.dataUltimaGraduacao) : ''));
+  const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaNome || ''));
+  const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaTel || ''));
+  const [formFotoPerfil, setFormFotoPerfil] = useState(isEditingAdmin ? (localStorage.getItem('sfbjj_admin_avatar') || '') : (student?.fotoPerfil || ''));
 
   // Password Change Form State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -65,28 +91,71 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
       .substring(0, 15);
   };
 
+  const formatBrazilianDate = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '$1/$2')
+      .replace(/(\d{2})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d)/, '$1')
+      .substring(0, 10);
+  };
   const handleSaveInfo = (e: React.FormEvent) => {
     e.preventDefault();
     setInfoSuccess(null);
     setInfoError(null);
 
-    if (!formNome || !formDataNascimento) {
-      setInfoError('Nome e Data de Nascimento são obrigatórios.');
+    if (!formNome) {
+      setInfoError('Nome é obrigatório.');
+      return;
+    }
+
+    if (isEditingAdmin) {
+      localStorage.setItem('sfbjj_admin_name', formNome);
+      localStorage.setItem('sfbjj_admin_avatar', formFotoPerfil);
+      
+      // Update logged user state
+      if (setLoggedUser) {
+        setLoggedUser(prev => prev ? { ...prev, nome: formNome } : null);
+      }
+      
+      // Update localStorage user name if changed
+      const loggedStr = localStorage.getItem('sfbjj_logged_user');
+      if (loggedStr) {
+        const logged = JSON.parse(loggedStr);
+        logged.nome = formNome;
+        localStorage.setItem('sfbjj_logged_user', JSON.stringify(logged));
+      }
+
+      setInfoSuccess('Informações do administrador atualizadas com sucesso!');
+      setTimeout(() => setInfoSuccess(null), 4000);
+      return;
+    }
+
+    if (!formDataNascimento) {
+      setInfoError('Data de Nascimento é obrigatória.');
       return;
     }
 
     setStudents(prev => prev.map(s => {
-      if (s.id === student.id) {
+      if (student && s.id === student.id) {
         return {
           ...s,
           nome: formNome,
+          cpf: formCpf,
           dataNascimento: formDataNascimento,
           telefone: formTelefone,
           email: formEmail,
           genero: formGenero,
           bairro: formBairro,
+          dataMatricula: formDataMatricula,
+          faixa: formFaixa,
+          graus: formGraus,
+          turma: formTurma,
+          modalidadePagamento: formModalidade,
+          dataUltimaGraduacao: formUltimaGraduacao,
           contatoEmergenciaNome: formContatoEmergenciaNome,
-          contatoEmergenciaTel: formContatoEmergenciaTel
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          fotoPerfil: formFotoPerfil
         };
       }
       return s;
@@ -96,7 +165,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
     const loggedStr = localStorage.getItem('sfbjj_logged_user');
     if (loggedStr) {
       const logged = JSON.parse(loggedStr);
-      if (logged.studentId === student.id) {
+      if (student && logged.studentId === student.id) {
         logged.nome = formNome;
         localStorage.setItem('sfbjj_logged_user', JSON.stringify(logged));
       }
@@ -111,7 +180,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
     setPassSuccess(null);
     setPassError(null);
 
-    const actualCurrentPassword = student.senha || '#sfbjj2026';
+    const actualCurrentPassword = isEditingAdmin 
+      ? (localStorage.getItem('sfbjj_admin_password') || '#sfbjj2026')
+      : (student?.senha || '#sfbjj2026');
 
     if (currentPassword !== actualCurrentPassword) {
       setPassError('A senha atual digitada está incorreta.');
@@ -129,15 +200,19 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
     }
 
     // Save Password
-    setStudents(prev => prev.map(s => {
-      if (s.id === student.id) {
-        return {
-          ...s,
-          senha: newPassword
-        };
-      }
-      return s;
-    }));
+    if (isEditingAdmin) {
+      localStorage.setItem('sfbjj_admin_password', newPassword);
+    } else if (student) {
+      setStudents(prev => prev.map(s => {
+        if (s.id === student.id) {
+          return {
+            ...s,
+            senha: newPassword
+          };
+        }
+        return s;
+      }));
+    }
 
     // Clean inputs
     setCurrentPassword('');
@@ -199,9 +274,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
     );
   };
 
-  // Get current payment record
-  const currentPayment = student.pagamentos?.[0]; // Usually holds current record
-
   return (
     <div className="space-y-6">
       {/* Header Profile Hero Card */}
@@ -210,46 +282,55 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
         <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] rounded-full bg-gold-500/5 blur-[100px] pointer-events-none" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 z-10 relative">
-          {/* Avatar Icon */}
-          <div className="p-5 bg-gradient-to-br from-gold-500/20 to-gold-600/5 border border-gold-500/30 rounded-2xl text-gold-400">
-            <Flame className="w-10 h-10 animate-float" />
+          {/* Avatar / Profile Picture */}
+          <div className="w-24 h-24 rounded-2xl overflow-hidden border border-gold-500/30 bg-gradient-to-br from-gold-500/10 to-gold-600/5 flex items-center justify-center text-4xl shadow-md shrink-0 select-none">
+            {isEditingAdmin ? (
+              formFotoPerfil ? (
+                formFotoPerfil.length === 2 ? (
+                  <span>{formFotoPerfil}</span>
+                ) : (
+                  <img src={formFotoPerfil} alt="Foto de perfil" className="w-full h-full object-cover" />
+                )
+              ) : (
+                <span className="text-slate-400">🥋</span>
+              )
+            ) : student?.fotoPerfil ? (
+              student.fotoPerfil.length === 2 ? (
+                <span>{student.fotoPerfil}</span>
+              ) : (
+                <img src={student.fotoPerfil} alt="Foto de perfil" className="w-full h-full object-cover" />
+              )
+            ) : (
+              <span className="text-slate-400">🥋</span>
+            )}
           </div>
 
-          {/* Student Info Summary */}
+          {/* Student/Admin Info Summary */}
           <div className="flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">
-                {student.nome}
+                {isEditingAdmin ? formNome : student?.nome}
               </h1>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-700/10 text-slate-400 border border-slate-750'}`}>
-                {student.status}
-              </span>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-sm text-slate-400 font-medium">
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">Graduação:</span>
-                {renderBeltBadge(student.faixa, student.graus)}
-              </div>
-              <div>
-                <span className="text-slate-500">Total de Treinos:</span>{' '}
-                <span className="font-extrabold text-gold-400">{student.totalTreinos} presenças</span>
-              </div>
-              {currentPayment && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500">Mensalidade ({currentPayment.mesRef}):</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    currentPayment.status === 'Pago' 
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : currentPayment.status === 'Pendente'
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}>
-                    {currentPayment.status}
-                  </span>
-                </div>
+              {!isEditingAdmin && student && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-700/10 text-slate-400 border border-slate-750'}`}>
+                  {student.status}
+                </span>
+              )}
+              {isEditingAdmin && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20">
+                  Administrador
+                </span>
               )}
             </div>
+            
+            {!isEditingAdmin && student && (
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-sm text-slate-400 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">Graduação:</span>
+                  {renderBeltBadge(student.faixa, student.graus)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -321,116 +402,252 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ studentId, stude
                 </div>
 
                 {/* Email & Phone */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone</label>
-                    <input
-                      type="text"
-                      value={formTelefone}
-                      onChange={(e) => setFormTelefone(formatPhone(e.target.value))}
-                      className="input-premium w-full"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">E-mail</label>
-                    <input
-                      type="email"
-                      value={formEmail}
-                      onChange={(e) => setFormEmail(e.target.value)}
-                      className="input-premium w-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Birth & Gender */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data de Nascimento</label>
-                    <input
-                      type="date"
-                      value={formDataNascimento}
-                      onChange={(e) => setFormDataNascimento(e.target.value)}
-                      className="input-premium w-full"
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Gênero</label>
-                    <select
-                      value={formGenero}
-                      onChange={(e) => setFormGenero(e.target.value as Gender)}
-                      className="input-premium w-full bg-obsidian-950"
-                    >
-                      <option value="Masculino">Masculino</option>
-                      <option value="Feminino">Feminino</option>
-                      <option value="Outro">Outro</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Neighborhood (Bairro) */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Bairro</label>
-                  <input
-                    type="text"
-                    value={formBairro}
-                    onChange={(e) => setFormBairro(e.target.value)}
-                    className="input-premium w-full"
-                    placeholder="Ex: Asa Sul, Guará..."
-                  />
-                </div>
-
-                {/* Emergency Contact Header */}
-                <div className="border-t border-obsidian-750 pt-4 mt-2">
-                  <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Contato de Emergência</h3>
+                {!isEditingAdmin && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nome do Contato</label>
+                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone</label>
                       <input
                         type="text"
-                        value={formContatoEmergenciaNome}
-                        onChange={(e) => setFormContatoEmergenciaNome(e.target.value)}
-                        placeholder="Nome do parente/amigo"
+                        value={formTelefone}
+                        onChange={(e) => setFormTelefone(formatPhone(e.target.value))}
                         className="input-premium w-full"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone do Contato</label>
+                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">E-mail</label>
                       <input
-                        type="text"
-                        value={formContatoEmergenciaTel}
-                        onChange={(e) => setFormContatoEmergenciaTel(formatPhone(e.target.value))}
-                        placeholder="(00) 00000-0000"
+                        type="email"
+                        value={formEmail}
+                        onChange={(e) => setFormEmail(e.target.value)}
                         className="input-premium w-full"
                       />
                     </div>
                   </div>
+                )}
+
+                {/* Birth & Gender */}
+                {!isEditingAdmin && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data de Nascimento</label>
+                      <input
+                        type="date"
+                        value={formDataNascimento}
+                        onChange={(e) => setFormDataNascimento(e.target.value)}
+                        className="input-premium w-full"
+                        required
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Gênero</label>
+                      <select
+                        value={formGenero}
+                        onChange={(e) => setFormGenero(e.target.value as Gender)}
+                        className="input-premium w-full bg-obsidian-950"
+                      >
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Neighborhood (Bairro) */}
+                {!isEditingAdmin && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Bairro</label>
+                    <input
+                      type="text"
+                      value={formBairro}
+                      onChange={(e) => setFormBairro(e.target.value)}
+                      className="input-premium w-full"
+                      placeholder="Ex: Asa Sul, Guará..."
+                    />
+                  </div>
+                )}
+
+                {/* Emergency Contact Header */}
+                {!isEditingAdmin && (
+                  <div className="border-t border-obsidian-750 pt-4 mt-2">
+                    <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Contato de Emergência</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nome do Contato</label>
+                        <input
+                          type="text"
+                          value={formContatoEmergenciaNome}
+                          onChange={(e) => setFormContatoEmergenciaNome(e.target.value)}
+                          placeholder="Nome do parente/amigo"
+                          className="input-premium w-full"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone do Contato</label>
+                        <input
+                          type="text"
+                          value={formContatoEmergenciaTel}
+                          onChange={(e) => setFormContatoEmergenciaTel(formatPhone(e.target.value))}
+                          placeholder="(00) 00000-0000"
+                          className="input-premium w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Foto de Perfil */}
+                <div className="border-t border-obsidian-750 pt-4 mt-2">
+                  <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Foto de Perfil</h3>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Preview */}
+                    <div className="w-20 h-20 rounded-xl overflow-hidden border border-gold-500/25 bg-obsidian-950 flex items-center justify-center text-3xl shadow-inner select-none shrink-0">
+                      {formFotoPerfil ? (
+                        formFotoPerfil.length === 2 ? (
+                          <span>{formFotoPerfil}</span>
+                        ) : (
+                          <img src={formFotoPerfil} alt="Preview" className="w-full h-full object-cover" />
+                        )
+                      ) : (
+                        <span className="text-slate-600">🥋</span>
+                      )}
+                    </div>
+                    {/* Options */}
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
+                        <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">Ou envie sua foto:</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setFormFotoPerfil(event.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Read Only/System Fields Notice */}
-                <div className="bg-obsidian-950 p-4 rounded-xl border border-obsidian-800 space-y-2 mt-6">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <ShieldAlert className="w-4 h-4 text-gold-500" />
-                    Informações Restritas da Academia
+                {/* Editable Academic & System Fields */}
+                {!isEditingAdmin && (
+                  <div className="border-t border-obsidian-750 pt-4 mt-2">
+                    <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Informações Acadêmicas</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF</label>
+                        <input
+                          type="text"
+                          value={formCpf}
+                          onChange={(e) => setFormCpf(e.target.value)}
+                          className="input-premium w-full font-mono"
+                          placeholder="000.000.000-00"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data de Matrícula</label>
+                        <input
+                          type="date"
+                          value={formDataMatricula}
+                          onChange={(e) => setFormDataMatricula(e.target.value)}
+                          className="input-premium w-full"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data da Última Graduação</label>
+                        <input
+                          type="text"
+                          value={formUltimaGraduacao}
+                          onChange={(e) => setFormUltimaGraduacao(formatBrazilianDate(e.target.value))}
+                          className="input-premium w-full"
+                          placeholder="DD/MM/AAAA"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Faixa Atual</label>
+                        <select
+                          value={formFaixa}
+                          onChange={(e) => setFormFaixa(e.target.value as Belt)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value="Branca">Branca</option>
+                          <option value="Cinza">Cinza</option>
+                          <option value="Amarela">Amarela</option>
+                          <option value="Laranja">Laranja</option>
+                          <option value="Verde">Verde</option>
+                          <option value="Azul">Azul</option>
+                          <option value="Roxa">Roxa</option>
+                          <option value="Marrom">Marrom</option>
+                          <option value="Preta">Preta</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Graus</label>
+                        <select
+                          value={formGraus}
+                          onChange={(e) => setFormGraus(Number(e.target.value) as Degree)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value={0}>0 Grau</option>
+                          <option value={1}>1 Grau</option>
+                          <option value={2}>2 Graus</option>
+                          <option value={3}>3 Graus</option>
+                          <option value={4}>4 Graus</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma</label>
+                        <select
+                          value={formTurma}
+                          onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value="Adulto">Adulto</option>
+                          <option value="Kids">Kids</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Modalidade de Pagamento</label>
+                        <select
+                          value={formModalidade}
+                          onChange={(e) => setFormModalidade(e.target.value)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value="Mensal">Mensal</option>
+                          <option value="Trimestral">Trimestral</option>
+                          <option value="Semestral">Semestral</option>
+                          <option value="Anual">Anual</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs mt-2 pt-1">
-                    <div>
-                      <span className="text-slate-500 block">CPF:</span>
-                      <span className="font-mono text-slate-300 font-semibold">{student.cpf}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Data de Matrícula:</span>
-                      <span className="text-slate-300 font-semibold">{student.dataMatricula.split('-').reverse().join('/')}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Graduação Atual:</span>
-                      <span className="text-slate-300 font-semibold">{student.faixa} ({student.graus} Graus)</span>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-500 leading-normal pt-1.5 border-t border-obsidian-800">
-                    Estes campos são gerenciados exclusivamente pela administração da Sagrada Família BJJ. Para retificá-los, por favor procure seu instrutor.
-                  </p>
-                </div>
+                )}
 
                 {/* Submit button */}
                 <div className="flex justify-end pt-4">

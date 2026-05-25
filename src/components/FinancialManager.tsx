@@ -20,37 +20,74 @@ interface FinancialManagerProps {
 export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, setStudents }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Modal for payment history
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyViewTab, setHistoryViewTab] = useState<'all' | 'by_month'>('all');
+  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>('Maio/2026');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Summaries
+  const currentMonthStr = new Date().toISOString().substring(0, 7); // YYYY-MM
+  const totalRecebidoMes = students.reduce((acc, student) => {
+    const monthlyPaid = student.pagamentos.filter(p => 
+      p.status === 'Pago' && 
+      p.dataPagamento && p.dataPagamento.startsWith(currentMonthStr)
+    );
+    return acc + monthlyPaid.reduce((sum, p) => sum + p.valor, 0);
+  }, 0);
+
+  const totalPeriodo = students.reduce((acc, student) => {
+    const periodPaid = student.pagamentos.filter(p => {
+      if (p.status !== 'Pago' || !p.dataPagamento) return false;
+      const date = p.dataPagamento;
+      const afterStart = !startDate || date >= startDate;
+      const beforeEnd = !endDate || date <= endDate;
+      return afterStart && beforeEnd;
+    });
+    return acc + periodPaid.reduce((sum, p) => sum + p.valor, 0);
+  }, 0);
   const itemsPerPage = 10;
 
   // Registered payment animation indicator
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
 
-  // Register payment in one-click
-  const handleRegisterPayment = (studentId: string, paymentId: string) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+  // Register payment with selected date
+  const handleRegisterPaymentWithDate = (studentId: string, paymentId: string, dateStr: string) => {
+    // Rigid validation preventing future payment dates beyond today's date in 2026 (2026-05-25)
+    if (!dateStr) {
+      alert("A data de pagamento é obrigatória.");
+      return;
+    }
+    const selectedDate = new Date(dateStr + "T12:00:00");
+    const maxDate = new Date("2026-05-25T12:00:00");
+    if (selectedDate > maxDate) {
+      alert("Data inválida. O pagamento não pode ser registrado com data futura após 25/05/2026.");
+      return;
+    }
 
     setStudents(prev => prev.map(s => {
       if (s.id === studentId) {
+        let paymentVal = 100;
         const updatedPagamentos = s.pagamentos.map(p => {
           if (p.id === paymentId) {
+            paymentVal = p.valor;
             return {
               ...p,
               status: 'Pago' as PaymentStatus,
-              dataPagamento: todayStr
+              dataPagamento: dateStr
             };
           }
           return p;
         });
 
         // Trigger success message
-        setPaymentSuccessMsg(`Pagamento de R$ 100,00 registrado com sucesso para ${s.nome}!`);
+        setPaymentSuccessMsg(`Pagamento de R$ ${paymentVal.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
         setTimeout(() => setPaymentSuccessMsg(null), 4000);
 
         return {
@@ -69,7 +106,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           ...prev,
           pagamentos: prev.pagamentos.map(p => {
             if (p.id === paymentId) {
-              return { ...p, status: 'Pago', dataPagamento: todayStr };
+              return { ...p, status: 'Pago', dataPagamento: dateStr };
             }
             return p;
           })
@@ -77,6 +114,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       });
     }
   };
+
+
 
   // Get current payment record (e.g. Maio/2026 or latest billing cycle)
   const getCurrentPayment = (student: Student) => {
@@ -86,8 +125,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     return currentPayment;
   };
 
-  // Filter and sort students alphabetically based on current payment status & search
+  // Filter and sort students alphabetically based on status (only Ativo), current payment status & search
   const filteredStudents = students
+    .filter(student => student.status === 'Ativo')
     .filter(student => {
       const currentPayment = getCurrentPayment(student);
       const matchesSearch = student.nome.toLowerCase().includes(searchQuery.toLowerCase());
@@ -157,6 +197,22 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         </p>
       </div>
 
+      {/* Resumos Financeiros */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-emerald-500 p-5">
+          <div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido no Mês</span>
+            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </div>
+        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-gold-500 p-5">
+          <div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total do Período</span>
+            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalPeriodo.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Payment registered banner */}
       {paymentSuccessMsg && (
         <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-md shadow-emerald-950/20 animate-fade-in">
@@ -171,7 +227,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       )}
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
         <div className="sm:col-span-2 relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
@@ -195,13 +251,53 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="input-premium w-full bg-obsidian-950"
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
           >
             <option value="Todos">Filtrar Status: Todos</option>
             <option value="Pago">Pago</option>
             <option value="Pendente">Pendente</option>
             <option value="Atrasado">Atrasado</option>
           </select>
+        </div>
+
+        <div className="flex gap-2 items-center sm:col-span-4 mt-1 border-t border-obsidian-800 pt-3">
+          <div className="flex flex-col flex-1 gap-1">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Período - De:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full text-xs"
+            />
+          </div>
+          <div className="flex flex-col flex-1 gap-1">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Período - Até:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full text-xs"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setCurrentPage(1);
+              }}
+              className="btn-obsidian text-xs self-end py-2 px-3 mt-4"
+              title="Limpar Datas"
+            >
+              Limpar
+            </button>
+          )}
         </div>
       </div>
 
@@ -247,8 +343,31 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                           {bill?.mesRef || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-slate-200">
-                        R$ {bill?.valor.toFixed(2).replace('.', ',') || '0,00'}
+                      <td className="px-6 py-4 text-center">
+                        {bill ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-xs text-slate-400">R$</span>
+                            <input
+                              type="number"
+                              value={bill.valor}
+                              onChange={(e) => {
+                                const newVal = parseFloat(e.target.value) || 0;
+                                setStudents(prev => prev.map(s => {
+                                  if (s.id === student.id) {
+                                    return {
+                                      ...s,
+                                      pagamentos: s.pagamentos.map(p => 
+                                        p.id === bill.id ? { ...p, valor: newVal } : p
+                                      )
+                                    };
+                                  }
+                                  return s;
+                                }));
+                              }}
+                              className="input-premium w-20 text-center py-1 px-1 font-bold text-slate-200 text-sm h-8 inline-block"
+                            />
+                          </div>
+                        ) : '-'}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {bill ? renderStatusBadge(bill.status) : '-'}
@@ -260,7 +379,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                         <div className="flex items-center justify-end gap-2">
                           {bill && bill.status !== 'Pago' ? (
                             <button
-                              onClick={() => handleRegisterPayment(student.id, bill.id)}
+                              onClick={() => handleOpenHistory(student)}
                               className="btn-gold text-[11px] py-1 px-3 shadow-none h-8"
                               title="Registrar Pagamento"
                             >
@@ -341,29 +460,68 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               </button>
             </div>
 
+            {/* Filter Tabs/Abas */}
+            <div className="px-6 py-2 border-b border-obsidian-750 bg-obsidian-850/40 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHistoryViewTab('all')}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${historyViewTab === 'all' ? 'bg-gold-500/15 text-gold-450 border border-gold-500/25' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Todos os pagamentos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryViewTab('by_month')}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${historyViewTab === 'by_month' ? 'bg-gold-500/15 text-gold-450 border border-gold-500/25' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Ver os pagamentos por mês
+                </button>
+              </div>
+
+              {historyViewTab === 'by_month' && (
+                <select
+                  value={selectedHistoryMonth}
+                  onChange={(e) => setSelectedHistoryMonth(e.target.value)}
+                  className="input-premium py-1 px-2 text-xs bg-obsidian-950 text-slate-200 font-semibold w-36"
+                >
+                  {Array.from(new Set(selectedStudent.pagamentos.map(p => p.mesRef))).map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             {/* Modal History Content */}
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               <div className="space-y-3">
-                {selectedStudent.pagamentos.length === 0 ? (
-                  <div className="text-center py-6 text-slate-500 text-xs">
-                    Nenhum registro de faturamento encontrado.
-                  </div>
-                ) : (
-                  [...selectedStudent.pagamentos]
-                    .sort((a, b) => b.mesRef.localeCompare(a.mesRef)) // Newest first
-                    .map((pay) => (
-                      <div
-                        key={pay.id}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-obsidian-900 border border-obsidian-750/80 hover:border-gold-500/10 transition-all"
-                      >
-                        <div className="space-y-1">
+                {(() => {
+                  const filteredPays = [...selectedStudent.pagamentos]
+                    .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
+                    .sort((a, b) => b.mesRef.localeCompare(a.mesRef));
+
+                  if (filteredPays.length === 0) {
+                    return (
+                      <div className="text-center py-6 text-slate-500 text-xs">
+                        Nenhum registro de faturamento encontrado.
+                      </div>
+                    );
+                  }
+
+                  return filteredPays.map((pay) => (
+                    <div
+                      key={pay.id}
+                      className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-obsidian-900 border border-obsidian-750/80 hover:border-gold-500/10 transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
                           <span className="font-bold text-xs text-slate-200 block">
                             Ciclo {pay.mesRef}
                           </span>
                           <div className="flex gap-4 text-[10px] text-slate-400 font-mono">
                             <span>Vencimento: {pay.dataVencimento.split('-').reverse().join('/')}</span>
                             {pay.dataPagamento && (
-                              <span className="text-emerald-500">Pago em: {pay.dataPagamento.split('-').reverse().join('/')}</span>
+                              <span className="text-emerald-500 font-semibold">Pago em: {pay.dataPagamento.split('-').reverse().join('/')}</span>
                             )}
                           </div>
                         </div>
@@ -376,18 +534,45 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                             {pay.status === 'Pago' ? (
                               renderStatusBadge(pay.status)
                             ) : (
-                              <button
-                                onClick={() => handleRegisterPayment(selectedStudent.id, pay.id)}
-                                className="btn-gold text-[10px] py-1 px-2.5 shadow-none"
-                              >
-                                Receber
-                              </button>
+                              <span className="text-xs text-amber-500 font-semibold uppercase tracking-wider">Pendente</span>
                             )}
                           </div>
                         </div>
                       </div>
-                    ))
-                )}
+
+                      {pay.status !== 'Pago' && (
+                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-obsidian-800">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Data de Pagamento:</span>
+                          <input
+                            type="date"
+                            id={`date-pay-${pay.id}`}
+                            max="2026-05-25"
+                            defaultValue="2026-05-25"
+                            className="input-premium py-0.5 px-2 text-xs h-7 w-32 bg-obsidian-950 font-mono text-slate-200"
+                          />
+                          <button
+                            onClick={() => {
+                              const inputEl = document.getElementById(`date-pay-${pay.id}`) as HTMLInputElement;
+                              const selectedDate = inputEl?.value || '';
+                              if (!selectedDate) {
+                                alert('Por favor, selecione uma data de pagamento.');
+                                return;
+                              }
+                              if (new Date(selectedDate + "T12:00:00") > new Date("2026-05-25T12:00:00")) {
+                                alert('A data de pagamento não pode ser posterior a 25/05/2026.');
+                                return;
+                              }
+                              handleRegisterPaymentWithDate(selectedStudent.id, pay.id, selectedDate);
+                            }}
+                            className="btn-gold text-[10px] py-1 px-2.5 h-7 shadow-none"
+                          >
+                            Confirmar Recebimento
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 
