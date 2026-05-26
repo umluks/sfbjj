@@ -7,6 +7,7 @@ import { ScheduleGrid } from './components/ScheduleGrid';
 import { Login } from './components/Login';
 import { StudentProfile } from './components/StudentProfile';
 import { Contact } from './components/Contact';
+import { LandingPage } from './components/LandingPage';
 import type { Student, Announcement, LoggedUser } from './types';
 import { 
   INITIAL_STUDENTS, 
@@ -18,6 +19,8 @@ function App() {
     const saved = localStorage.getItem('sfbjj_logged_user');
     return saved ? JSON.parse(saved) : null;
   });
+
+  const [showLogin, setShowLogin] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<string>(() => {
     const saved = localStorage.getItem('sfbjj_logged_user');
@@ -209,7 +212,16 @@ function App() {
   };
 
   if (!loggedUser) {
-    return <Login students={students} onLoginSuccess={handleLoginSuccess} />;
+    if (showLogin) {
+      return (
+        <Login 
+          students={students} 
+          onLoginSuccess={handleLoginSuccess} 
+          onBackToLanding={() => setShowLogin(false)} 
+        />
+      );
+    }
+    return <LandingPage onAccessLogin={() => setShowLogin(true)} />;
   }
 
   return (

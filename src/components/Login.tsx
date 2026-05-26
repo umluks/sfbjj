@@ -7,9 +7,10 @@ import logoSFBJJ from '../assets/logo-sfbjj.jpg';
 interface LoginProps {
   students: Student[];
   onLoginSuccess: (user: LoggedUser) => void;
+  onBackToLanding: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess }) => {
+export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackToLanding }) => {
   const [cpfInput, setCpfInput] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -203,6 +204,13 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess }) => {
               ) : (
                 <span>Entrar no Portal</span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={onBackToLanding}
+              className="w-full text-center mt-4 text-xs text-slate-400 hover:text-slate-200 transition-all duration-200 uppercase tracking-widest font-bold"
+            >
+              ← Voltar para o início
             </button>
           </form>
         </div>
