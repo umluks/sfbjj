@@ -661,7 +661,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
           >
             <Upload className="w-4 h-4" />
-            Importar Planilha
+            Importar Alunos
           </button>
 
           {/* Export Dropdown */}
@@ -818,11 +818,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     {/* Status */}
                     <td className="px-4 py-4 text-center">
                       <span
-                        className={`inline-block w-3.5 h-3.5 rounded-full transition-all duration-300 ${
-                          student.status === 'Ativo'
+                        className={`inline-block w-3.5 h-3.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
                             ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
                             : 'bg-white border border-slate-300 shadow-[0_0_8px_rgba(255,255,255,0.4)]'
-                        }`}
+                          }`}
                         title={student.status}
                       />
                     </td>
@@ -1063,60 +1062,60 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       <option value="Kids">Kids</option>
                     </select>
                   </div>
-                  </div>
                 </div>
+              </div>
 
-                {/* Foto de Perfil */}
-                <div className="border-t border-obsidian-750 pt-4 mt-4">
-                  <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest mb-3">Foto de Perfil</h3>
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    {/* Preview */}
-                    <div className="w-20 h-20 rounded-xl overflow-hidden border border-gold-500/25 bg-obsidian-950 flex items-center justify-center text-3xl shadow-inner select-none shrink-0">
-                      {formFotoPerfil ? (
-                        formFotoPerfil.length === 2 ? (
-                          <span>{formFotoPerfil}</span>
-                        ) : (
-                          <img src={formFotoPerfil} alt="Preview" className="w-full h-full object-cover" />
-                        )
+              {/* Foto de Perfil */}
+              <div className="border-t border-obsidian-750 pt-4 mt-4">
+                <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest mb-3">Foto de Perfil</h3>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Preview */}
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border border-gold-500/25 bg-obsidian-950 flex items-center justify-center text-3xl shadow-inner select-none shrink-0">
+                    {formFotoPerfil ? (
+                      formFotoPerfil.length === 2 ? (
+                        <span>{formFotoPerfil}</span>
                       ) : (
-                        <span className="text-slate-600">🥋</span>
-                      )}
+                        <img src={formFotoPerfil} alt="Preview" className="w-full h-full object-cover" />
+                      )
+                    ) : (
+                      <span className="text-slate-600">🥋</span>
+                    )}
+                  </div>
+                  {/* Options */}
+                  <div className="flex-1 space-y-3 w-full">
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
+                      <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
+                      <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
+                      <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
+                      <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
+                      <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
+                      <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
                     </div>
-                    {/* Options */}
-                    <div className="flex-1 space-y-3 w-full">
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
-                        <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
-                        <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
-                        <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
-                        <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
-                        <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
-                        <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
-                      </div>
 
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-slate-500">Ou envie sua foto:</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setFormFotoPerfil(event.target.result as string);
-                                }
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                          className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
-                        />
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-slate-500">Ou envie sua foto:</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              if (event.target?.result) {
+                                setFormFotoPerfil(event.target.result as string);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>
+              </div>
 
 
               {/* Seção 2: Graduação Jiu-Jitsu */}
