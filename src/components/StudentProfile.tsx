@@ -62,7 +62,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const [formFaixa, setFormFaixa] = useState<Belt>(isEditingAdmin ? 'Branca' : (student?.faixa || 'Branca'));
   const [formGraus, setFormGraus] = useState<Degree>(isEditingAdmin ? 0 : (student?.graus || 0));
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>(isEditingAdmin ? 'Adulto' : (student?.turma || 'Adulto'));
-  const [formModalidade, setFormModalidade] = useState(isEditingAdmin ? 'Mensal' : (student?.modalidadePagamento || 'Mensal'));
+
   const [formUltimaGraduacao, setFormUltimaGraduacao] = useState(isEditingAdmin ? '' : (student ? formatToDDMMAAAA(student.dataUltimaGraduacao) : ''));
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaNome || ''));
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaTel || ''));
@@ -151,7 +151,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
           faixa: formFaixa,
           graus: formGraus,
           turma: formTurma,
-          modalidadePagamento: formModalidade,
           dataUltimaGraduacao: formUltimaGraduacao,
           contatoEmergenciaNome: formContatoEmergenciaNome,
           contatoEmergenciaTel: formContatoEmergenciaTel,
@@ -631,21 +630,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Modalidade de Pagamento</label>
-                        <select
-                          value={formModalidade}
-                          onChange={(e) => setFormModalidade(e.target.value)}
-                          className="input-premium w-full bg-obsidian-950"
-                        >
-                          <option value="Mensal">Mensal</option>
-                          <option value="Trimestral">Trimestral</option>
-                          <option value="Semestral">Semestral</option>
-                          <option value="Anual">Anual</option>
-                        </select>
-                      </div>
-                    </div>
                   </div>
                 )}
 

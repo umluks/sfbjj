@@ -6,7 +6,6 @@ import type {
 } from '../types';
 import {
   Users,
-  AlertTriangle,
   Cake,
   Megaphone,
   Plus,
@@ -35,11 +34,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Stats calculation
   const totalActive = students.filter(s => s.status === 'Ativo').length;
-
-  const totalInadimplentes = students.filter(s =>
-    s.status === 'Ativo' && s.pagamentos.some(p => p.status === 'Atrasado')
-  ).length;
-
   const todayDate = new Date();
   const currentMonthNum = String(todayDate.getMonth() + 1).padStart(2, '0');
   const currentDayNum = todayDate.getDate();
@@ -96,7 +90,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-          Olá, Professor {loggedUser?.nome || 'Administrador'} 👋
+          Olá, {loggedUser?.nome || 'Administrador'} 👋
         </h1>
         <p className="text-slate-400 text-sm mt-1">
           Visão geral e avisos da academia Sagrada Família BJJ.
@@ -104,7 +98,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Students */}
         <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-emerald-500">
           <div>
@@ -120,24 +114,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500">
             <Users className="w-8 h-8" />
-          </div>
-        </div>
-
-        {/* Overdue/Defaulters */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-red-500">
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-              Alunos Inadimplentes
-            </span>
-            <span className="text-4xl font-black text-slate-100 mt-2 block">
-              {totalInadimplentes}
-            </span>
-            <span className="text-xs text-red-400 font-medium mt-1 inline-flex items-center gap-1">
-              • Mensalidade em atraso
-            </span>
-          </div>
-          <div className="p-4 bg-red-500/10 rounded-2xl text-red-500">
-            <AlertTriangle className="w-8 h-8" />
           </div>
         </div>
 

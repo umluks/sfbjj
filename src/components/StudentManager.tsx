@@ -13,7 +13,8 @@ import {
   Calendar,
   Heart,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 
 interface StudentManagerProps {
@@ -44,6 +45,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [parsedImportRows, setParsedImportRows] = useState<any[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // Export dropdown state
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
   // Form fields state
   const [formNome, setFormNome] = useState('');
   const [formCpf, setFormCpf] = useState('');
@@ -60,6 +64,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
   const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>('Adulto');
+  const [formFotoPerfil, setFormFotoPerfil] = useState('');
 
   // Input formatting helpers
   const formatCPF = (value: string) => {
@@ -103,6 +108,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormContatoEmergenciaTel('');
     setFormStatus('Ativo');
     setFormTurma('Adulto');
+    setFormFotoPerfil('');
     setShowFormModal(true);
   };
 
@@ -124,6 +130,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormContatoEmergenciaTel(formatPhone(student.contatoEmergenciaTel || ''));
     setFormStatus(student.status || 'Ativo');
     setFormTurma(student.turma || 'Adulto');
+    setFormFotoPerfil(student.fotoPerfil || '');
     setShowFormModal(true);
   };
 
@@ -152,7 +159,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             contatoEmergenciaNome: formContatoEmergenciaNome,
             contatoEmergenciaTel: formContatoEmergenciaTel,
             status: formStatus,
-            turma: formTurma
+            turma: formTurma,
+            fotoPerfil: formFotoPerfil
           };
         }
         return s;
@@ -176,6 +184,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         contatoEmergenciaTel: formContatoEmergenciaTel,
         status: formStatus,
         turma: formTurma,
+        fotoPerfil: formFotoPerfil,
         totalTreinos: 0,
         pagamentos: [
           {
@@ -207,6 +216,113 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
     setShowDeleteModal(false);
     setStudentToDelete(null);
+  };
+
+  // Export to CSV function
+  const handleExportCSV = () => {
+    const BOM = "\uFEFF";
+    const headers = [
+      "Nome",
+      "CPF",
+      "Data de Nascimento",
+      "Telefone",
+      "Email",
+      "Gênero",
+      "Bairro",
+      "Faixa",
+      "Graus",
+      "Turma",
+      "Status",
+      "Data de Matrícula",
+      "Última Graduação",
+      "Total de Treinos"
+    ];
+
+    const rows = filteredStudents.map(s => [
+      s.nome,
+      s.cpf || "",
+      s.dataNascimento || "",
+      s.telefone || "",
+      s.email || "",
+      s.genero || "",
+      s.bairro || "",
+      s.faixa || "",
+      s.graus ?? 0,
+      s.turma || "Adulto",
+      s.status || "Ativo",
+      s.dataMatricula || "",
+      s.dataUltimaGraduacao || "",
+      s.totalTreinos ?? 0
+    ]);
+
+    const csvContent = BOM + [
+      headers.join(";"),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";"))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `alunos_sfbjj_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export to XLS (HTML-based spreadsheet compatible with Excel)
+  const handleExportXLS = () => {
+    const headers = [
+      "Nome",
+      "CPF",
+      "Data de Nascimento",
+      "Telefone",
+      "Email",
+      "Gênero",
+      "Bairro",
+      "Faixa",
+      "Graus",
+      "Turma",
+      "Status",
+      "Data de Matrícula",
+      "Última Graduação",
+      "Total de Treinos"
+    ];
+
+    const rows = filteredStudents.map(s => [
+      s.nome,
+      s.cpf || "",
+      s.dataNascimento || "",
+      s.telefone || "",
+      s.email || "",
+      s.genero || "",
+      s.bairro || "",
+      s.faixa || "",
+      s.graus ?? 0,
+      s.turma || "Adulto",
+      s.status || "Ativo",
+      s.dataMatricula || "",
+      s.dataUltimaGraduacao || "",
+      s.totalTreinos ?? 0
+    ]);
+
+    let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+    html += '<head><meta charset="utf-8"/><style>td { border: 0.5pt solid #ccc; font-family: sans-serif; font-size: 10pt; } th { background-color: #dcdcdc; font-weight: bold; border: 0.5pt solid #ccc; font-family: sans-serif; font-size: 10pt; }</style></head><body>';
+    html += '<table>';
+    html += '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    rows.forEach(row => {
+      html += '<tr>' + row.map(val => `<td>${val}</td>`).join('') + '</tr>';
+    });
+    html += '</table></body></html>';
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `alunos_sfbjj_${new Date().toISOString().split('T')[0]}.xls`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Filter and sort students alphabetically
@@ -539,7 +655,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             Cadastre, edite e acompanhe os alunos da Sagrada Família BJJ.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto relative">
           <button
             onClick={() => setShowImportModal(true)}
             className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
@@ -547,6 +663,45 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <Upload className="w-4 h-4" />
             Importar Planilha
           </button>
+
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
+            >
+              <Download className="w-4 h-4" />
+              Exportar Alunos
+            </button>
+            {showExportDropdown && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowExportDropdown(false)} />
+                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-obsidian-850 border border-obsidian-750/90 shadow-2xl z-20 py-1.5 animate-scale-up">
+                  <button
+                    onClick={() => {
+                      handleExportCSV();
+                      setShowExportDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:text-gold-400 hover:bg-obsidian-750/50 transition-all flex items-center gap-2 font-semibold"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+                    Exportar como CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportXLS();
+                      setShowExportDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:text-gold-400 hover:bg-obsidian-750/50 transition-all flex items-center gap-2 font-semibold"
+                  >
+                    <Download className="w-3.5 h-3.5 text-gold-500" />
+                    Exportar como XLS
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={handleOpenCreate}
             className="btn-gold flex items-center gap-2"
@@ -908,8 +1063,61 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       <option value="Kids">Kids</option>
                     </select>
                   </div>
+                  </div>
                 </div>
-              </div>
+
+                {/* Foto de Perfil */}
+                <div className="border-t border-obsidian-750 pt-4 mt-4">
+                  <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest mb-3">Foto de Perfil</h3>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Preview */}
+                    <div className="w-20 h-20 rounded-xl overflow-hidden border border-gold-500/25 bg-obsidian-950 flex items-center justify-center text-3xl shadow-inner select-none shrink-0">
+                      {formFotoPerfil ? (
+                        formFotoPerfil.length === 2 ? (
+                          <span>{formFotoPerfil}</span>
+                        ) : (
+                          <img src={formFotoPerfil} alt="Preview" className="w-full h-full object-cover" />
+                        )
+                      ) : (
+                        <span className="text-slate-600">🥋</span>
+                      )}
+                    </div>
+                    {/* Options */}
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
+                        <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">Ou envie sua foto:</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setFormFotoPerfil(event.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
 
               {/* Seção 2: Graduação Jiu-Jitsu */}
               <div className="space-y-4 pt-2">

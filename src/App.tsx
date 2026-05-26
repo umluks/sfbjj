@@ -30,7 +30,7 @@ function App() {
 
   // Unified State with LocalStorage Persistence
   const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem('sfbjj_students');
+    const saved = localStorage.getItem('sfbjj_students_v3');
     let loadedStudents = INITIAL_STUDENTS;
     if (saved) {
       try {
@@ -43,13 +43,28 @@ function App() {
             i.nome.toLowerCase().trim() === savedStudent.nome.toLowerCase().trim()
           );
           if (initial) {
+            const updatedPagamentos = (savedStudent.pagamentos || []).map(savedPay => {
+              const initialPay = initial.pagamentos.find(p => p.mesRef === savedPay.mesRef);
+              if (initialPay && savedPay.mesRef === 'Abril/2026') {
+                return {
+                  ...savedPay,
+                  status: initialPay.status,
+                  dataPagamento: initialPay.dataPagamento,
+                  valor: initialPay.valor
+                };
+              }
+              return savedPay;
+            });
+            // If any initial payments are missing in saved student, append them
+            initial.pagamentos.forEach(initPay => {
+              if (!updatedPagamentos.some(p => p.mesRef === initPay.mesRef)) {
+                updatedPagamentos.push(initPay);
+              }
+            });
             return {
               ...savedStudent,
               ...initial,
-              // Keep saved payments if there are any
-              pagamentos: savedStudent.pagamentos && savedStudent.pagamentos.length > 0 
-                ? savedStudent.pagamentos 
-                : initial.pagamentos
+              pagamentos: updatedPagamentos
             };
           }
           return savedStudent;
@@ -72,7 +87,7 @@ function App() {
     }
 
     // Ensure all students have the 'turma' field set (based on birth year if missing)
-    return loadedStudents.map(s => {
+    const finalizedStudents = loadedStudents.map(s => {
       if (!s.turma) {
         let isKids = false;
         if (s.dataNascimento) {
@@ -82,10 +97,22 @@ function App() {
             isKids = true;
           }
         }
-        return { ...s, turma: isKids ? 'Kids' : 'Adulto' };
+        return { ...s, turma: (isKids ? 'Kids' : 'Adulto') as 'Kids' | 'Adulto' };
       }
       return s;
     });
+
+    // Remove empty/blank students and duplicate entries by name
+    const uniqueStudentsMap = new Map<string, Student>();
+    finalizedStudents.forEach(s => {
+      if (s && s.nome && s.nome.trim() !== "") {
+        const key = s.nome.toLowerCase().trim();
+        if (!uniqueStudentsMap.has(key)) {
+          uniqueStudentsMap.set(key, s);
+        }
+      }
+    });
+    return Array.from(uniqueStudentsMap.values());
   });
 
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
@@ -96,7 +123,7 @@ function App() {
 
   // Sync state changes to localStorage
   useEffect(() => {
-    localStorage.setItem('sfbjj_students', JSON.stringify(students));
+    localStorage.setItem('sfbjj_students_v3', JSON.stringify(students));
   }, [students]);
 
   // Adjust routing tab if role permissions mismatch
@@ -159,7 +186,7 @@ function App() {
         );
 
       case 'contact':
-        return <Contact />;
+        return <Contact loggedUser={loggedUser} />;
       case 'schedule':
         return <ScheduleGrid />;
       case 'profile':

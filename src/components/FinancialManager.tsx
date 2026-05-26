@@ -19,9 +19,6 @@ interface FinancialManagerProps {
 
 export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, setStudents }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('Todos');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
   // Modal for payment history
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -33,25 +30,20 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   const [currentPage, setCurrentPage] = useState(1);
 
   // Summaries
-  const currentMonthStr = new Date().toISOString().substring(0, 7); // YYYY-MM
+  const [monthFilter, setMonthFilter] = useState<string>('Maio/2026');
+
   const totalRecebidoMes = students.reduce((acc, student) => {
     const monthlyPaid = student.pagamentos.filter(p => 
-      p.status === 'Pago' && 
-      p.dataPagamento && p.dataPagamento.startsWith(currentMonthStr)
+      p.mesRef === monthFilter && p.status === 'Pago'
     );
     return acc + monthlyPaid.reduce((sum, p) => sum + p.valor, 0);
   }, 0);
 
-  const totalPeriodo = students.reduce((acc, student) => {
-    const periodPaid = student.pagamentos.filter(p => {
-      if (p.status !== 'Pago' || !p.dataPagamento) return false;
-      const date = p.dataPagamento;
-      const afterStart = !startDate || date >= startDate;
-      const beforeEnd = !endDate || date <= endDate;
-      return afterStart && beforeEnd;
-    });
-    return acc + periodPaid.reduce((sum, p) => sum + p.valor, 0);
+  const totalGeralRecebido = students.reduce((acc, student) => {
+    const allPaid = student.pagamentos.filter(p => p.status === 'Pago');
+    return acc + allPaid.reduce((sum, p) => sum + p.valor, 0);
   }, 0);
+
   const itemsPerPage = 10;
 
   // Registered payment animation indicator
@@ -117,10 +109,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
 
 
-  // Get current payment record (e.g. Maio/2026 or latest billing cycle)
+  // Get current payment record based on the selected month filter
   const getCurrentPayment = (student: Student) => {
-    // Return the payment corresponding to Maio/2026 (current month context) or the first one
-    const currentPayment = student.pagamentos.find(p => p.mesRef === 'Maio/2026')
+    const currentPayment = student.pagamentos.find(p => p.mesRef === monthFilter)
       || student.pagamentos[0];
     return currentPayment;
   };
@@ -129,13 +120,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   const filteredStudents = students
     .filter(student => student.status === 'Ativo')
     .filter(student => {
-      const currentPayment = getCurrentPayment(student);
       const matchesSearch = student.nome.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus = statusFilter === 'Todos' ||
-        (currentPayment && currentPayment.status === statusFilter);
-
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
@@ -198,17 +184,28 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       </div>
 
       {/* Resumos Financeiros */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Selected Month Summary */}
         <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-emerald-500 p-5">
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido no Mês</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido em {monthFilter}</span>
             <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
+            <span className="text-[10px] text-slate-500 mt-1 block">Mensalidades quitadas no ciclo de {monthFilter}</span>
+          </div>
+          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hidden sm:block">
+            <CreditCard className="w-5 h-5" />
           </div>
         </div>
+
+        {/* Consolidated Total Summary */}
         <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-gold-500 p-5">
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total do Período</span>
-            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalPeriodo.toFixed(2).replace('.', ',')}</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido Consolidado (Geral)</span>
+            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalGeralRecebido.toFixed(2).replace('.', ',')}</span>
+            <span className="text-[10px] text-slate-500 mt-1 block">Soma total de todas as mensalidades quitadas no sistema</span>
+          </div>
+          <div className="p-3 bg-gold-500/10 rounded-xl text-gold-500 hidden sm:block">
+            <CreditCard className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -227,7 +224,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       )}
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
         <div className="sm:col-span-2 relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
@@ -246,58 +243,17 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
         <div>
           <select
-            value={statusFilter}
+            value={monthFilter}
             onChange={(e) => {
-              setStatusFilter(e.target.value);
+              setMonthFilter(e.target.value);
               setCurrentPage(1);
             }}
             className="input-premium w-full bg-obsidian-950 text-slate-200"
           >
-            <option value="Todos">Filtrar Status: Todos</option>
-            <option value="Pago">Pago</option>
-            <option value="Pendente">Pendente</option>
-            <option value="Atrasado">Atrasado</option>
+            <option value="Maio/2026">Mês Ref: Maio/2026</option>
+            <option value="Abril/2026">Mês Ref: Abril/2026</option>
+            <option value="Março/2026">Mês Ref: Março/2026</option>
           </select>
-        </div>
-
-        <div className="flex gap-2 items-center sm:col-span-4 mt-1 border-t border-obsidian-800 pt-3">
-          <div className="flex flex-col flex-1 gap-1">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Período - De:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="input-premium w-full text-xs"
-            />
-          </div>
-          <div className="flex flex-col flex-1 gap-1">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Período - Até:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="input-premium w-full text-xs"
-            />
-          </div>
-          {(startDate || endDate) && (
-            <button
-              onClick={() => {
-                setStartDate('');
-                setEndDate('');
-                setCurrentPage(1);
-              }}
-              className="btn-obsidian text-xs self-end py-2 px-3 mt-4"
-              title="Limpar Datas"
-            >
-              Limpar
-            </button>
-          )}
         </div>
       </div>
 
@@ -310,7 +266,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                 <th className="px-6 py-4">Aluno</th>
                 <th className="px-6 py-4 text-center">Ref. Ciclo</th>
                 <th className="px-6 py-4 text-center">Valor</th>
-                <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4 text-center">Vencimento</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
@@ -368,9 +323,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                             />
                           </div>
                         ) : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {bill ? renderStatusBadge(bill.status) : '-'}
                       </td>
                       <td className="px-6 py-4 text-center text-xs text-slate-400 font-mono">
                         {bill ? bill.dataVencimento.split('-').reverse().join('/') : '-'}
@@ -511,22 +463,14 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                   return filteredPays.map((pay) => (
                     <div
                       key={pay.id}
-                      className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-obsidian-900 border border-obsidian-750/80 hover:border-gold-500/10 transition-all"
+                      className="flex flex-col gap-2 p-3 rounded-xl bg-obsidian-900 border border-obsidian-750/80 hover:border-gold-500/10 transition-all"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <span className="font-bold text-xs text-slate-200 block">
-                            Ciclo {pay.mesRef}
-                          </span>
-                          <div className="flex gap-4 text-[10px] text-slate-400 font-mono">
-                            <span>Vencimento: {pay.dataVencimento.split('-').reverse().join('/')}</span>
-                            {pay.dataPagamento && (
-                              <span className="text-emerald-500 font-semibold">Pago em: {pay.dataPagamento.split('-').reverse().join('/')}</span>
-                            )}
-                          </div>
-                        </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="font-bold text-xs text-slate-200">
+                          Ciclo {pay.mesRef}
+                        </span>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                           <span className="text-xs font-black text-slate-100">
                             R$ {pay.valor.toFixed(2).replace('.', ',')}
                           </span>
