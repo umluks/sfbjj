@@ -1,18 +1,20 @@
 import React from 'react';
 import {
   MapPin,
-  ArrowRight
+  Megaphone
 } from 'lucide-react';
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
 import bjjKidsClass from '../assets/bjj_kids_class.png';
 import bjjAdultsSparring from '../assets/bjj_adults_sparring.png';
 import bjjTeamGroup from '../assets/bjj_team_group.png';
+import type { Aviso } from '../types';
 
 interface LandingPageProps {
+  announcements?: Aviso[];
   onAccessLogin: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onAccessLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], onAccessLogin }) => {
 
   // Custom schedule for display
   const quickSchedule = [
@@ -49,18 +51,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onAccessLogin }) => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-350">
             <a href="#galeria" className="hover:text-slate-100 transition-colors">Galeria</a>
+            {announcements && announcements.length > 0 && (
+              <a href="#avisos" className="hover:text-slate-100 transition-colors">Avisos</a>
+            )}
             <a href="#horarios" className="hover:text-slate-100 transition-colors">Horários & Localização</a>
           </nav>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onAccessLogin}
-              className="btn-gold text-xs sm:text-sm px-5 py-2.5 shadow-lg flex items-center gap-2 group"
-            >
-              <span>Acessar Painel</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
-          </div>
         </div>
       </header>
 
@@ -125,6 +120,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onAccessLogin }) => {
           </div>
         </div>
       </section>
+
+      {/* SEÇÃO DE AVISOS */}
+      {announcements && announcements.length > 0 && (
+        <section id="avisos" className="py-20 px-4 max-w-7xl mx-auto border-b border-obsidian-850 scroll-mt-20">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <h2 className="text-xs uppercase font-black tracking-widest text-slate-400 flex items-center justify-center gap-1.5">
+              <Megaphone className="w-3.5 h-3.5 text-gold-500" /> Comunicados e Eventos
+            </h2>
+            <p className="text-3xl sm:text-4xl font-extrabold text-slate-100 mt-2">
+              Avisos Recentes
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {announcements.map((aviso) => (
+              <div 
+                key={aviso.id} 
+                className={`card-premium p-6 flex flex-col justify-between border-l-4 relative overflow-hidden bg-obsidian-800/40 hover:bg-obsidian-800/70 transition-all ${
+                  aviso.fixado ? 'border-l-gold-500' : 'border-l-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {new Date(aviso.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                    </span>
+                    {aviso.fixado && (
+                      <span className="text-[9px] uppercase font-black tracking-wider bg-gold-500/10 text-gold-450 border border-gold-500/20 px-2 py-0.5 rounded-full">
+                        Destaque
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-md font-bold text-slate-200 mb-2 leading-snug">
+                    {aviso.titulo}
+                  </h4>
+                  <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-line">
+                    {aviso.conteudo}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* GALERIA DE FOTOS DO DOJO */}
       <section id="galeria" className="py-24 px-4 max-w-7xl mx-auto border-b border-obsidian-850 scroll-mt-20">

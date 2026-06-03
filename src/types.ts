@@ -6,8 +6,17 @@ export type PaymentStatus = 'Pago' | 'Pendente' | 'Atrasado';
 
 export type Gender = 'Masculino' | 'Feminino' | 'Outro';
 
-export interface PaymentRecord {
-  id: string;
+export interface GraduacaoHistorico {
+  id: number;
+  data: string; // YYYY-MM-DD
+  faixa: Belt;
+  graus: Degree;
+  avaliador?: string; // Nome do professor que graduou
+}
+
+export interface Pagamento {
+  id: number;
+  alunoId?: number;
   mesRef: string; // e.g. "Maio/2026"
   valor: number;
   status: PaymentStatus;
@@ -15,8 +24,8 @@ export interface PaymentRecord {
   dataPagamento: string | null; // YYYY-MM-DD
 }
 
-export interface Student {
-  id: string;
+export interface Aluno {
+  id: number;
   nome: string;
   cpf: string;
   dataNascimento: string; // YYYY-MM-DD
@@ -31,31 +40,50 @@ export interface Student {
   contatoEmergenciaNome: string;
   contatoEmergenciaTel: string;
   status: 'Ativo' | 'Inativo';
-  totalTreinos: number; // Incrementado a cada presenca
-  pagamentos: PaymentRecord[]; // Historico de pagamentos
+
+  pagamentos: Pagamento[]; // Historico de pagamentos
   senha?: string; // Senha customizada do aluno
-  turma?: 'Kids' | 'Adulto';
+  turma: 'Kids' | 'Adulto';
+  role?: 'admin' | 'student'; // Adicionado tipo de usuário
   fotoPerfil?: string; // Base64 data URI or avatar name
   modalidadePagamento?: string; // Default payment modality (e.g. Mensal, Trimestral)
+  historicoGraduacoes?: GraduacaoHistorico[];
 }
 
-export interface Attendance {
-  id: string;
+export interface Presenca {
+  id: number;
   data: string; // YYYY-MM-DD
-  aulaId: string; // ID da Aula da Grade
-  alunosPresentes: string[]; // List de IDs dos Alunos presentes
+  aulaId: number; // ID da Aula da Grade
+  alunosPresentes: number[]; // List de IDs dos Alunos presentes
 }
 
-export interface ScheduleClass {
-  id: string;
+export interface Professor {
+  id: number;
+  nome: string;
+  email: string;
+  senha?: string;
+  telefone: string;
+  cbjj?: string; // Adicionado número CBJJ
+}
+
+export interface Turma {
+  id: number;
+  nome: string;
+  categoria: 'Infantil' | 'Adulto Iniciante' | 'Adulto' | 'Avançado' | 'Open Match' | 'No-Gi';
+}
+
+export interface Aula {
+  id: number;
   hora: string; // e.g. "18:00 - 19:15"
-  categoria: 'Infantil' | 'Adulto' | 'Open Match' | 'No-Gi';
+  categoria: 'Infantil' | 'Adulto Iniciante' | 'Adulto' | 'Avançado' | 'Open Match' | 'No-Gi' | string;
   professor: string;
+  professorId?: number; // Relacional
+  turmaId?: number; // Relacional
   diasSemana: number[]; // 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado
 }
 
-export interface Announcement {
-  id: string;
+export interface Aviso {
+  id: number;
   titulo: string;
   conteudo: string;
   data: string; // YYYY-MM-DD ou data formatada
@@ -63,8 +91,8 @@ export interface Announcement {
 }
 
 export interface LoggedUser {
-  role: 'admin' | 'student';
-  studentId?: string;
+  role: 'admin' | 'student' | 'teacher';
+  alunoId?: number;
+  professorId?: number;
   nome: string;
 }
-

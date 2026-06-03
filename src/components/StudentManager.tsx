@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { Student, Belt, Degree, Gender } from '../types';
+import type { Aluno, Belt, Degree, Gender, LoggedUser } from '../types';
+import { supabase } from '../lib/supabase';
 import {
   Search,
   Edit,
@@ -18,11 +19,13 @@ import {
 } from 'lucide-react';
 
 interface StudentManagerProps {
-  students: Student[];
-  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  students: Aluno[];
+  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
+  loggedUser: LoggedUser | null;
 }
 
-export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents }) => {
+export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents, loggedUser }) => {
+  const isTeacher = loggedUser?.role === 'teacher';
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
@@ -37,8 +40,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Aluno | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Aluno | null>(null);
 
   // Import fields state
   const [importText, setImportText] = useState('');
@@ -59,12 +62,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formBairro, setFormBairro] = useState('');
   const [formFaixa, setFormFaixa] = useState<Belt>('Branca');
   const [formGraus, setFormGraus] = useState<Degree>(0);
+  const [formRole, setFormRole] = useState<'admin' | 'student'>('student');
   const [formDataUltimaGraduacao, setFormDataUltimaGraduacao] = useState('');
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState('');
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
   const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>('Adulto');
   const [formFotoPerfil, setFormFotoPerfil] = useState('');
+  const [formHistoricoGraduacoes, setFormHistoricoGraduacoes] = useState<any[]>([]);
 
   // Input formatting helpers
   const formatCPF = (value: string) => {
@@ -103,17 +108,19 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormBairro('');
     setFormFaixa('Branca');
     setFormGraus(0);
+    setFormRole('student');
     setFormDataUltimaGraduacao('');
     setFormContatoEmergenciaNome('');
     setFormContatoEmergenciaTel('');
     setFormStatus('Ativo');
     setFormTurma('Adulto');
     setFormFotoPerfil('');
+    setFormHistoricoGraduacoes([]);
     setShowFormModal(true);
   };
 
   // Open form modal for editing
-  const handleOpenEdit = (student: Student) => {
+  const handleOpenEdit = (student: Aluno) => {
     setEditingStudent(student);
     setFormNome(student.nome);
     setFormCpf(student.cpf || '');
@@ -125,22 +132,94 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormBairro(student.bairro || '');
     setFormFaixa(student.faixa || 'Branca');
     setFormGraus(student.graus || 0);
-    setFormDataUltimaGraduacao(student.dataUltimaGraduacao || '');
+    setFormRole(student.role || 'student');
+    setFormDataUltimaGraduacao(student.dataUltimaGraduacao ? formatDate(student.dataUltimaGraduacao) : '');
     setFormContatoEmergenciaNome(student.contatoEmergenciaNome || '');
     setFormContatoEmergenciaTel(formatPhone(student.contatoEmergenciaTel || ''));
     setFormStatus(student.status || 'Ativo');
     setFormTurma(student.turma || 'Adulto');
     setFormFotoPerfil(student.fotoPerfil || '');
+    setFormHistoricoGraduacoes(student.historicoGraduacoes || []);
     setShowFormModal(true);
   };
 
+  const convertDDMMAAAAToYYYYMMDD = (dateStr: string) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   // Save student (Create or Update)
-  const handleSaveStudent = (e: React.FormEvent) => {
+  const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNome || !formDataNascimento || !formBairro) return;
 
+    const dbUltimaGrad = convertDDMMAAAAToYYYYMMDD(formDataUltimaGraduacao) || new Date().toISOString().split('T')[0];
+
     if (editingStudent) {
-      // Update
+      // Update student in supabase
+      const { error: updateError } = await supabase
+        .from('alunos')
+        .update({
+          nome: formNome,
+          cpf: formCpf,
+          dataNascimento: formDataNascimento,
+          telefone: formTelefone,
+          email: formEmail,
+          genero: formGenero,
+          dataMatricula: formDataMatricula,
+          bairro: formBairro,
+          faixa: formFaixa,
+          graus: formGraus,
+          dataUltimaGraduacao: dbUltimaGrad,
+          contatoEmergenciaNome: formContatoEmergenciaNome,
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          status: formStatus,
+          turma: formTurma,
+          fotoPerfil: formFotoPerfil
+        })
+        .eq('id', editingStudent.id);
+
+      if (updateError) {
+        console.error('Error updating student:', updateError);
+        alert('Erro ao atualizar aluno no banco de dados.');
+        return;
+      }
+
+      let updatedHistory = formHistoricoGraduacoes || [];
+      if (editingStudent.faixa !== formFaixa || editingStudent.graus !== formGraus) {
+        // Insert new graduation record in supabase
+        const { data: newGradDataDb, error: gradError } = await supabase
+          .from('graduacoes_historico')
+          .insert({
+            aluno_id: editingStudent.id,
+            faixa: formFaixa,
+            graus: formGraus,
+            data_graduacao: dbUltimaGrad,
+            avaliador: loggedUser?.nome || 'Professor'
+          })
+          .select()
+          .single();
+
+        if (gradError) {
+          console.error('Error inserting graduation record:', gradError);
+        } else if (newGradDataDb) {
+          updatedHistory = [
+            ...updatedHistory,
+            {
+              id: newGradDataDb.id,
+              faixa: newGradDataDb.faixa,
+              graus: newGradDataDb.graus,
+              data: newGradDataDb.data_graduacao,
+              avaliador: newGradDataDb.avaliador
+            }
+          ];
+        }
+      }
+
       setStudents(prev => prev.map(s => {
         if (s.id === editingStudent.id) {
           return {
@@ -155,49 +234,101 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             bairro: formBairro,
             faixa: formFaixa,
             graus: formGraus,
-            dataUltimaGraduacao: formDataUltimaGraduacao,
+            role: formRole,
+            dataUltimaGraduacao: dbUltimaGrad,
             contatoEmergenciaNome: formContatoEmergenciaNome,
             contatoEmergenciaTel: formContatoEmergenciaTel,
             status: formStatus,
             turma: formTurma,
-            fotoPerfil: formFotoPerfil
+            fotoPerfil: formFotoPerfil,
+            historicoGraduacoes: updatedHistory
           };
         }
         return s;
       }));
     } else {
-      // Create
-      const newStudent: Student = {
-        id: `std_${Date.now()}`,
-        nome: formNome,
-        cpf: formCpf || `000.000.000-${Math.floor(Math.random() * 90 + 10)}`,
-        dataNascimento: formDataNascimento,
-        telefone: formTelefone,
-        email: formEmail || `${formNome.toLowerCase().replace(/\s+/g, '.')}@sfbjj.com.br`,
-        genero: formGenero,
-        dataMatricula: formDataMatricula,
-        bairro: formBairro,
-        faixa: formFaixa,
-        graus: formGraus,
-        dataUltimaGraduacao: formDataUltimaGraduacao,
-        contatoEmergenciaNome: formContatoEmergenciaNome,
-        contatoEmergenciaTel: formContatoEmergenciaTel,
-        status: formStatus,
-        turma: formTurma,
-        fotoPerfil: formFotoPerfil,
-        totalTreinos: 0,
-        pagamentos: [
-          {
-            id: `pay_${Date.now()}`,
-            mesRef: 'Maio/2026',
-            valor: 100,
-            status: 'Pendente',
-            dataVencimento: '2026-05-30',
-            dataPagamento: null
-          }
-        ]
-      };
-      setStudents(prev => [newStudent, ...prev]);
+      // Create student in supabase
+      const { data: newStudentData, error: insertError } = await supabase
+        .from('alunos')
+        .insert({
+          nome: formNome,
+          cpf: formCpf,
+          dataNascimento: formDataNascimento,
+          telefone: formTelefone,
+          email: formEmail,
+          genero: formGenero,
+          dataMatricula: formDataMatricula,
+          bairro: formBairro,
+          faixa: formFaixa,
+          graus: formGraus,
+          dataUltimaGraduacao: dbUltimaGrad,
+          contatoEmergenciaNome: formContatoEmergenciaNome,
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          status: formStatus,
+          turma: formTurma,
+          fotoPerfil: formFotoPerfil
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting student:', insertError);
+        alert('Erro ao cadastrar aluno no banco de dados.');
+        return;
+      }
+
+      let initialHistory: any[] = [];
+      if (newStudentData) {
+        // Insert initial graduation record in supabase
+        const { data: newGradDataDb, error: gradError } = await supabase
+          .from('graduacoes_historico')
+          .insert({
+            aluno_id: newStudentData.id,
+            faixa: formFaixa,
+            graus: formGraus,
+            data_graduacao: dbUltimaGrad,
+            avaliador: loggedUser?.nome || 'Professor'
+          })
+          .select()
+          .single();
+
+        if (gradError) {
+          console.error('Error inserting initial graduation record:', gradError);
+        } else if (newGradDataDb) {
+          initialHistory = [{
+            id: newGradDataDb.id,
+            faixa: newGradDataDb.faixa,
+            graus: newGradDataDb.graus,
+            data: newGradDataDb.data_graduacao,
+            avaliador: newGradDataDb.avaliador
+          }];
+        }
+
+        const newStudent: Aluno = {
+          id: newStudentData.id,
+          nome: formNome,
+          cpf: formCpf,
+          dataNascimento: formDataNascimento,
+          telefone: formTelefone,
+          email: formEmail,
+          genero: formGenero,
+          dataMatricula: formDataMatricula,
+          bairro: formBairro,
+          faixa: formFaixa,
+          graus: formGraus,
+          role: formRole,
+          dataUltimaGraduacao: dbUltimaGrad,
+          contatoEmergenciaNome: formContatoEmergenciaNome,
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          status: formStatus,
+          turma: formTurma,
+          fotoPerfil: formFotoPerfil,
+          historicoGraduacoes: initialHistory,
+          pagamentos: []
+        };
+
+        setStudents(prev => [newStudent, ...prev]);
+      }
     }
 
     setShowFormModal(false);
@@ -205,14 +336,47 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   };
 
   // Open delete confirmation modal
-  const handleOpenDelete = (student: Student) => {
+  const handleOpenDelete = (student: Aluno) => {
     setStudentToDelete(student);
     setShowDeleteModal(true);
   };
 
   // Confirm delete student
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!studentToDelete) return;
+
+    // Delete payments first due to foreign key
+    const { error: deletePaymentsError } = await supabase
+      .from('pagamentos')
+      .delete()
+      .eq('alunoId', studentToDelete.id);
+
+    if (deletePaymentsError) {
+      console.error('Error deleting student payments:', deletePaymentsError);
+    }
+
+    // Delete graduation history first due to foreign key
+    const { error: deleteHistoryError } = await supabase
+      .from('graduacoes_historico')
+      .delete()
+      .eq('aluno_id', studentToDelete.id);
+
+    if (deleteHistoryError) {
+      console.error('Error deleting student graduation history:', deleteHistoryError);
+    }
+
+    // Delete student from supabase
+    const { error: deleteStudentError } = await supabase
+      .from('alunos')
+      .delete()
+      .eq('id', studentToDelete.id);
+
+    if (deleteStudentError) {
+      console.error('Error deleting student:', deleteStudentError);
+      alert('Erro ao excluir aluno do banco de dados.');
+      return;
+    }
+
     setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
     setShowDeleteModal(false);
     setStudentToDelete(null);
@@ -234,8 +398,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       "Turma",
       "Status",
       "Data de Matrícula",
-      "Última Graduação",
-      "Total de Treinos"
+      "Última Graduação"
     ];
 
     const rows = filteredStudents.map(s => [
@@ -251,8 +414,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       s.turma || "Adulto",
       s.status || "Ativo",
       s.dataMatricula || "",
-      s.dataUltimaGraduacao || "",
-      s.totalTreinos ?? 0
+      s.dataUltimaGraduacao || ""
     ]);
 
     const csvContent = BOM + [
@@ -285,8 +447,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       "Turma",
       "Status",
       "Data de Matrícula",
-      "Última Graduação",
-      "Total de Treinos"
+      "Última Graduação"
     ];
 
     const rows = filteredStudents.map(s => [
@@ -302,8 +463,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       s.turma || "Adulto",
       s.status || "Ativo",
       s.dataMatricula || "",
-      s.dataUltimaGraduacao || "",
-      s.totalTreinos ?? 0
+      s.dataUltimaGraduacao || ""
     ]);
 
     let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
@@ -354,7 +514,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // Helper to render beautiful visual BJJ belt
   const renderBeltBadge = (faixa: Belt, graus: Degree) => {
     let beltClass = '';
     let barColor = 'bg-black'; // Black sleeve bar standard
@@ -381,7 +540,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         barColor = 'bg-neutral-950';
         break;
       case 'Azul':
-        beltClass = 'bg-blue-750 text-white';
+        beltClass = 'bg-blue-600 text-white border border-blue-700';
         barColor = 'bg-neutral-950';
         break;
       case 'Roxa':
@@ -409,7 +568,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <div
               key={idx}
               className={`w-0.5 h-3 rounded-sm transition-all ${idx < graus
-                ? 'bg-amber-300 shadow shadow-gold-500/60'
+                ? 'bg-white shadow-[0_0_3px_rgba(255,255,255,0.7)]'
                 : 'bg-neutral-800/40'
                 }`}
               title={`${graus} Grau(s)`}
@@ -590,22 +749,15 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         bairro: getValue('bairro') || 'Asa Sul',
         faixa: faixa,
         graus: graus,
-        dataUltimaGraduacao: getValue('dataUltimaGraduacao') || '',
+        role: 'student',
+        dataUltimaGraduacao: getValue('dataUltimaGraduacao') || null,
         contatoEmergenciaNome: getValue('contatoEmergenciaNome') || '',
         contatoEmergenciaTel: getValue('contatoEmergenciaTel') || '',
         turma: turma,
         status: 'Ativo',
-        totalTreinos: 0,
-        pagamentos: [
-          {
-            id: `pay_${Date.now()}_${i}`,
-            mesRef: 'Maio/2026',
-            valor: 100,
-            status: 'Pendente',
-            dataVencimento: '2026-05-30',
-            dataPagamento: null
-          }
-        ]
+        fotoPerfil: '',
+        historicoGraduacoes: [],
+        pagamentos: []
       });
     }
 
@@ -874,7 +1026,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                     {/* Última Graduação */}
                     <td className="px-6 py-4 text-xs font-medium text-slate-300">
-                      {formatDate(student.dataUltimaGraduacao)}
+                      {formatDate(student.dataUltimaGraduacao || '')}
                     </td>
 
                     {/* Contato */}
@@ -941,11 +1093,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       {/* CRUD Form Modal */}
       {showFormModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-obsidian-850 border border-obsidian-700/80 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-up">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-obsidian-850 border border-obsidian-700/80 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-scale-up">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 sticky top-0 bg-obsidian-850 z-10">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 shrink-0 bg-obsidian-850 z-10 rounded-t-2xl">
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-gold-500" />
                 {editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
@@ -959,7 +1111,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             </div>
 
             {/* Modal Form Content */}
-            <form onSubmit={handleSaveStudent} className="p-6 space-y-5">
+            <form onSubmit={handleSaveStudent} className="flex flex-col overflow-hidden">
+              <div className="p-6 space-y-5 overflow-y-auto flex-1">
 
               {/* Seção 1: Dados Pessoais */}
               <div className="space-y-4">
@@ -1055,7 +1208,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     <select
                       value={formTurma}
                       onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
-                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold text-slate-200"
+                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold"
                       required
                     >
                       <option value="Adulto">Adulto</option>
@@ -1159,7 +1312,19 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tipo de Usuário</label>
+                    <select
+                      value={formRole}
+                      onChange={(e) => setFormRole(e.target.value as 'admin' | 'student')}
+                      className="input-premium w-full bg-obsidian-950 disabled:opacity-50"
+                      disabled={isTeacher}
+                    >
+                      <option value="student">Aluno</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Última Graduação</label>
                     <input
@@ -1188,6 +1353,45 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       className="input-premium"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Histórico de Graduações */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between border-b border-obsidian-750 pb-1.5">
+                  <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest flex items-center gap-1.5">
+                    📜 Histórico de Graduações
+                  </h3>
+                </div>
+                <div className="border border-obsidian-750 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-obsidian-900 text-[10px] uppercase text-slate-400 border-b border-obsidian-750 font-bold">
+                      <tr>
+                        <th className="px-4 py-2.5">Data</th>
+                        <th className="px-4 py-2.5">Faixa & Grau</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-obsidian-750/50 bg-obsidian-900/40">
+                      {formHistoricoGraduacoes && formHistoricoGraduacoes.length > 0 ? (
+                        formHistoricoGraduacoes.slice().reverse().map((grad, idx) => (
+                          <tr key={idx} className="hover:bg-obsidian-800/30 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap font-mono">
+                              {formatDate(grad.data)}
+                            </td>
+                            <td className="px-4 py-3">
+                              {renderBeltBadge(grad.faixa, grad.graus)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={2} className="px-4 py-6 text-center text-slate-500 italic">
+                            Nenhum histórico de graduação registrado.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -1238,8 +1442,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 </label>
               </div>
 
+              </div>
+
               {/* Footer controls */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-obsidian-750">
+              <div className="flex justify-end gap-3 p-6 border-t border-obsidian-750 shrink-0 bg-obsidian-850 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setShowFormModal(false)}

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Lock, User, Eye, EyeOff, AlertCircle, Flame } from 'lucide-react';
-import type { Student, LoggedUser } from '../types';
+import type { Aluno, LoggedUser } from '../types';
+import { supabase } from '../lib/supabase';
 
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
 
 interface LoginProps {
-  students: Student[];
+  students: Aluno[];
   onLoginSuccess: (user: LoggedUser) => void;
   onBackToLanding: () => void;
 }
@@ -43,7 +44,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const username = cpfInput.trim().toLowerCase();
       const cleanedCpfInput = username.replace(/\D/g, '');
       const adminPassword = localStorage.getItem('sfbjj_admin_password') || '#sfbjj2026';
@@ -64,7 +65,26 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
         }
       }
 
-      // 2. Check Student Login
+      // 2. Check Professor Login (if it looks like an email)
+      if (username.includes('@')) {
+        const { data: profData } = await supabase
+          .from('professores')
+          .select('*')
+          .eq('email', username)
+          .single();
+          
+        if (profData && profData.senha === password) {
+          onLoginSuccess({
+            role: 'teacher',
+            professorId: profData.id,
+            nome: profData.nome
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. Check Aluno Login
       if (cleanedCpfInput.length > 0) {
         const student = students.find(s => s.cpf.replace(/\D/g, '') === cleanedCpfInput);
         if (student) {
@@ -77,8 +97,8 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
             }
 
             onLoginSuccess({
-              role: 'student',
-              studentId: student.id,
+              role: student.role === 'admin' ? 'admin' : 'student',
+              alunoId: student.id,
               nome: student.nome
             });
             setLoading(false);
@@ -88,7 +108,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
       }
 
       // Default error fallback
-      setError('CPF ou senha incorretos.');
+      setError('Credenciais incorretas.');
       setLoading(false);
     }, 600); // Small delay for nice UX loader effect
   };
@@ -111,7 +131,6 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
                 alt="Sagrada Família BJJ Logo"
                 className="w-24 h-24 object-contain animate-float"
                 onError={(e) => {
-                  // Fallback if image doesn't exist
                   e.currentTarget.style.display = 'none';
                   const fb = e.currentTarget.parentElement?.querySelector('.fallback-icon');
                   if (fb) fb.classList.remove('hidden');
@@ -145,7 +164,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
             {/* CPF / Username field */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                CPF
+                CPF, Email ou Admin
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
@@ -155,7 +174,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
                   type="text"
                   value={cpfInput}
                   onChange={handleCpfChange}
-                  placeholder="Digite seu CPF"
+                  placeholder="Seu CPF ou E-mail"
                   className="input-premium w-full pl-11"
                   required
                   autoFocus

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Student, PaymentStatus } from '../types';
+import type { Aluno, PaymentStatus } from '../types';
 import {
   Search,
   History,
@@ -13,35 +13,75 @@ import {
 } from 'lucide-react';
 
 interface FinancialManagerProps {
-  students: Student[];
-  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  students: Aluno[];
+  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
 }
 
 export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, setStudents }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modal for payment history
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Aluno | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyViewTab, setHistoryViewTab] = useState<'all' | 'by_month'>('all');
-  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>('Maio/2026');
+  const ALL_MONTHS = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const currentYear = new Date().getFullYear().toString();
+  
+  // Extract unique years from students' payment history, plus current year
+  const yearsFromRecords = students.flatMap(s => s.pagamentos.map(p => p.mesRef.split('/')[1]));
+  const availableYears = Array.from(new Set([currentYear, ...yearsFromRecords.filter(Boolean)])).sort((a, b) => Number(b) - Number(a));
+
+  const [yearFilter, setYearFilter] = useState<string>(currentYear);
+
+  // Generate months based on selected year
+  const availableMonths = ALL_MONTHS.map(m => `${m}/${yearFilter}`);
+
+  const getDefaultMonth = (year: string) => {
+    if (year === currentYear) {
+      return `${ALL_MONTHS[new Date().getMonth()]}/${year}`;
+    }
+    return `Janeiro/${year}`;
+  };
+
+  const [monthFilter, setMonthFilter] = useState<string>(getDefaultMonth(currentYear));
+
+  // Also need selectedHistoryMonth logic for History modal
+  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>(getDefaultMonth(currentYear));
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Summaries
-  const [monthFilter, setMonthFilter] = useState<string>('Maio/2026');
+  const getMonthAndYear = (filter: string) => {
+    const parts = filter.split('/');
+    if (parts.length !== 2) return null;
+    const monthIndex = ALL_MONTHS.indexOf(parts[0]);
+    if (monthIndex === -1) return null;
+    const monthNum = (monthIndex + 1).toString().padStart(2, '0');
+    return { month: monthNum, year: parts[1] };
+  };
+
+  const filterDate = getMonthAndYear(monthFilter);
 
   const totalRecebidoMes = students.reduce((acc, student) => {
-    const monthlyPaid = student.pagamentos.filter(p => 
-      p.mesRef === monthFilter && p.status === 'Pago'
-    );
+    const monthlyPaid = student.pagamentos.filter(p => {
+      if (p.status !== 'Pago' || !p.dataPagamento || !filterDate) return false;
+      const payParts = p.dataPagamento.split('-');
+      return payParts.length >= 2 && payParts[0] === filterDate.year && payParts[1] === filterDate.month;
+    });
     return acc + monthlyPaid.reduce((sum, p) => sum + p.valor, 0);
   }, 0);
 
-  const totalGeralRecebido = students.reduce((acc, student) => {
-    const allPaid = student.pagamentos.filter(p => p.status === 'Pago');
-    return acc + allPaid.reduce((sum, p) => sum + p.valor, 0);
+  const totalAnoRecebido = students.reduce((acc, student) => {
+    const anoPaid = student.pagamentos.filter(p => {
+      if (p.status !== 'Pago' || !p.dataPagamento) return false;
+      const payParts = p.dataPagamento.split('-');
+      return payParts.length >= 1 && payParts[0] === yearFilter;
+    });
+    return acc + anoPaid.reduce((sum, p) => sum + p.valor, 0);
   }, 0);
 
   const itemsPerPage = 10;
@@ -50,27 +90,21 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
 
   // Register payment with selected date
-  const handleRegisterPaymentWithDate = (studentId: string, paymentId: string, dateStr: string) => {
-    // Rigid validation preventing future payment dates beyond today's date in 2026 (2026-05-25)
+  const handleRegisterPaymentWithDate = (alunoId: number, paymentId: number, dateStr: string) => {
     if (!dateStr) {
       alert("A data de pagamento é obrigatória.");
       return;
     }
-    const selectedDate = new Date(dateStr + "T12:00:00");
-    const maxDate = new Date("2026-05-25T12:00:00");
-    if (selectedDate > maxDate) {
-      alert("Data inválida. O pagamento não pode ser registrado com data futura após 25/05/2026.");
-      return;
-    }
 
     setStudents(prev => prev.map(s => {
-      if (s.id === studentId) {
+      if (s.id === alunoId) {
         let paymentVal = 100;
         const updatedPagamentos = s.pagamentos.map(p => {
           if (p.id === paymentId) {
-            paymentVal = p.valor;
+            paymentVal = 100;
             return {
               ...p,
+              valor: 100,
               status: 'Pago' as PaymentStatus,
               dataPagamento: dateStr
             };
@@ -91,7 +125,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     }));
 
     // If modal is open for history, update selectedStudent reference to reflect change
-    if (selectedStudent && selectedStudent.id === studentId) {
+    if (selectedStudent && selectedStudent.id === alunoId) {
       setSelectedStudent(prev => {
         if (!prev) return null;
         return {
@@ -109,11 +143,39 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
 
 
+
   // Get current payment record based on the selected month filter
-  const getCurrentPayment = (student: Student) => {
-    const currentPayment = student.pagamentos.find(p => p.mesRef === monthFilter)
-      || student.pagamentos[0];
-    return currentPayment;
+  const getCurrentPayment = (student: Aluno) => {
+    return student.pagamentos.find(p => p.mesRef === monthFilter);
+  };
+
+  const handleGeneratePayment = async (alunoId: number) => {
+    const defaultVencimento = new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0];
+    const newPayment = {
+      alunoId,
+      mesRef: monthFilter,
+      valor: 100,
+      status: 'Pendente',
+      dataVencimento: defaultVencimento,
+      dataPagamento: null
+    };
+
+    // Note: If using real Supabase, this would insert into 'pagamentos'. 
+    // Here we update state to reflect the UI change.
+    const paymentWithId = { ...newPayment, id: Date.now() } as any;
+
+    setStudents(prev => prev.map(s => {
+      if (s.id === alunoId) {
+        return {
+          ...s,
+          pagamentos: [...s.pagamentos, paymentWithId]
+        };
+      }
+      return s;
+    }));
+    
+    setPaymentSuccessMsg(`Fatura gerada para o mês ${monthFilter}.`);
+    setTimeout(() => setPaymentSuccessMsg(null), 3000);
   };
 
   // Filter and sort students alphabetically based on status (only Ativo), current payment status & search
@@ -140,7 +202,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   };
 
   // Open history modal
-  const handleOpenHistory = (student: Student) => {
+  const handleOpenHistory = (student: Aluno) => {
     setSelectedStudent(student);
     setShowHistoryModal(true);
   };
@@ -174,13 +236,15 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-          Controle Financeiro e Mensalidades
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos e inativos.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
+            Controle Financeiro e Mensalidades
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos e inativos.
+          </p>
+        </div>
       </div>
 
       {/* Resumos Financeiros */}
@@ -190,21 +254,21 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido em {monthFilter}</span>
             <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
-            <span className="text-[10px] text-slate-500 mt-1 block">Mensalidades quitadas no ciclo de {monthFilter}</span>
+            <span className="text-[10px] text-slate-500 mt-1 block">Recebimentos no mês corrente</span>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hidden sm:block">
             <CreditCard className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Consolidated Total Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-gold-500 p-5">
+        {/* Consolidated Year Summary */}
+        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-blue-500 p-5">
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido Consolidado (Geral)</span>
-            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalGeralRecebido.toFixed(2).replace('.', ',')}</span>
-            <span className="text-[10px] text-slate-500 mt-1 block">Soma total de todas as mensalidades quitadas no sistema</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido ({yearFilter})</span>
+            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
+            <span className="text-[10px] text-slate-500 mt-1 block">Soma de recebimentos no ano selecionado</span>
           </div>
-          <div className="p-3 bg-gold-500/10 rounded-xl text-gold-500 hidden sm:block">
+          <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500 hidden sm:block">
             <CreditCard className="w-5 h-5" />
           </div>
         </div>
@@ -225,7 +289,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
       {/* Search & Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
-        <div className="sm:col-span-2 relative">
+        <div className="relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
           </span>
@@ -236,9 +300,26 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Buscar por nome do aluno..."
+            placeholder="Buscar por nome..."
             className="input-premium w-full pl-9"
           />
+        </div>
+
+        <div>
+          <select
+            value={yearFilter}
+            onChange={(e) => {
+              const newYear = e.target.value;
+              setYearFilter(newYear);
+              setMonthFilter(getDefaultMonth(newYear));
+              setCurrentPage(1);
+            }}
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
+          >
+            {availableYears.map(y => (
+              <option key={y} value={y}>Ano: {y}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -250,9 +331,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             }}
             className="input-premium w-full bg-obsidian-950 text-slate-200"
           >
-            <option value="Maio/2026">Mês Ref: Maio/2026</option>
-            <option value="Abril/2026">Mês Ref: Abril/2026</option>
-            <option value="Março/2026">Mês Ref: Março/2026</option>
+            {availableMonths.map(m => (
+              <option key={m} value={m}>Mês Ref: {m}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -295,32 +376,14 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="text-xs font-semibold text-slate-400">
-                          {bill?.mesRef || 'N/A'}
+                          {bill ? bill.mesRef : monthFilter}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         {bill ? (
                           <div className="flex items-center justify-center gap-1">
                             <span className="text-xs text-slate-400">R$</span>
-                            <input
-                              type="number"
-                              value={bill.valor}
-                              onChange={(e) => {
-                                const newVal = parseFloat(e.target.value) || 0;
-                                setStudents(prev => prev.map(s => {
-                                  if (s.id === student.id) {
-                                    return {
-                                      ...s,
-                                      pagamentos: s.pagamentos.map(p => 
-                                        p.id === bill.id ? { ...p, valor: newVal } : p
-                                      )
-                                    };
-                                  }
-                                  return s;
-                                }));
-                              }}
-                              className="input-premium w-20 text-center py-1 px-1 font-bold text-slate-200 text-sm h-8 inline-block"
-                            />
+                            <span className="font-bold text-slate-200 text-sm">100,00</span>
                           </div>
                         ) : '-'}
                       </td>
@@ -329,14 +392,21 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {bill && bill.status !== 'Pago' ? (
+                          {!bill ? (
                             <button
-                              onClick={() => handleOpenHistory(student)}
-                              className="btn-gold text-[11px] py-1 px-3 shadow-none h-8"
-                              title="Registrar Pagamento"
+                              onClick={() => handleGeneratePayment(student.id)}
+                              className="text-[10px] text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-amber-500/20 transition-colors"
+                              title={`Gerar Fatura para ${monthFilter}`}
                             >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              Receber
+                              + Gerar Fatura
+                            </button>
+                          ) : bill.status !== 'Pago' ? (
+                            <button
+                              onClick={() => handleRegisterPaymentWithDate(student.id, bill.id, new Date().toISOString().split('T')[0])}
+                              className="p-1.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-all h-8 w-8 flex items-center justify-center"
+                              title={`Registrar Pagamento de ${student.nome}`}
+                            >
+                              <Check className="w-4 h-4" />
                             </button>
                           ) : (
                             <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24">
@@ -484,36 +554,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                         </div>
                       </div>
 
-                      {pay.status !== 'Pago' && (
-                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-obsidian-800">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Data de Pagamento:</span>
-                          <input
-                            type="date"
-                            id={`date-pay-${pay.id}`}
-                            max="2026-05-25"
-                            defaultValue="2026-05-25"
-                            className="input-premium py-0.5 px-2 text-xs h-7 w-32 bg-obsidian-950 font-mono text-slate-200"
-                          />
-                          <button
-                            onClick={() => {
-                              const inputEl = document.getElementById(`date-pay-${pay.id}`) as HTMLInputElement;
-                              const selectedDate = inputEl?.value || '';
-                              if (!selectedDate) {
-                                alert('Por favor, selecione uma data de pagamento.');
-                                return;
-                              }
-                              if (new Date(selectedDate + "T12:00:00") > new Date("2026-05-25T12:00:00")) {
-                                alert('A data de pagamento não pode ser posterior a 25/05/2026.');
-                                return;
-                              }
-                              handleRegisterPaymentWithDate(selectedStudent.id, pay.id, selectedDate);
-                            }}
-                            className="btn-gold text-[10px] py-1 px-2.5 h-7 shadow-none"
-                          >
-                            Confirmar Recebimento
-                          </button>
-                        </div>
-                      )}
+
                     </div>
                   ));
                 })()}
@@ -533,6 +574,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           </div>
         </div>
       )}
+
+
 
     </div>
   );

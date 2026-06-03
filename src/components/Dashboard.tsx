@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type {
-  Student,
-  Announcement,
+  Aluno,
+  Aviso,
   LoggedUser
 } from '../types';
 import {
@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 
 interface DashboardProps {
-  students: Student[];
-  announcements: Announcement[];
-  setAnnouncements: React.Dispatch<React.SetStateAction<Announcement[]>>;
+  students: Aluno[];
+  announcements: Aviso[];
+  setAnnouncements: React.Dispatch<React.SetStateAction<Aviso[]>>;
   loggedUser: LoggedUser | null;
 }
 
@@ -59,8 +59,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     e.preventDefault();
     if (!newNoticeTitle.trim() || !newNoticeContent.trim()) return;
 
-    const newAnnouncement: Announcement = {
-      id: `ann_${Date.now()}`,
+    const newAnnouncement: Aviso = {
+      id: Date.now(),
       titulo: newNoticeTitle,
       conteudo: newNoticeContent,
       data: new Date().toISOString().split('T')[0],
@@ -74,7 +74,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowAddNotice(false);
   };
 
-  const handleDeleteNotice = (id: string) => {
+  const handleDeleteNotice = (id: number) => {
     setAnnouncements(prev => prev.filter(ann => ann.id !== id));
   };
 

@@ -1,32 +1,37 @@
 import React, { useState } from 'react';
-import type { Student, Belt, Degree, Gender, LoggedUser } from '../types';
+import type { Aluno, Belt, Degree, Gender, LoggedUser, GraduacaoHistorico } from '../types';
+import { supabase } from '../lib/supabase';
 import { 
   User, 
   Lock, 
   CheckCircle2, 
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Award,
+  Plus
 } from 'lucide-react';
 
 
 interface StudentProfileProps {
-  studentId?: string;
-  students: Student[];
-  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  alunoId?: number;
+  students: Aluno[];
+  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
   loggedUser: LoggedUser | null;
   setLoggedUser?: React.Dispatch<React.SetStateAction<LoggedUser | null>>;
 }
 
 export const StudentProfile: React.FC<StudentProfileProps> = ({ 
-  studentId, 
+  alunoId, 
   students, 
   setStudents, 
   loggedUser, 
   setLoggedUser 
 }) => {
-  const isEditingAdmin = !studentId && loggedUser?.role === 'admin';
-  const student = students.find(s => s.id === studentId);
+  const isEditingAdmin = !alunoId && loggedUser?.role === 'admin';
+  const isStudent = loggedUser?.role === 'student';
+
+  const student = students.find(s => s.id === alunoId);
 
   if (!isEditingAdmin && !student) {
     return (
@@ -47,8 +52,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     return dateStr;
   };
 
-  // Active Tab: 'profile' or 'password'
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password'>('profile');
+  // Active Tab: 'profile' or 'password' or 'graduacoes'
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'graduacoes'>('profile');
 
   // Form States (conditional for admin/student)
   const [formNome, setFormNome] = useState(isEditingAdmin ? (loggedUser?.nome || 'Administrador') : (student?.nome || ''));
@@ -81,6 +86,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const [infoError, setInfoError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
   const [passError, setPassError] = useState<string | null>(null);
+  const [gradError, setGradError] = useState<string | null>(null);
+  
+  // New Graduation State
+  const [showGradModal, setShowGradModal] = useState(false);
+  const [newGradFaixa, setNewGradFaixa] = useState<Belt>('Branca');
+  const [newGradGrau, setNewGradGrau] = useState<Degree>(0);
+  const [newGradData, setNewGradData] = useState(new Date().toISOString().split('T')[0]);
 
   // Formatting helpers
   const formatPhone = (value: string) => {
@@ -99,7 +111,17 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       .replace(/(\d{4})(\d)/, '$1')
       .substring(0, 10);
   };
-  const handleSaveInfo = (e: React.FormEvent) => {
+
+  const convertDDMMAAAAToYYYYMMDD = (dateStr: string) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  const handleSaveInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setInfoSuccess(null);
     setInfoError(null);
@@ -131,13 +153,45 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
+    if (!student) return;
+
     if (!formDataNascimento) {
       setInfoError('Data de Nascimento é obrigatória.');
       return;
     }
 
+    const dbUltimaGrad = convertDDMMAAAAToYYYYMMDD(formUltimaGraduacao);
+
+    // Update in supabase
+    const { error: updateError } = await supabase
+      .from('alunos')
+      .update({
+        nome: formNome,
+        cpf: formCpf,
+        dataNascimento: formDataNascimento,
+        telefone: formTelefone,
+        email: formEmail,
+        genero: formGenero,
+        bairro: formBairro,
+        dataMatricula: formDataMatricula,
+        faixa: formFaixa,
+        graus: formGraus,
+        turma: formTurma,
+        dataUltimaGraduacao: dbUltimaGrad,
+        contatoEmergenciaNome: formContatoEmergenciaNome,
+        contatoEmergenciaTel: formContatoEmergenciaTel,
+        fotoPerfil: formFotoPerfil
+      })
+      .eq('id', student.id);
+
+    if (updateError) {
+      console.error('Error updating student info:', updateError);
+      setInfoError('Erro ao salvar as informações no banco de dados.');
+      return;
+    }
+
     setStudents(prev => prev.map(s => {
-      if (student && s.id === student.id) {
+      if (student && s.id === student?.id) {
         return {
           ...s,
           nome: formNome,
@@ -151,7 +205,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
           faixa: formFaixa,
           graus: formGraus,
           turma: formTurma,
-          dataUltimaGraduacao: formUltimaGraduacao,
+          dataUltimaGraduacao: dbUltimaGrad || '',
           contatoEmergenciaNome: formContatoEmergenciaNome,
           contatoEmergenciaTel: formContatoEmergenciaTel,
           fotoPerfil: formFotoPerfil
@@ -164,7 +218,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     const loggedStr = localStorage.getItem('sfbjj_logged_user');
     if (loggedStr) {
       const logged = JSON.parse(loggedStr);
-      if (student && logged.studentId === student.id) {
+      if (student && logged.alunoId === student.id) {
         logged.nome = formNome;
         localStorage.setItem('sfbjj_logged_user', JSON.stringify(logged));
       }
@@ -198,53 +252,119 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    // Save Password
     if (isEditingAdmin) {
       localStorage.setItem('sfbjj_admin_password', newPassword);
-    } else if (student) {
+      setPassSuccess('Senha do administrador atualizada com sucesso!');
+    } else {
       setStudents(prev => prev.map(s => {
-        if (s.id === student.id) {
-          return {
-            ...s,
-            senha: newPassword
-          };
+        if (student && s.id === student.id) {
+          return { ...s, senha: newPassword };
         }
         return s;
       }));
+      setPassSuccess('Sua senha foi atualizada com sucesso!');
     }
 
-    // Clean inputs
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
-    
-    setPassSuccess('Sua senha foi alterada com sucesso!');
     setTimeout(() => setPassSuccess(null), 4000);
   };
 
-  // Helper to render beautiful visual BJJ belt
+  const handleAddGraduacao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isStudent || !student) return;
+
+    if (!newGradData) {
+      setGradError('A data da graduação é obrigatória.');
+      return;
+    }
+
+    // Insert new graduation record in supabase
+    const { data: newGradDataDb, error: gradInsertError } = await supabase
+      .from('graduacoes_historico')
+      .insert({
+        aluno_id: student.id,
+        faixa: newGradFaixa,
+        graus: newGradGrau,
+        data_graduacao: newGradData,
+        avaliador: loggedUser.nome
+      })
+      .select()
+      .single();
+
+    if (gradInsertError) {
+      console.error('Error inserting graduation record:', gradInsertError);
+      setGradError('Erro ao registrar graduação no banco de dados.');
+      return;
+    }
+
+    // Update faixa, graus, and dataUltimaGraduacao in alunos table
+    const { error: studentUpdateError } = await supabase
+      .from('alunos')
+      .update({
+        faixa: newGradFaixa,
+        graus: newGradGrau,
+        data_graduacao: newGradData
+      })
+      .eq('id', student.id);
+
+    if (studentUpdateError) {
+      console.error('Error updating student graduation details:', studentUpdateError);
+    }
+
+    const newGrad: GraduacaoHistorico = {
+      id: newGradDataDb ? newGradDataDb.id : Date.now(),
+      data: newGradData,
+      faixa: newGradFaixa,
+      graus: newGradGrau,
+      avaliador: loggedUser.nome
+    };
+
+    setStudents(prev => prev.map(s => {
+      if (s.id === student.id) {
+        const hist = s.historicoGraduacoes || [];
+        return {
+          ...s,
+          faixa: newGradFaixa,
+          graus: newGradGrau,
+          dataUltimaGraduacao: newGradData,
+          historicoGraduacoes: [...hist, newGrad]
+        };
+      }
+      return s;
+    }));
+    
+    // Atualiza estados locais do formulário também
+    setFormFaixa(newGradFaixa);
+    setFormGraus(newGradGrau);
+    setFormUltimaGraduacao(formatBrazilianDate(newGradData.split('-').reverse().join('')));
+
+    setShowGradModal(false);
+  };
+
   const renderBeltBadge = (faixa: Belt, graus: Degree) => {
-    let beltClass = '';
-    let barColor = 'bg-black'; // Black sleeve bar standard
+    let beltClass = 'bg-slate-200 text-slate-800'; // Default branca
+    let barColor = 'bg-black'; // Default black sleeve bar
 
     switch (faixa) {
       case 'Branca':
-        beltClass = 'bg-white text-slate-800 border border-slate-300';
+        beltClass = 'bg-slate-200 text-slate-800 border border-slate-350';
         break;
       case 'Cinza':
-        beltClass = 'bg-slate-400 text-slate-900 border border-slate-500';
+        beltClass = 'bg-gray-500 text-white';
         break;
       case 'Amarela':
-        beltClass = 'bg-yellow-400 text-slate-900 border border-yellow-500';
+        beltClass = 'bg-yellow-400 text-black';
         break;
       case 'Laranja':
         beltClass = 'bg-orange-500 text-white';
         break;
       case 'Verde':
-        beltClass = 'bg-emerald-600 text-white';
+        beltClass = 'bg-green-600 text-white';
         break;
       case 'Azul':
-        beltClass = 'bg-blue-700 text-white';
+        beltClass = 'bg-blue-600 text-white border border-blue-700';
         break;
       case 'Roxa':
         beltClass = 'bg-purple-700 text-white';
@@ -265,7 +385,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
           {Array.from({ length: 4 }).map((_, idx) => (
             <div
               key={idx}
-              className={`w-1 h-3.5 rounded-sm transition-all ${idx < graus ? 'bg-amber-300 shadow-sm shadow-gold-500/50' : 'bg-neutral-800/80'}`}
+              className={`w-1 h-3.5 rounded-sm transition-all ${idx < graus ? 'bg-white shadow-[0_0_3px_rgba(255,255,255,0.7)]' : 'bg-neutral-800/80'}`}
             />
           ))}
         </div>
@@ -304,7 +424,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
             )}
           </div>
 
-          {/* Student/Admin Info Summary */}
+          {/* Aluno/Admin Info Summary */}
           <div className="flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">
@@ -349,6 +469,19 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
             <User className="w-4.5 h-4.5" />
             Dados Pessoais
           </button>
+          {!isEditingAdmin && (
+            <button
+              onClick={() => setActiveSubTab('graduacoes')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
+                activeSubTab === 'graduacoes'
+                  ? 'bg-gold-500/10 border-l-2 border-gold-500 text-gold-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-750'
+              }`}
+            >
+              <Award className="w-4.5 h-4.5" />
+              Graduações
+            </button>
+          )}
           <button
             onClick={() => setActiveSubTab('password')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
@@ -370,6 +503,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 <h2 className="text-xl font-bold text-slate-100">Atualizar Dados Pessoais</h2>
                 <p className="text-slate-400 text-xs mt-1">
                   Mantenha suas informações de contato e emergência atualizadas para comunicação oficial.
+                  {isStudent && " Alguns campos são restritos e só podem ser alterados na secretaria."}
                 </p>
               </div>
 
@@ -395,8 +529,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     type="text"
                     value={formNome}
                     onChange={(e) => setFormNome(e.target.value)}
-                    className="input-premium w-full"
+                    className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     required
+                    disabled={isStudent}
                   />
                 </div>
 
@@ -433,8 +568,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         type="date"
                         value={formDataNascimento}
                         onChange={(e) => setFormDataNascimento(e.target.value)}
-                        className="input-premium w-full"
+                        className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         required
+                        disabled={isStudent}
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -442,7 +578,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       <select
                         value={formGenero}
                         onChange={(e) => setFormGenero(e.target.value as Gender)}
-                        className="input-premium w-full bg-obsidian-950"
+                        className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isStudent}
                       >
                         <option value="Masculino">Masculino</option>
                         <option value="Feminino">Feminino</option>
@@ -559,8 +696,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           type="text"
                           value={formCpf}
                           onChange={(e) => setFormCpf(e.target.value)}
-                          className="input-premium w-full font-mono"
+                          className="input-premium w-full font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="000.000.000-00"
+                          disabled={isStudent}
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -569,7 +707,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           type="date"
                           value={formDataMatricula}
                           onChange={(e) => setFormDataMatricula(e.target.value)}
-                          className="input-premium w-full"
+                          className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={isStudent}
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -578,7 +717,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           type="text"
                           value={formUltimaGraduacao}
                           onChange={(e) => setFormUltimaGraduacao(formatBrazilianDate(e.target.value))}
-                          className="input-premium w-full"
+                          className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="DD/MM/AAAA"
                         />
                       </div>
@@ -590,7 +729,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         <select
                           value={formFaixa}
                           onChange={(e) => setFormFaixa(e.target.value as Belt)}
-                          className="input-premium w-full bg-obsidian-950"
+                          className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="Branca">Branca</option>
                           <option value="Cinza">Cinza</option>
@@ -608,7 +747,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         <select
                           value={formGraus}
                           onChange={(e) => setFormGraus(Number(e.target.value) as Degree)}
-                          className="input-premium w-full bg-obsidian-950"
+                          className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value={0}>0 Grau</option>
                           <option value={1}>1 Grau</option>
@@ -618,11 +757,11 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma</label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Principal</label>
                         <select
                           value={formTurma}
                           onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
-                          className="input-premium w-full bg-obsidian-950"
+                          className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="Adulto">Adulto</option>
                           <option value="Kids">Kids</option>
@@ -641,7 +780,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 </div>
               </form>
             </div>
-          ) : (
+          ) : activeSubTab === 'password' ? (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-100">Alterar Senha de Acesso</h2>
@@ -735,6 +874,136 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   </button>
                 </div>
               </form>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-100">Histórico de Graduações</h2>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Acompanhe a jornada, faixas e graus alcançados.
+                  </p>
+                </div>
+                {isStudent && (
+                  <button 
+                    onClick={() => setShowGradModal(true)}
+                    className="btn-gold flex items-center gap-2 text-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Registrar Graduação
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-4 border border-obsidian-750 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-sm text-slate-300">
+                  <thead className="bg-obsidian-850 text-xs uppercase text-slate-400 border-b border-obsidian-750">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Data</th>
+                      <th className="px-4 py-3 font-semibold">Faixa & Grau</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-obsidian-750/50">
+                    {student?.historicoGraduacoes && student.historicoGraduacoes.length > 0 ? (
+                      student.historicoGraduacoes.slice().reverse().map((grad) => (
+                        <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
+                            {formatToDDMMAAAA(grad.data)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {renderBeltBadge(grad.faixa, grad.graus)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-8 text-center text-slate-500 text-xs">
+                          Nenhum registro de graduação encontrado para este aluno.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Modal de Registro de Graduação (Only Student) */}
+              {showGradModal && isStudent && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                  <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-scale-up">
+                    <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+                      <Award className="w-5 h-5 text-gold-500" />
+                      Nova Graduação
+                    </h3>
+
+                    {gradError && (
+                      <div className="mb-4 flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{gradError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleAddGraduacao} className="space-y-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nova Faixa</label>
+                        <select
+                          value={newGradFaixa}
+                          onChange={(e) => setNewGradFaixa(e.target.value as Belt)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value="Branca">Branca</option>
+                          <option value="Cinza">Cinza</option>
+                          <option value="Amarela">Amarela</option>
+                          <option value="Laranja">Laranja</option>
+                          <option value="Verde">Verde</option>
+                          <option value="Azul">Azul</option>
+                          <option value="Roxa">Roxa</option>
+                          <option value="Marrom">Marrom</option>
+                          <option value="Preta">Preta</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Novo Grau</label>
+                        <select
+                          value={newGradGrau}
+                          onChange={(e) => setNewGradGrau(Number(e.target.value) as Degree)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value={0}>0 Grau</option>
+                          <option value={1}>1 Grau</option>
+                          <option value={2}>2 Graus</option>
+                          <option value={3}>3 Graus</option>
+                          <option value={4}>4 Graus</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data da Graduação</label>
+                        <input
+                          type="date"
+                          value={newGradData}
+                          onChange={(e) => setNewGradData(e.target.value)}
+                          className="input-premium w-full bg-obsidian-950"
+                          required
+                        />
+                      </div>
+
+                      <div className="mt-6 flex justify-end gap-2 pt-2 border-t border-obsidian-750">
+                        <button 
+                          type="button" 
+                          onClick={() => setShowGradModal(false)}
+                          className="btn-obsidian px-4 py-2 text-xs"
+                        >
+                          Cancelar
+                        </button>
+                        <button type="submit" className="btn-gold px-4 py-2 text-xs">
+                          Registrar
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

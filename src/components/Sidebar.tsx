@@ -9,7 +9,8 @@ import {
   Flame,
   User,
   LogOut,
-  Mail
+  Mail,
+  Shield
 } from 'lucide-react';
 import type { LoggedUser } from '../types';
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
@@ -25,19 +26,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
   const [isOpen, setIsOpen] = useState(false);
 
   // Role based navigation menu items
-  const menuItems = loggedUser.role === 'admin'
-    ? [
+  let menuItems: any[] = [];
+  if (loggedUser.role === 'admin') {
+    menuItems = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'students', label: 'Gestão de Alunos', icon: Users },
+      { id: 'teachers', label: 'Gestão de Professores', icon: Shield },
       { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
       { id: 'contact', label: 'Contato', icon: Mail },
-    ]
-    : [
+    ];
+  } else if (loggedUser.role === 'teacher') {
+    menuItems = [
+      { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
+      { id: 'students', label: 'Consultar Alunos', icon: Users },
+      { id: 'contact', label: 'Contato', icon: Mail },
+    ];
+  } else {
+    menuItems = [
       { id: 'profile', label: 'Meu Perfil', icon: User },
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
+  }
 
   const handleTabChange = (tabId: string) => {
     setCurrentTab(tabId);
@@ -135,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
                 {loggedUser.nome}
               </p>
               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-0.5">
-                {loggedUser.role === 'admin' ? 'Administrador' : 'Aluno'}
+                {loggedUser.role === 'admin' ? 'Administrador' : loggedUser.role === 'teacher' ? 'Professor' : 'Aluno'}
               </p>
             </div>
           </div>
