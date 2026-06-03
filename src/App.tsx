@@ -176,7 +176,7 @@ function App() {
         />
       );
     }
-    return <LandingPage onAccessLogin={() => setShowLogin(true)} />;
+    return <LandingPage announcements={announcements} onAccessLogin={() => setShowLogin(true)} />;
   }
 
   return (

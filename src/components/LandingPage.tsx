@@ -386,6 +386,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
         </h5>
         <ul className="space-y-2 text-xs text-slate-450">
           <li><a href="#galeria" className="hover:text-slate-200 transition-colors">Galeria</a></li>
+          {announcements && announcements.length > 0 && (
+            <li><a href="#avisos" className="hover:text-slate-200 transition-colors">Avisos</a></li>
+          )}
           <li><a href="#horarios" className="hover:text-slate-200 transition-colors">Horários Semanal</a></li>
           <li><button onClick={onAccessLogin} className="hover:text-slate-200 transition-colors text-left">Acessar Painel</button></li>
         </ul>

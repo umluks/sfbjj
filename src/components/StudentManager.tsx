@@ -18,6 +18,47 @@ import {
   Download
 } from 'lucide-react';
 
+const parseCSVDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  // Match YYYY-MM-DD
+  const ymdMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+  }
+  // Match DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+  }
+  return '';
+};
+
+const splitCSVLine = (line: string, delimiter: string): string[] => {
+  if (delimiter === '\t') {
+    return line.split('\t').map(p => p.trim().replace(/^["']|["']$/g, ''));
+  }
+  
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  
+  return result.map(p => p.trim().replace(/^["']|["']$/g, ''));
+};
+
 interface StudentManagerProps {
   students: Aluno[];
   setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
@@ -47,6 +88,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [importText, setImportText] = useState('');
   const [parsedImportRows, setParsedImportRows] = useState<any[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Export dropdown state
   const [showExportDropdown, setShowExportDropdown] = useState(false);
@@ -621,13 +663,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
     rawHeaders.forEach((header, idx) => {
       const hClean = clean(header);
-      if (hClean.includes('nome') || hClean.includes('name') || hClean.includes('membro') || hClean.includes('aluno')) {
+      if (hClean.includes('emergencianome') || hClean.includes('emergenciacontatonome') || hClean.includes('nomedeemergencia') || hClean.includes('responsavel')) {
+        mappings['contatoEmergenciaNome'] = idx;
+      } else if (hClean.includes('emergenciatel') || hClean.includes('emergenciaphone') || hClean.includes('telefoneemergencia') || hClean.includes('telephonedeemergencia')) {
+        mappings['contatoEmergenciaTel'] = idx;
+      } else if (hClean.includes('datamatricula') || hClean.includes('matriculadata') || (hClean.includes('matricula') && !hClean.includes('responsavel'))) {
+        mappings['dataMatricula'] = idx;
+      } else if (hClean.includes('ultimagraduacao') || hClean.includes('graduacaoultima') || hClean.includes('datagraduacao') || (hClean.includes('graduacao') && hClean.includes('ultima'))) {
+        mappings['dataUltimaGraduacao'] = idx;
+      } else if (hClean.includes('nascimento') || hClean.includes('nasc') || hClean.includes('birth') || hClean.includes('idade')) {
+        mappings['dataNascimento'] = idx;
+      } else if (hClean.includes('nome') || hClean.includes('name') || hClean.includes('membro') || hClean.includes('aluno')) {
         mappings['nome'] = idx;
       } else if (hClean.includes('cpf')) {
         mappings['cpf'] = idx;
-      } else if (hClean.includes('nascimento') || hClean.includes('nasc') || hClean.includes('birth') || (hClean.includes('data') && hClean.includes('nasc')) || hClean.includes('idade')) {
-        mappings['dataNascimento'] = idx;
-      } else if (hClean.includes('telefone') || hClean.includes('tel') || hClean.includes('cel') || hClean.includes('fone') || hClean.includes('contato')) {
+      } else if (hClean.includes('telefone') || hClean.includes('tel') || hClean.includes('cel') || hClean.includes('fone')) {
         mappings['telefone'] = idx;
       } else if (hClean.includes('email') || hClean.includes('mail')) {
         mappings['email'] = idx;
@@ -635,27 +685,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         mappings['genero'] = idx;
       } else if (hClean.includes('bairro') || hClean.includes('endereco') || hClean.includes('local')) {
         mappings['bairro'] = idx;
-      } else if (hClean.includes('faixa') || hClean.includes('belt') || hClean.includes('graduacao')) {
+      } else if (hClean.includes('faixa') || hClean.includes('belt')) {
         mappings['faixa'] = idx;
       } else if (hClean.includes('grau') || hClean.includes('stripe')) {
         mappings['graus'] = idx;
       } else if (hClean.includes('turma') || hClean.includes('categoria') || hClean.includes('class') || hClean.includes('grupo')) {
         mappings['turma'] = idx;
-      } else if (hClean.includes('emergencianome') || hClean.includes('emergenciacontato') || hClean.includes('responsavel')) {
-        mappings['contatoEmergenciaNome'] = idx;
-      } else if (hClean.includes('emergenciatel') || hClean.includes('emergenciatelefone')) {
-        mappings['contatoEmergenciaTel'] = idx;
-      } else if (hClean.includes('ultima') || (hClean.includes('data') && hClean.includes('grad'))) {
-        mappings['dataUltimaGraduacao'] = idx;
-      } else if (hClean.includes('matricula')) {
-        mappings['dataMatricula'] = idx;
+      } else if (hClean.includes('status')) {
+        mappings['status'] = idx;
       }
     });
 
     // Parse data rows
     const rows: any[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
+      const parts = splitCSVLine(lines[i], delimiter);
       // If the row has fewer elements than headers, fill with empty strings
       while (parts.length < rawHeaders.length) {
         parts.push('');
@@ -679,24 +723,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       }
 
       // Process birth date
-      let rawBirth = getValue('dataNascimento');
-      let dataNasc = '';
-      if (rawBirth) {
-        // Handle DD/MM/YYYY or D/M/YYYY
-        if (rawBirth.includes('/')) {
-          const birthParts = rawBirth.split('/');
-          if (birthParts.length === 3) {
-            dataNasc = `${birthParts[2]}-${birthParts[1].padStart(2, '0')}-${birthParts[0].padStart(2, '0')}`;
-          }
-        } else if (rawBirth.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          dataNasc = rawBirth;
-        }
-      }
-
-      // If dataNasc is invalid or empty, set a default
-      if (!dataNasc) {
-        dataNasc = '2000-01-01'; // Fallback
-      }
+      const dataNasc = parseCSVDate(getValue('dataNascimento')) || '2000-01-01';
 
       // Process belt
       const rawFaixa = getValue('faixa').toLowerCase();
@@ -716,6 +743,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       let turma: 'Kids' | 'Adulto' = 'Adulto';
       if (rawTurma.includes('kid') || rawTurma.includes('inf') || rawTurma.includes('cri')) {
         turma = 'Kids';
+      } else if (rawTurma.includes('adult') || rawTurma.includes('adul')) {
+        turma = 'Adulto';
       } else {
         // Check age based on birth year
         const year = parseInt(dataNasc.split('-')[0], 10);
@@ -725,17 +754,16 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       }
 
       // Process registration date
-      let rawMatr = getValue('dataMatricula');
-      let dataMatr = new Date().toISOString().split('T')[0];
-      if (rawMatr) {
-        if (rawMatr.includes('/')) {
-          const matrParts = rawMatr.split('/');
-          if (matrParts.length === 3) {
-            dataMatr = `${matrParts[2]}-${matrParts[1].padStart(2, '0')}-${matrParts[0].padStart(2, '0')}`;
-          }
-        } else if (rawMatr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          dataMatr = rawMatr;
-        }
+      const dataMatr = parseCSVDate(getValue('dataMatricula')) || new Date().toISOString().split('T')[0];
+
+      // Process last graduation date
+      const dataUltimaGrad = parseCSVDate(getValue('dataUltimaGraduacao')) || dataMatr;
+
+      // Process status
+      const rawStatus = getValue('status').toLowerCase();
+      let status: 'Ativo' | 'Inativo' = 'Ativo';
+      if (rawStatus.includes('inativ') || rawStatus === 'inativo') {
+        status = 'Inativo';
       }
 
       rows.push({
@@ -743,18 +771,18 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         cpf: getValue('cpf') || `000.000.000-${Math.floor(Math.random() * 90 + 10)}`,
         dataNascimento: dataNasc,
         telefone: getValue('telefone'),
-        email: getValue('email') || `${rawNome.toLowerCase().replace(/\s+/g, '.')}@sfbjj.com.br`,
+        email: getValue('email') || `${rawNome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '.')}@sfbjj.com.br`,
         genero: gender,
         dataMatricula: dataMatr,
         bairro: getValue('bairro') || 'Asa Sul',
         faixa: faixa,
         graus: graus,
         role: 'student',
-        dataUltimaGraduacao: getValue('dataUltimaGraduacao') || null,
+        dataUltimaGraduacao: dataUltimaGrad,
         contatoEmergenciaNome: getValue('contatoEmergenciaNome') || '',
         contatoEmergenciaTel: getValue('contatoEmergenciaTel') || '',
         turma: turma,
-        status: 'Ativo',
+        status: status,
         fotoPerfil: '',
         historicoGraduacoes: [],
         pagamentos: []
@@ -777,22 +805,95 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     reader.readAsText(file);
   };
 
-  const handleImportConfirm = () => {
+  const handleImportConfirm = async () => {
     if (parsedImportRows.length === 0) {
       setImportError('Nenhum dado válido para importar.');
       return;
     }
 
-    // Generate unique IDs for imported students
-    const studentsWithIds = parsedImportRows.map((student, index) => ({
-      ...student,
-      id: `std_imp_${Date.now()}_${index}`
-    }));
+    setIsImporting(true);
+    setImportError(null);
 
-    setStudents(prev => [...studentsWithIds, ...prev]);
-    setShowImportModal(false);
-    setImportText('');
-    setParsedImportRows([]);
+    try {
+      // 1. Prepare data to insert into `alunos` table
+      const alunosToInsert = parsedImportRows.map(student => ({
+        nome: student.nome,
+        cpf: student.cpf,
+        dataNascimento: student.dataNascimento,
+        telefone: student.telefone,
+        email: student.email,
+        genero: student.genero,
+        dataMatricula: student.dataMatricula,
+        bairro: student.bairro,
+        faixa: student.faixa,
+        graus: student.graus,
+        dataUltimaGraduacao: student.dataUltimaGraduacao,
+        contatoEmergenciaNome: student.contatoEmergenciaNome,
+        contatoEmergenciaTel: student.contatoEmergenciaTel,
+        status: student.status,
+        turma: student.turma,
+        fotoPerfil: ''
+      }));
+
+      const { data: insertedAlunos, error: insertError } = await supabase
+        .from('alunos')
+        .insert(alunosToInsert)
+        .select();
+
+      if (insertError) {
+        console.error('Error importing students to Supabase:', insertError);
+        throw new Error('Erro ao inserir alunos no banco de dados: ' + insertError.message);
+      }
+
+      if (insertedAlunos && insertedAlunos.length > 0) {
+        // 2. Prepare graduation history records
+        const graducoesToInsert = insertedAlunos.map(aluno => ({
+          aluno_id: aluno.id,
+          faixa: aluno.faixa,
+          graus: aluno.graus,
+          data_graduacao: aluno.dataUltimaGraduacao || aluno.dataMatricula,
+          avaliador: loggedUser?.nome || 'Professor'
+        }));
+
+        const { data: insertedGrads, error: gradsError } = await supabase
+          .from('graduacoes_historico')
+          .insert(graducoesToInsert)
+          .select();
+
+        if (gradsError) {
+          console.error('Error inserting graduation records for imported students:', gradsError);
+        }
+
+        // 3. Update local state
+        const newStudentsWithHistory = insertedAlunos.map(aluno => {
+          const alunoGrads = (insertedGrads || []).filter(g => g.aluno_id === aluno.id);
+          return {
+            ...aluno,
+            historicoGraduacoes: alunoGrads.map(g => ({
+              id: g.id,
+              data: g.data_graduacao,
+              faixa: g.faixa,
+              graus: g.graus,
+              avaliador: g.avaliador
+            })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+            pagamentos: []
+          };
+        });
+
+        setStudents(prev => {
+          const merged = [...newStudentsWithHistory, ...prev];
+          return merged.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        });
+      }
+
+      setShowImportModal(false);
+      setImportText('');
+      setParsedImportRows([]);
+    } catch (err: any) {
+      setImportError(err.message || 'Erro inesperado durante a importação.');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -1512,7 +1613,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   setImportText('');
                   setParsedImportRows([]);
                 }}
-                className="text-slate-400 hover:text-gold-500 p-1 transition-colors"
+                disabled={isImporting}
+                className="text-slate-400 hover:text-gold-500 p-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1538,10 +1640,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     onChange={handleFileUpload}
                     className="hidden"
                     id="csv-file-upload-input"
+                    disabled={isImporting}
                   />
                   <label
                     htmlFor="csv-file-upload-input"
-                    className="flex flex-col items-center justify-center border border-dashed border-obsidian-700 hover:border-gold-500/50 rounded-xl p-8 cursor-pointer bg-obsidian-900/40 hover:bg-obsidian-900/80 transition-all text-slate-400 hover:text-slate-200 h-40"
+                    className={`flex flex-col items-center justify-center border border-dashed border-obsidian-700 hover:border-gold-500/50 rounded-xl p-8 cursor-pointer bg-obsidian-900/40 hover:bg-obsidian-900/80 transition-all text-slate-400 hover:text-slate-200 h-40 ${isImporting ? 'opacity-45 pointer-events-none' : ''}`}
                   >
                     <Upload className="w-8 h-8 mb-2 text-gold-500" />
                     <span className="text-sm font-semibold">Carregar Arquivo .CSV</span>
@@ -1558,7 +1661,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       parseData(e.target.value);
                     }}
                     placeholder="Cole aqui os dados copiados da planilha (com cabeçalho)...&#10;Ex:&#10;Nome&#9;Nascimento&#9;Faixa&#9;Bairro&#9;Turma&#10;Lucas dos Anjos&#9;18/03/1987&#9;Preta&#9;Guará&#9;Adulto"
-                    className="input-premium w-full h-40 font-mono text-[10px] leading-normal"
+                    className="input-premium w-full h-40 font-mono text-[10px] leading-normal disabled:opacity-40"
+                    disabled={isImporting}
                   />
                 </div>
               </div>
@@ -1629,17 +1733,28 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   setImportText('');
                   setParsedImportRows([]);
                 }}
-                className="btn-obsidian"
+                disabled={isImporting}
+                className="btn-obsidian disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleImportConfirm}
-                disabled={parsedImportRows.length === 0}
-                className="btn-gold px-6 disabled:opacity-50 disabled:pointer-events-none"
+                disabled={parsedImportRows.length === 0 || isImporting}
+                className="btn-gold px-6 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
               >
-                Importar {parsedImportRows.length > 0 ? `${parsedImportRows.length} Alunos` : 'Membros'}
+                {isImporting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-obsidian-950" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Salvando no Banco...</span>
+                  </>
+                ) : (
+                  <span>Importar {parsedImportRows.length > 0 ? `${parsedImportRows.length} Alunos` : 'Membros'}</span>
+                )}
               </button>
             </div>
 

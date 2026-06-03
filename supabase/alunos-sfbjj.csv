@@ -1,0 +1,49 @@
+﻿Nome;CPF;Data de Nascimento;Telefone;Email;Gênero;Bairro;Faixa;Graus;Turma;Status;Data de Matrícula;Última Graduação;Contato Emergência Nome;Contato Emergência Tel
+Alice Naves dos Santos;111.000.001.01;2019-03-13;(61) 98431-2386;;Feminino;Asa Sul;Branca;0;Kids;Ativo;2026-03-16;2026-03-16;Felipe;(61) 98431-6561
+Andrigo Rodrigues Ramos;111.000.001.02;1983-11-22;(61) 98427-7376;;Masculino;Guará;Preta;0;Adulto;Ativo;2016-01-01;2016-01-01;Nitielma;(61) 98427-6823
+Arthur Antonoff Dos Santos;111.000.001.03;1991-09-21;(61) 98441-2626;;Masculino;Guará;Preta;0;Adulto;Ativo;2020-01-01;2020-01-01;Isadora;(61) 99649-0326
+Arthur Barbosa Cardoso;111.000.001.04;2011-10-09;(61) 8291-0013;;Masculino;Vila Telebrasiia;Branca;2;Adulto;Ativo;2026-06-03;N/A;Cremilda;(61) 99616-3109
+Bento Naves dos Santos;111.000.001.05;2022-01-30;(61) 98297-7016;;Masculino;Park Way;Branca;0;Kids;Ativo;2026-03-15;2026-03-15;Felipe;(61) 98431-6561
+Breno Carlos Soares Fernandes;111.000.001.06;1995-02-10;(61) 98258-4490;;Masculino;Asa Sul;Azul;2;Adulto;Ativo;2021-05-10;2025-08-23;Vanessa;(61) 98290-7784
+Bruno Moreira Galvão Bello;111.000.001.07;1993-12-19;(61) 98297-7016;;Masculino;Park Way;Branca;4;Adulto;Inativo;2023-01-15;2025-12-11;Ana Luísa;(61) 99672-8888
+Caio César Dias Barros;111.000.001.08;2011-06-19;(61) 99196-7932;;Masculino;Santa Maria;Verde;0;Kids;Ativo;2026-08-02;2026-08-02;Caio;(61) 98473-4874
+Carlos Miranda Barbosa Soares;111.000.001.09;1986-03-29;(61) 98154-0523;;Masculino;Vicente Pires;Preta;0;Adulto;Inativo;2018-02-10;2025-08-23;Carlos;(61) 99999-5075
+Daniel Costa Corrêa Leite Muniz;111.000.001.10;1982-01-05;(61) 99912-9694;;Masculino;Águas Claras;Azul;0;Adulto;Ativo;2022-08-15;2025-08-23;Jacqueline;(61) 99800-2550
+Daniel de Assis Nascimento;111.000.001.11;2002-11-21;(61) 99962-5435;;Masculino;Asa Sul;Azul;0;Adulto;Ativo;2023-01-10;2025-08-23;Angela;(61) 99649-8901
+Daniel dos Santos;111.000.001.12;2007-05-25;(61) 98192-9046;;Masculino;Asa sul;Branca;0;Adulto;Inativo;2025-01-10;2026-01-01;Diego;(61) 98366-9077
+David de Souza Ferrer dos Santos;111.000.001.13;1989-06-06;(61) 98505-7222;;Masculino;Guará;Azul;2;Adulto;Ativo;2022-03-15;2025-08-23;Carol;(61) 98210-7184
+Diogo Ferreira de Sousa;111.000.001.14;1990-12-16;(61) 98275-9727;;Masculino;Asa Sul;Azul;2;Adulto;Ativo;2021-01-10;2021-10-02;Ellen;(61) 98157-2367
+Ériclis Douglas dos Santos Araújo Carneiro;111.000.001.46;1999-04-22;(061) 99354-5902;;Masculino;Setor Policial Sul;Azul;0;Adulto;Ativo;2023-05-11;2023-11-26;Larissa;(61) 99184-2003
+Fabrício Jaime Saraiva do Nascimento;111.000.001.15;1990-10-09;(61) 99332-0951;;Masculino;Candangolândia;Azul;4;Adulto;Inativo;2023-01-10;2023-10-29;Mariana;(61) 98375-4040
+Felipe Debattisti dos Santos;111.000.001.16;1991-01-21;(61) 98431-6561;;Masculino;Asa sul;Branca;1;Adulto;Ativo;2026-03-15;2025-08-23;Maria Luiza;(61) 98431-2386
+Felipe Rocha Mendonça;111.000.001.17;1984-11-02;61 981858105;;Masculino;Guara;Azul;2;Adulto;Inativo;2015-12-01;2015-12-01;N/A;
+Flávio de Arruda Ribeiro;111.000.001.18;1976-01-09;(61) 99333-5893;;Masculino;Taguatinga Norte;Branca;3;Adulto;Ativo;2025-10-10;2026-01-01;Vanessa;(61) 99334-8343
+Georsolei Loredo de Faria;111.000.001.19;1983-04-29;(61) 98300-2420;;Masculino;Asa Sul;Roxa;2;Adulto;Ativo;2022-01-15;2025-08-23;Francine;(61) 99949-9775
+Guilherme Felisberto Mourão;111.000.001.20;2000-04-27;(61) 99425-0806;;Masculino;Asa Sul;Branca;3;Adulto;Inativo;2026-03-15;2025-12-12;N/A;
+Gustavo Santos das Neves;111.000.001.21;1986-01-25;(61) 99272-9559;;Masculino;Cruzeiro Novo;Branca;4;Adulto;Ativo;2024-01-10;2025-08-23;Thaiana;(61) 99522-3223
+Herbert William Boger;111.000.001.22;2005-03-12;(61) 98100-1629;;Masculino;Park Way;Branca;0;Adulto;Ativo;2026-03-15;2025-08-23;Elizabete Boger;(61) 98127-1108
+Ícaro Bernardes Barbosa;111.000.001.47;2010-05-02;(61) 98185-8105;;Masculino;Asa sul;Branca;2;Adulto;Ativo;2025-03-15;2026-01-01;Thais Santos;(61) 98146-4448
+Isaac Mendes Campos;111.000.001.23;2016-01-09;(61) 99104-5590;;Masculino;Núcleo Bandeirante;Branca;0;Kids;Ativo;2026-03-15;2026-03-15;Thacia;(61) 98199-5336
+João Alfredo dos Santos Araújo Carneiro;111.000.001.26;2010-09-02;(61) 98205-9079;;Masculino;São Sebastião;Branca;0;Kids;Ativo;2026-03-15;N/A;Éric;(61) 99354-5902
+João Marcelo Izaga Coutinho de Oliveira;111.000.001.24;2016-08-14;(61) 98353-9584;;Masculino;Cruzeiro;Branca;0;Kids;Ativo;2026-03-15;2026-03-15;;(61) 99221-1223
+José Antero Dias Neto;111.000.001.25;1983-09-25;(61) 98473-4874;;Masculino;Santa Maria;Branca;4;Adulto;Ativo;2025-08-02;2025-08-02;Eliane;(61) 99171-0271
+Laura Araújo Luz;111.000.001.27;2017-03-13;N/A;;Feminino;Asa Sul;Branca;0;Kids;Ativo;2026-03-15;2026-03-15;Reberty Pereira Luz;(61) 99643-5138
+Leonardo Rocha Mendonça;111.000.001.28;1986-05-19;(61) 99168-8002;;Masculino;Asa Sul;Branca;0;Adulto;Inativo;N/A;N/A;Zita ;(61) 99216-4873
+Lucas Santiago Gonçalves dos Anjos;111.000.001.29;1987-03-18;(61) 98158-0353;lucas.sga@gmail.com;Masculino;Guara;Preta;2;Adulto;Ativo;2024-12-22;2024-12-22;Eduarda;(61) 98226-2607
+Lucas Santos Lima do Nascimento;111.000.001.30;1989-05-05;(61) 98167-6724;;Masculino;Cruzeiro Novo;Azul;3;Adulto;Ativo;2022-06-15;2025-08-23;Tássia;(61) 98181-1799
+Maria Giovana Vasconcelos dos Anjos;111.000.001.48;2020-12-18;N/A;;Feminino;Guara;Branca;0;Kids;Ativo;2026-03-15;2026-03-15;Maria Eduarda;(61) 98158-0353
+Miguel Meireles Oliveira de Almeida;111.000.001.31;2000-10-04;(61) 99174-1111;;Masculino;Taguatinga;Azul;2;Adulto;Ativo;2019-12-14;2019-12-14;Débora;(61) 98191-1859
+Paulo Marcilio Almeida de Carvalho;111.000.001.32;1988-01-05;(61) 98132-3186;;Masculino;Asa Sul;Roxa;2;Adulto;Ativo;2025-08-23;2025-08-23;Aline;(61) 98306-4082
+Pedro Henrique Barbosa Brandão;111.000.001.33;1996-10-24;(22) 98104-2161;;Masculino;Sudoeste;Branca;4;Adulto;Ativo;2024-05-10;2025-08-23;Taíse;(68) 99230-7358
+Pedro Kauã Veloso de Sousa;111.000.001.34;2007-06-05;(61) 99425-0806;;Masculino;Asa Sul;Branca;2;Adulto;Ativo;2025-01-10;2025-12-12;Camila;(61) 98443-1616
+Pedro Suhet Justino;111.000.001.35;2003-03-08;(61) 99973-0803;;Masculino;Asa sul;Azul;3;Adulto;Ativo;2025-12-15;2025-12-15;Adriana;(61) 99967-0271
+Rafael Goulart do Nascimento;111.000.001.36;1988-02-23;(61) 98221-2496;;Masculino;Asa Sul;Azul;0;Adulto;Inativo;2024-09-13;2024-09-13;Ana;(61) 98148-2424
+Raul Gonçalves de Moura;111.000.001.37;1993-07-10;(61) 98311-0730;;Masculino;Itapoã Parque;Azul;0;Adulto;Ativo;2022-05-10;2022-12-03;Isadora;(61) 98214-9073
+Rodrigo Rocha Mendonça;111.000.001.38;1982-04-15;N/A;;Masculino;Águas Claras;Roxa;0;Adulto;Inativo;2020-11-01;2020-11-01;N/A;
+Rodrigo Weber D'avila Valentim;111.000.001.39;1977-06-08;(61) 99640-1878;;Masculino;Asa Sul;Preta;0;Adulto;Inativo;2012-11-01;2012-11-01;Juliana;(21) 99614-7333
+Thalles da Paz Moreira;111.000.001.40;1992-12-07;(61) 99185-4342;;Masculino;Cruzeiro;Azul;2;Adulto;Ativo;2024-02-15;2024-02-15;Glauber;(61) 98190-6570
+Thiago Augusto Rodrigues;111.000.001.41;1982-04-07;(61) 99622-7769;;Masculino;Guará;Preta;0;Adulto;Ativo;2015-05-10;2025-08-23;Thassia Costa;(61) 99168-5854
+Vinícius Gabriel Rodrigues da Silva Brito;111.000.001.43;2001-02-15;(61) 99104-5590;;Masculino;Núcleo Bandeirante;Roxa;0;Adulto;Ativo;2023-03-20;2025-08-23;Luana;(61) 98480-2535
+Vinicius Tadeu Uliana Cavalcante;111.000.001.42;1990-08-04;(61) 98353-9584;;Masculino;Cruzeiro;Azul;0;Adulto;Ativo;2023-05-12;2025-08-23;Ludmylla;(62) 99297-9178
+Vitor Patrick Alves Tavares;111.000.001.44;2004-09-05;(61) 99120-0140;;Masculino;Asa Sul;Azul;0;Adulto;Ativo;2024-02-10;2025-12-15;Valdemar;(61) 99115-5476
+Willian Kaizer Stambassi;111.000.001.45;1988-05-23;(61) 98122-8887;;Masculino;Sudoeste;Branca;0;Adulto;Inativo;N/A;N/A;N/A;
