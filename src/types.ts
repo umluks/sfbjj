@@ -44,7 +44,7 @@ export interface Aluno {
   pagamentos: Pagamento[]; // Historico de pagamentos
   senha?: string; // Senha customizada do aluno
   turma: 'Kids' | 'Adulto';
-  role?: 'admin' | 'student'; // Adicionado tipo de usuário
+  role?: 'admin' | 'student' | 'teacher'; // Adicionado tipo de usuário
   fotoPerfil?: string; // Base64 data URI or avatar name
   modalidadePagamento?: string; // Default payment modality (e.g. Mensal, Trimestral)
   historicoGraduacoes?: GraduacaoHistorico[];

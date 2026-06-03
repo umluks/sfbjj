@@ -32,3 +32,6 @@ ALTER TABLE graduacoes_historico ENABLE ROW LEVEL SECURITY;
 -- Políticas de acesso público para fins de teste no projeto local (como as demais tabelas)
 CREATE POLICY "Acesso total publico professores" ON professores FOR ALL USING (true);
 CREATE POLICY "Acesso total publico graduacoes" ON graduacoes_historico FOR ALL USING (true);
+
+-- Adiciona a coluna role para gerenciar permissões na tabela alunos
+ALTER TABLE alunos ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'student';

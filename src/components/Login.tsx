@@ -97,7 +97,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
             }
 
             onLoginSuccess({
-              role: student.role === 'admin' ? 'admin' : 'student',
+              role: student.role || 'student',
               alunoId: student.id,
               nome: student.nome
             });

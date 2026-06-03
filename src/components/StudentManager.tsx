@@ -15,7 +15,8 @@ import {
   Heart,
   Upload,
   FileSpreadsheet,
-  Download
+  Download,
+  Eye
 } from 'lucide-react';
 
 const parseCSVDate = (dateStr: string): string => {
@@ -104,7 +105,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formBairro, setFormBairro] = useState('');
   const [formFaixa, setFormFaixa] = useState<Belt>('Branca');
   const [formGraus, setFormGraus] = useState<Degree>(0);
-  const [formRole, setFormRole] = useState<'admin' | 'student'>('student');
+  const [formRole, setFormRole] = useState<'admin' | 'student' | 'teacher'>('student');
   const [formDataUltimaGraduacao, setFormDataUltimaGraduacao] = useState('');
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState('');
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
@@ -216,6 +217,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           bairro: formBairro,
           faixa: formFaixa,
           graus: formGraus,
+          role: formRole,
           dataUltimaGraduacao: dbUltimaGrad,
           contatoEmergenciaNome: formContatoEmergenciaNome,
           contatoEmergenciaTel: formContatoEmergenciaTel,
@@ -303,6 +305,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           bairro: formBairro,
           faixa: formFaixa,
           graus: formGraus,
+          role: formRole,
           dataUltimaGraduacao: dbUltimaGrad,
           contatoEmergenciaNome: formContatoEmergenciaNome,
           contatoEmergenciaTel: formContatoEmergenciaTel,
@@ -827,6 +830,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         bairro: student.bairro,
         faixa: student.faixa,
         graus: student.graus,
+        role: student.role || 'student',
         dataUltimaGraduacao: student.dataUltimaGraduacao,
         contatoEmergenciaNome: student.contatoEmergenciaNome,
         contatoEmergenciaTel: student.contatoEmergenciaTel,
@@ -909,13 +913,15 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto relative">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
-          >
-            <Upload className="w-4 h-4" />
-            Importar Alunos
-          </button>
+          {!isTeacher && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
+            >
+              <Upload className="w-4 h-4" />
+              Importar Alunos
+            </button>
+          )}
 
           {/* Export Dropdown */}
           <div className="relative">
@@ -955,13 +961,15 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             )}
           </div>
 
-          <button
-            onClick={handleOpenCreate}
-            className="btn-gold flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            Cadastrar Membro
-          </button>
+          {!isTeacher && (
+            <button
+              onClick={handleOpenCreate}
+              className="btn-gold flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Cadastrar Membro
+            </button>
+          )}
         </div>
       </div>
 
@@ -1144,17 +1152,19 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                         <button
                           onClick={() => handleOpenEdit(student)}
                           className="p-1.5 rounded bg-obsidian-850 hover:bg-obsidian-750 border border-obsidian-700 text-slate-300 hover:text-gold-500 transition-all"
-                          title="Editar cadastro"
+                          title={isTeacher ? "Visualizar cadastro" : "Editar cadastro"}
                         >
-                          <Edit className="w-3.5 h-3.5" />
+                          {isTeacher ? <Eye className="w-3.5 h-3.5" /> : <Edit className="w-3.5 h-3.5" />}
                         </button>
-                        <button
-                          onClick={() => handleOpenDelete(student)}
-                          className="p-1.5 rounded bg-obsidian-850 hover:bg-red-500/10 border border-obsidian-700 hover:border-red-500/30 text-slate-300 hover:text-red-500 transition-all"
-                          title="Excluir Aluno"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {!isTeacher && (
+                          <button
+                            onClick={() => handleOpenDelete(student)}
+                            className="p-1.5 rounded bg-obsidian-850 hover:bg-red-500/10 border border-obsidian-700 hover:border-red-500/30 text-slate-300 hover:text-red-500 transition-all"
+                            title="Excluir Aluno"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1201,7 +1211,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 shrink-0 bg-obsidian-850 z-10 rounded-t-2xl">
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-gold-500" />
-                {editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
+                {isTeacher ? 'Visualizar Cadastro de Membro' : editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
               </h2>
               <button
                 onClick={() => setShowFormModal(false)}
@@ -1230,6 +1240,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     placeholder="Nome e Sobrenome"
                     className="input-premium"
                     required
+                    disabled={isTeacher}
                   />
                 </div>
 
@@ -1242,6 +1253,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormDataNascimento(e.target.value)}
                       className="input-premium"
                       required
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1253,6 +1265,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       placeholder="Ex: Asa Sul, Guará"
                       className="input-premium"
                       required
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1267,6 +1280,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       placeholder="(61) 99999-9999"
                       className="input-premium font-mono"
                       required
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1277,6 +1291,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormEmail(e.target.value)}
                       placeholder="email@dominio.com"
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1290,6 +1305,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormCpf(formatCPF(e.target.value))}
                       placeholder="000.000.000-00"
                       className="input-premium font-mono"
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1298,6 +1314,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formGenero}
                       onChange={(e) => setFormGenero(e.target.value as Gender)}
                       className="input-premium bg-obsidian-950 text-slate-200"
+                      disabled={isTeacher}
                     >
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
@@ -1311,6 +1328,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
                       className="input-premium bg-obsidian-950 text-slate-200 font-semibold"
                       required
+                      disabled={isTeacher}
                     >
                       <option value="Adulto">Adulto</option>
                       <option value="Kids">Kids</option>
@@ -1336,38 +1354,40 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     )}
                   </div>
                   {/* Options */}
-                  <div className="flex-1 space-y-3 w-full">
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
-                      <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
-                    </div>
+                  {!isTeacher && (
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
+                        <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
+                      </div>
 
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs text-slate-500">Ou envie sua foto:</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
-                                setFormFotoPerfil(event.target.result as string);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">Ou envie sua foto:</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setFormFotoPerfil(event.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1385,6 +1405,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formFaixa}
                       onChange={(e) => setFormFaixa(e.target.value as Belt)}
                       className="input-premium bg-obsidian-950 text-slate-200"
+                      disabled={isTeacher}
                     >
                       <option value="Branca">Branca</option>
                       <option value="Cinza">Cinza</option>
@@ -1403,6 +1424,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formGraus}
                       onChange={(e) => setFormGraus(Number(e.target.value) as Degree)}
                       className="input-premium bg-obsidian-950 text-slate-200"
+                      disabled={isTeacher}
                     >
                       <option value={0}>0 Grau</option>
                       <option value={1}>1 Grau</option>
@@ -1418,11 +1440,12 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tipo de Usuário</label>
                     <select
                       value={formRole}
-                      onChange={(e) => setFormRole(e.target.value as 'admin' | 'student')}
+                      onChange={(e) => setFormRole(e.target.value as 'admin' | 'student' | 'teacher')}
                       className="input-premium w-full bg-obsidian-950 disabled:opacity-50"
                       disabled={isTeacher}
                     >
                       <option value="student">Aluno</option>
+                      <option value="teacher">Professor</option>
                       <option value="admin">Administrador</option>
                     </select>
                   </div>
@@ -1443,6 +1466,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       }}
                       placeholder="DD/MM/AAAA"
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1452,6 +1476,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formDataMatricula}
                       onChange={(e) => setFormDataMatricula(e.target.value)}
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1511,6 +1536,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormContatoEmergenciaNome(e.target.value)}
                       placeholder="Nome do responsável / contato"
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1521,6 +1547,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormContatoEmergenciaTel(formatPhone(e.target.value))}
                       placeholder="(61) 99999-9999"
                       className="input-premium font-mono"
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1529,12 +1556,13 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               {/* Status field */}
               <div className="flex items-center gap-3 pt-3">
                 <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Status Acadêmico:</span>
-                <label className="relative inline-flex items-center cursor-pointer select-none">
+                <label className={`relative inline-flex items-center select-none ${isTeacher ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     checked={formStatus === 'Ativo'}
                     onChange={(e) => setFormStatus(e.target.checked ? 'Ativo' : 'Inativo')}
                     className="sr-only peer"
+                    disabled={isTeacher}
                   />
                   <div className="w-11 h-6 bg-obsidian-950 border border-obsidian-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-gold-500 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500/10 peer-checked:border-gold-500"></div>
                   <span className={`ml-3 text-sm font-semibold transition-colors ${formStatus === 'Ativo' ? 'text-emerald-400' : 'text-slate-500'}`}>
@@ -1552,14 +1580,16 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   onClick={() => setShowFormModal(false)}
                   className="btn-obsidian"
                 >
-                  Cancelar
+                  {isTeacher ? 'Fechar' : 'Cancelar'}
                 </button>
-                <button
-                  type="submit"
-                  className="btn-gold px-6"
-                >
-                  {editingStudent ? 'Salvar Alterações' : 'Confirmar Cadastro'}
-                </button>
+                {!isTeacher && (
+                  <button
+                    type="submit"
+                    className="btn-gold px-6"
+                  >
+                    {editingStudent ? 'Salvar Alterações' : 'Confirmar Cadastro'}
+                  </button>
+                )}
               </div>
 
             </form>
