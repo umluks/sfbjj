@@ -32,13 +32,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [newNoticeContent, setNewNoticeContent] = useState('');
   const [newNoticePinned, setNewNoticePinned] = useState(false);
 
-  // Stats calculation
+  // Cálculo de estatísticas
   const totalActive = students.filter(s => s.status === 'Ativo').length;
   const todayDate = new Date();
   const currentMonthNum = String(todayDate.getMonth() + 1).padStart(2, '0');
   const currentDayNum = todayDate.getDate();
 
-  // All birthdays of the month (full count, no removal)
+  // Todos os aniversários do mês (contagem total, sem remoção)
   const allMonthBirthdayStudents = students.filter(s => {
     if (!s.dataNascimento) return false;
     const parts = s.dataNascimento.split('-');
@@ -46,7 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return birthMonth === currentMonthNum;
   });
 
-  // Upcoming birthdays (only today and future days)
+  // Próximos aniversários (apenas hoje e dias futuros)
   const upcomingBirthdayStudents = students.filter(s => {
     if (!s.dataNascimento) return false;
     const parts = s.dataNascimento.split('-');
@@ -78,7 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setAnnouncements(prev => prev.filter(ann => ann.id !== id));
   };
 
-  // Sort announcements to show pinned first
+  // Ordena os anúncios para mostrar os fixados primeiro
   const sortedAnnouncements = [...announcements].sort((a, b) => {
     if (a.fixado && !b.fixado) return -1;
     if (!a.fixado && b.fixado) return 1;
@@ -287,6 +287,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   })
                   .map((student) => {
                     const day = student.dataNascimento.split('-')[2];
+                    const isToday = parseInt(day, 10) === currentDayNum;
                     return (
                       <div
                         key={student.id}
@@ -300,7 +301,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             Faixa {student.faixa}
                           </span>
                         </div>
-                        <span className="text-xs font-bold text-gold-500 bg-gold-500/10 px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                          isToday 
+                            ? 'text-white bg-yellow-500 animate-pulse' 
+                            : 'text-gold-500 bg-gold-500/10'
+                        }`}>
                           Dia {day}
                         </span>
                       </div>

@@ -20,7 +20,7 @@ interface FinancialManagerProps {
 export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, setStudents }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal for payment history
+  // Modal para histórico de pagamentos
   const [selectedStudent, setSelectedStudent] = useState<Aluno | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyViewTab, setHistoryViewTab] = useState<'all' | 'by_month'>('all');
@@ -31,13 +31,13 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
   const currentYear = new Date().getFullYear().toString();
   
-  // Extract unique years from students' payment history, plus current year
+  // Extrai anos únicos do histórico de pagamentos dos alunos, mais o ano atual
   const yearsFromRecords = students.flatMap(s => s.pagamentos.map(p => p.mesRef.split('/')[1]));
   const availableYears = Array.from(new Set([currentYear, ...yearsFromRecords.filter(Boolean)])).sort((a, b) => Number(b) - Number(a));
 
   const [yearFilter, setYearFilter] = useState<string>(currentYear);
 
-  // Generate months based on selected year
+  // Gera os meses com base no ano selecionado
   const availableMonths = ALL_MONTHS.map(m => `${m}/${yearFilter}`);
 
   const getDefaultMonth = (year: string) => {
@@ -49,10 +49,10 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
   const [monthFilter, setMonthFilter] = useState<string>(getDefaultMonth(currentYear));
 
-  // Also need selectedHistoryMonth logic for History modal
+  // Também precisa da lógica selectedHistoryMonth para o modal de Histórico
   const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>(getDefaultMonth(currentYear));
 
-  // Pagination state
+  // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
 
   const getMonthAndYear = (filter: string) => {
@@ -86,10 +86,10 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
   const itemsPerPage = 10;
 
-  // Registered payment animation indicator
+  // Indicador de animação de pagamento registrado
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
 
-  // Register payment with selected date
+  // Registra o pagamento com a data selecionada
   const handleRegisterPaymentWithDate = (alunoId: number, paymentId: number, dateStr: string) => {
     if (!dateStr) {
       alert("A data de pagamento é obrigatória.");
@@ -112,7 +112,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           return p;
         });
 
-        // Trigger success message
+        // Dispara mensagem de sucesso
         setPaymentSuccessMsg(`Pagamento de R$ ${paymentVal.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
         setTimeout(() => setPaymentSuccessMsg(null), 4000);
 
@@ -124,7 +124,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       return s;
     }));
 
-    // If modal is open for history, update selectedStudent reference to reflect change
+    // Se o modal estiver aberto para histórico, atualize a referência selectedStudent para refletir a alteração
     if (selectedStudent && selectedStudent.id === alunoId) {
       setSelectedStudent(prev => {
         if (!prev) return null;
@@ -144,7 +144,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
 
 
-  // Get current payment record based on the selected month filter
+  // Obtém o registro de pagamento atual com base no filtro de mês selecionado
   const getCurrentPayment = (student: Aluno) => {
     return student.pagamentos.find(p => p.mesRef === monthFilter);
   };
@@ -160,8 +160,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       dataPagamento: null
     };
 
-    // Note: If using real Supabase, this would insert into 'pagamentos'. 
-    // Here we update state to reflect the UI change.
+    // Nota: Se usar Supabase real, isso iria inserir em 'pagamentos'. 
+    // Aqui atualizamos o estado para refletir a alteração na UI.
     const paymentWithId = { ...newPayment, id: Date.now() } as any;
 
     setStudents(prev => prev.map(s => {
@@ -178,7 +178,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     setTimeout(() => setPaymentSuccessMsg(null), 3000);
   };
 
-  // Filter and sort students alphabetically based on status (only Ativo), current payment status & search
+  // Filtra e ordena os alunos alfabeticamente com base no status (apenas Ativo), status de pagamento atual e busca
   const filteredStudents = students
     .filter(student => student.status === 'Ativo')
     .filter(student => {
@@ -187,7 +187,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-  // Pagination calculations
+  // Cálculos de paginação
   const totalItems = filteredStudents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -201,7 +201,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // Open history modal
+  // Abre o modal de histórico
   const handleOpenHistory = (student: Aluno) => {
     setSelectedStudent(student);
     setShowHistoryModal(true);

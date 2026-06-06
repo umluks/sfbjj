@@ -8,6 +8,7 @@ import bjjKidsClass from '../assets/bjj_kids_class.png';
 import bjjAdultsSparring from '../assets/bjj_adults_sparring.png';
 import bjjTeamGroup from '../assets/bjj_team_group.png';
 import type { Aviso } from '../types';
+import { Contact } from './Contact';
 
 interface LandingPageProps {
   announcements?: Aviso[];
@@ -16,7 +17,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], onAccessLogin }) => {
 
-  // Custom schedule for display
+  // Horários customizados para exibição
   const quickSchedule = [
     { hora: '18:30 - 19:30', categoria: 'Infantil', dias: 'Segunda & Quarta', professor: 'Lucas dos Anjos' },
     { hora: '19:30 - 21:00', categoria: 'Adulto', dias: 'Segunda & Quarta', professor: 'Lucas dos Anjos' },
@@ -27,7 +28,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
     <div className="bg-obsidian-950 text-slate-100 min-h-screen font-sans selection:bg-gold-500/20 selection:text-white overflow-x-hidden">
 
       {/* HEADER / NAVIGATION */}
-      <header className="sticky top-0 z-50 bg-obsidian-950/80 backdrop-blur-xl border-b border-obsidian-800/60 transition-all duration-300">
+      <header className="fixed w-full top-0 z-50 bg-obsidian-950/80 backdrop-blur-xl border-b border-obsidian-800/60 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -50,11 +51,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-350">
-            <a href="#galeria" className="hover:text-slate-100 transition-colors">Galeria</a>
             {announcements && announcements.length > 0 && (
               <a href="#avisos" className="hover:text-slate-100 transition-colors">Avisos</a>
             )}
             <a href="#horarios" className="hover:text-slate-100 transition-colors">Horários & Localização</a>
+            <a href="#contato" className="hover:text-slate-100 transition-colors">Contato</a>
           </nav>
         </div>
       </header>
@@ -111,12 +112,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             >
               Acessar Painel (Login)
             </button>
-            <a
-              href="#galeria"
-              className="w-full sm:w-auto btn-obsidian px-8 py-3.5 text-base font-bold"
-            >
-              Galeria de Fotos
-            </a>
           </div>
         </div>
       </section>
@@ -332,6 +327,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
     </div>
   </section>
 
+      {/* SEÇÃO DE CONTATO */}
+      <section id="contato" className="py-24 px-4 max-w-7xl mx-auto border-t border-obsidian-850 scroll-mt-20">
+        <Contact />
+      </section>
+
       {/* FOOTER */}
       <footer className="bg-obsidian-950 border-t border-obsidian-850 py-16 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
@@ -385,11 +385,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
           Navegação
         </h5>
         <ul className="space-y-2 text-xs text-slate-450">
-          <li><a href="#galeria" className="hover:text-slate-200 transition-colors">Galeria</a></li>
           {announcements && announcements.length > 0 && (
             <li><a href="#avisos" className="hover:text-slate-200 transition-colors">Avisos</a></li>
           )}
           <li><a href="#horarios" className="hover:text-slate-200 transition-colors">Horários Semanal</a></li>
+          <li><a href="#contato" className="hover:text-slate-200 transition-colors">Contato</a></li>
           <li><button onClick={onAccessLogin} className="hover:text-slate-200 transition-colors text-left">Acessar Painel</button></li>
         </ul>
       </div>

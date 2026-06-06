@@ -1,0 +1,46 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main # O deploy será acionado ao realizar push na branch main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # (Opcional) Instalar dependências, buildar o projeto, etc.
+      # - name: Build app
+      #   run: |
+      #     npm install
+      #     npm run build
+
+      - name: Deploy to EC2 via SCP and SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Conectado na instância Alpine!"
+            
+            # Aqui você coloca os comandos que devem rodar na máquina
+            # Exemplo: Atualizar pacotes, instalar Git, baixar código, reiniciar serviços
+            
+            # sudo apk update
+            # sudo apk add git
+            
+            # Se já existir uma pasta do app, faz pull, senão clona
+            # if [ -d "/var/www/meu-app" ]; then
+            #   cd /var/www/meu-app
+            #   git pull origin main
+            # else
+            #   git clone https://github.com/usuario/repositorio.git /var/www/meu-app
+            # fi
+            
+            # Reiniciar algum serviço
+            # sudo rc-service app restart

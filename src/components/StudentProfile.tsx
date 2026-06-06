@@ -280,7 +280,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    // Insert new graduation record in supabase
+    // Insere novo registro de graduação no supabase
     const { data: newGradDataDb, error: gradInsertError } = await supabase
       .from('graduacoes_historico')
       .insert({

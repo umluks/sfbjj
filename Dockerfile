@@ -1,23 +1,23 @@
-# --- Build Stage ---
+# --- Estágio de Build ---
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copia os arquivos do package e instala as dependências
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy the rest of the application files and build
+# Copia o restante dos arquivos da aplicação e faz o build
 COPY . .
 RUN npm run build
 
-# --- Production Stage ---
+# --- Estágio de Produção ---
 FROM nginx:stable-alpine
 
-# Copy the build artifacts from the build stage to the Nginx html directory
+# Copia os artefatos gerados do estágio de build para o diretório html do Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy custom nginx configuration for SPA routing if needed
+# Copia a configuração customizada do nginx para roteamento SPA, se necessário
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

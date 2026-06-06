@@ -6,13 +6,19 @@ O **SFBJJ** é um sistema moderno de gestão interna desenvolvido para academias
 
 ## 🚀 Funcionalidades Principais
 
-O sistema possui controle de acesso com dois perfis de usuários principais (**Administrador** e **Aluno**):
+A aplicação possui um layout 100% responsivo para mobile e desktop, com controle de acesso para três perfis de usuários principais (**Administrador**, **Professor** e **Aluno**):
 
 ### 👤 Perfil Administrador (Admin)
-- **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia e publicação de avisos/comunicados internos.
+- **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia, destaque em tempo real para os aniversariantes do dia e publicação de avisos/comunicados internos.
 - **Gestão de Alunos:** Cadastro completo de atletas (Kids e Adulto), edição de informações, busca e filtros avançados por status, graduação ou turma, além de suporte para exportar a listagem em formato CSV/Excel.
+- **Gestão de Professores:** Controle do quadro de professores da academia.
 - **Controle Financeiro:** Gerenciamento de faturamento mensal, fluxo de caixa detalhado, controle de mensalidades pagas e pendentes, e saldo acumulado com transição de saldos de meses anteriores.
 - **Grade de Horários:** Visualização completa da programação de aulas semanais.
+
+### 🎓 Perfil Professor (Teacher)
+- **Consultar Alunos:** Acesso à listagem de alunos para acompanhamento das turmas.
+- **Grade de Horários:** Visualização completa da programação de aulas.
+- **Contato:** Acesso aos canais de comunicação e suporte.
 
 ### 🥋 Perfil Aluno (Student)
 - **Perfil do Atleta:** Histórico completo de graduações, datas de exames de faixa, dados cadastrais e visualização do status de pagamentos.
@@ -27,6 +33,7 @@ A aplicação foi construída utilizando ferramentas modernas do ecossistema Web
 
 - **Core:** [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
 - **Build Tool:** [Vite](https://vite.dev/)
+- **Backend as a Service:** [Supabase](https://supabase.com/)
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
 - **Ícones:** [Lucide React](https://lucide.dev/)
 - **Servidor Web & Proxy (Produção):** [Nginx](https://www.nginx.com/)

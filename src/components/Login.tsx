@@ -23,7 +23,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
     if (val.toLowerCase().startsWith('a')) {
       setCpfInput(val.toLowerCase());
     } else {
-      // CPF Mask (000.000.000-00)
+      // Máscara de CPF (000.000.000-00)
       const digits = val.replace(/\D/g, '');
       let formatted = digits;
       if (digits.length > 3) {
@@ -49,7 +49,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
       const cleanedCpfInput = username.replace(/\D/g, '');
       const adminPassword = localStorage.getItem('sfbjj_admin_password') || '#sfbjj2026';
 
-      // 1. Check Admin Login
+      // 1. Verifica Login Admin
       if (username === 'admin' || cleanedCpfInput === '01334314101') {
         if (password === adminPassword) {
           onLoginSuccess({
@@ -65,7 +65,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
         }
       }
 
-      // 2. Check Professor Login (if it looks like an email)
+      // 2. Verifica Login Professor (se parecer um e-mail)
       if (username.includes('@')) {
         const { data: profData } = await supabase
           .from('professores')
@@ -84,7 +84,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
         }
       }
 
-      // 3. Check Aluno Login
+      // 3. Verifica Login Aluno
       if (cleanedCpfInput.length > 0) {
         const student = students.find(s => s.cpf.replace(/\D/g, '') === cleanedCpfInput);
         if (student) {
@@ -107,10 +107,10 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
         }
       }
 
-      // Default error fallback
+      // Fallback de erro padrão
       setError('Credenciais incorretas.');
       setLoading(false);
-    }, 600); // Small delay for nice UX loader effect
+    }, 600); // Pequeno atraso para um efeito legal de carregamento (UX)
   };
 
   return (

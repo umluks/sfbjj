@@ -30,7 +30,7 @@ export const ScheduleGrid: React.FC<ScheduleGridProps> = ({ loggedUser }) => {
           diasSemana: typeof d.diasSemana === 'string' ? JSON.parse(d.diasSemana) : d.diasSemana
         })));
       } else {
-        // Fallback to local storage if supabase fails or table is empty
+        // Fallback para o local storage se o supabase falhar ou a tabela estiver vazia
         const saved = localStorage.getItem('sfbjj_aulas_fallback');
         if (saved) setSchedule(JSON.parse(saved));
       }

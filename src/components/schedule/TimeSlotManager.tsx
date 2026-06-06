@@ -131,7 +131,7 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
     };
 
     if (editingId) {
-      // Update in Supabase
+      // Atualiza no Supabase
       const { error: updateError } = await supabase
         .from('aulas')
         .update({
@@ -152,7 +152,7 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
 
       setSchedule(prev => prev.map(a => a.id === editingId ? novaAula : a));
     } else {
-      // Create in Supabase (let database handle ID generation)
+      // Cria no Supabase (deixa o BD gerenciar a geração de ID)
       const { data: newSlotData, error: insertError } = await supabase
         .from('aulas')
         .insert({

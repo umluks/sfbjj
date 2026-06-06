@@ -25,7 +25,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, loggedUser, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Role based navigation menu items
+  // Itens de menu de navegação baseados em função (role)
   let menuItems: any[] = [];
   if (loggedUser.role === 'admin') {
     menuItems = [

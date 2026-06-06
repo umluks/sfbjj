@@ -1,9 +1,14 @@
 services:
+  # Serviço principal da aplicação web SFBJJ
   sfbjj-app:
+    # Configurações de build da imagem Docker
     build:
       context: .
       dockerfile: Dockerfile
+    # Nome customizado do container para facilitar a identificação
     container_name: sfbjj_container
+    # Mapeamento de portas (Porta do Host : Porta do Container)
     ports:
       - "8080:80"
+    # Política de reinicialização: reinicia automaticamente caso o container caia ou o Docker reinicie
     restart: unless-stopped

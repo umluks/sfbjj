@@ -22,12 +22,12 @@ import {
 const parseCSVDate = (dateStr: string): string => {
   if (!dateStr) return '';
   const trimmed = dateStr.trim();
-  // Match YYYY-MM-DD
+  // Formato YYYY-MM-DD
   const ymdMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
   if (ymdMatch) {
     return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
   }
-  // Match DD-MM-YYYY or DD/MM/YYYY
+  // Formato DD-MM-YYYY ou DD/MM/YYYY
   const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
   if (dmyMatch) {
     return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
@@ -68,33 +68,33 @@ interface StudentManagerProps {
 
 export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents, loggedUser }) => {
   const isTeacher = loggedUser?.role === 'teacher';
-  // Search & Filter state
+  // Estado de Busca e Filtro
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedTurma, setSelectedTurma] = useState<string>('Todos');
 
-  // Pagination state
+  // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Modals state
+  // Estado dos modais
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Aluno | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Aluno | null>(null);
 
-  // Import fields state
+  // Estado dos campos de importação
   const [importText, setImportText] = useState('');
   const [parsedImportRows, setParsedImportRows] = useState<any[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Export dropdown state
+  // Estado do menu de exportação
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
-  // Form fields state
+  // Estado dos campos do formulário
   const [formNome, setFormNome] = useState('');
   const [formCpf, setFormCpf] = useState('');
   const [formDataNascimento, setFormDataNascimento] = useState('');
@@ -114,7 +114,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formFotoPerfil, setFormFotoPerfil] = useState('');
   const [formHistoricoGraduacoes, setFormHistoricoGraduacoes] = useState<any[]>([]);
 
-  // Input formatting helpers
+  // Helpers de formatação de entrada
   const formatCPF = (value: string) => {
     return value
       .replace(/\D/g, '') // Remove non-digits
@@ -138,7 +138,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       .substring(0, 15);
   };
 
-  // Open form modal for creating
+  // Abre o modal de formulário para criação
   const handleOpenCreate = () => {
     setEditingStudent(null);
     setFormNome('');
@@ -162,7 +162,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setShowFormModal(true);
   };
 
-  // Open form modal for editing
+  // Abre o modal de formulário para edição
   const handleOpenEdit = (student: Aluno) => {
     setEditingStudent(student);
     setFormNome(student.nome);
@@ -195,7 +195,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     return dateStr;
   };
 
-  // Save student (Create or Update)
+  // Salva o aluno (Criar ou Atualizar)
   const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNome || !formDataNascimento || !formBairro) return;
@@ -203,7 +203,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     const dbUltimaGrad = convertDDMMAAAAToYYYYMMDD(formDataUltimaGraduacao) || new Date().toISOString().split('T')[0];
 
     if (editingStudent) {
-      // Update student in supabase
+      // Atualiza o aluno no supabase
       const { error: updateError } = await supabase
         .from('alunos')
         .update({
@@ -235,7 +235,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       let updatedHistory = formHistoricoGraduacoes || [];
       if (editingStudent.faixa !== formFaixa || editingStudent.graus !== formGraus) {
-        // Insert new graduation record in supabase
+        // Insere novo registro de graduação no supabase
         const { data: newGradDataDb, error: gradError } = await supabase
           .from('graduacoes_historico')
           .insert({
@@ -291,7 +291,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         return s;
       }));
     } else {
-      // Create student in supabase
+      // Cria aluno no supabase
       const { data: newStudentData, error: insertError } = await supabase
         .from('alunos')
         .insert({
@@ -324,7 +324,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       let initialHistory: any[] = [];
       if (newStudentData) {
-        // Insert initial graduation record in supabase
+        // Insere registro inicial de graduação no supabase
         const { data: newGradDataDb, error: gradError } = await supabase
           .from('graduacoes_historico')
           .insert({
@@ -380,17 +380,17 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setEditingStudent(null);
   };
 
-  // Open delete confirmation modal
+  // Abre modal de confirmação de exclusão
   const handleOpenDelete = (student: Aluno) => {
     setStudentToDelete(student);
     setShowDeleteModal(true);
   };
 
-  // Confirm delete student
+  // Confirma a exclusão do aluno
   const handleConfirmDelete = async () => {
     if (!studentToDelete) return;
 
-    // Delete payments first due to foreign key
+    // Exclui pagamentos primeiro devido à chave estrangeira
     const { error: deletePaymentsError } = await supabase
       .from('pagamentos')
       .delete()
@@ -400,7 +400,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       console.error('Error deleting student payments:', deletePaymentsError);
     }
 
-    // Delete graduation history first due to foreign key
+    // Exclui histórico de graduação primeiro devido à chave estrangeira
     const { error: deleteHistoryError } = await supabase
       .from('graduacoes_historico')
       .delete()
@@ -410,7 +410,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       console.error('Error deleting student graduation history:', deleteHistoryError);
     }
 
-    // Delete student from supabase
+    // Exclui aluno do supabase
     const { error: deleteStudentError } = await supabase
       .from('alunos')
       .delete()
@@ -427,7 +427,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setStudentToDelete(null);
   };
 
-  // Export to CSV function
+  // Função para exportar para CSV
   const handleExportCSV = () => {
     const BOM = "\uFEFF";
     const headers = [
@@ -477,7 +477,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     document.body.removeChild(link);
   };
 
-  // Export to XLS (HTML-based spreadsheet compatible with Excel)
+  // Exportar para XLS (planilha baseada em HTML compatível com Excel)
   const handleExportXLS = () => {
     const headers = [
       "Nome",
@@ -530,7 +530,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     document.body.removeChild(link);
   };
 
-  // Filter and sort students alphabetically
+  // Filtra e ordena alunos alfabeticamente
   const filteredStudents = students
     .filter(student => {
       const matchesSearch =
@@ -545,7 +545,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-  // Calculate pagination
+  // Calcula a paginação
   const totalItems = filteredStudents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -626,9 +626,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    // If it's already DD/MM/YYYY
+    // Se já estiver em DD/MM/YYYY
     if (dateStr.includes('/')) return dateStr;
-    // If YYYY-MM-DD
+    // Se for YYYY-MM-DD
     const parts = dateStr.split('-');
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -646,7 +646,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
     if (lines.length === 0) return;
 
-    // Detect delimiter
+    // Detecta o delimitador
     const firstLine = lines[0];
     let delimiter = '\t';
     if (firstLine.includes('\t')) {
@@ -657,10 +657,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       delimiter = ',';
     }
 
-    // Parse headers
+    // Analisa os cabeçalhos
     const rawHeaders = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
 
-    // Map headers to Student fields
+    // Mapeia cabeçalhos para os campos de Aluno
     const mappings: { [key: string]: number } = {};
     const clean = (h: string) => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 
@@ -699,11 +699,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       }
     });
 
-    // Parse data rows
+    // Analisa as linhas de dados
     const rows: any[] = [];
     for (let i = 1; i < lines.length; i++) {
       const parts = splitCSVLine(lines[i], delimiter);
-      // If the row has fewer elements than headers, fill with empty strings
+      // Se a linha tiver menos elementos que os cabeçalhos, preencha com strings vazias
       while (parts.length < rawHeaders.length) {
         parts.push('');
       }
@@ -716,7 +716,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       const rawNome = getValue('nome');
       if (!rawNome) continue; // Skip empty rows
 
-      // Process gender
+      // Processa gênero
       const rawGen = getValue('genero').toLowerCase();
       let gender: Gender = 'Masculino';
       if (rawGen.startsWith('f') || rawGen.includes('fem')) {
@@ -725,10 +725,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         gender = 'Outro';
       }
 
-      // Process birth date
+      // Processa data de nascimento
       const dataNasc = parseCSVDate(getValue('dataNascimento')) || '2000-01-01';
 
-      // Process belt
+      // Processa faixa
       const rawFaixa = getValue('faixa').toLowerCase();
       let faixa: Belt = 'Branca';
       const belts: Belt[] = ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
@@ -737,11 +737,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         faixa = foundBelt;
       }
 
-      // Process degrees
+      // Processa graus
       const rawGraus = parseInt(getValue('graus'), 10);
       const graus: Degree = (rawGraus >= 0 && rawGraus <= 4) ? (rawGraus as Degree) : 0;
 
-      // Process class (turma)
+      // Processa turma
       const rawTurma = getValue('turma').toLowerCase();
       let turma: 'Kids' | 'Adulto' = 'Adulto';
       if (rawTurma.includes('kid') || rawTurma.includes('inf') || rawTurma.includes('cri')) {
@@ -749,20 +749,20 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       } else if (rawTurma.includes('adult') || rawTurma.includes('adul')) {
         turma = 'Adulto';
       } else {
-        // Check age based on birth year
+        // Verifica a idade com base no ano de nascimento
         const year = parseInt(dataNasc.split('-')[0], 10);
         if (year >= 2010) {
           turma = 'Kids';
         }
       }
 
-      // Process registration date
+      // Processa data de matrícula
       const dataMatr = parseCSVDate(getValue('dataMatricula')) || new Date().toISOString().split('T')[0];
 
-      // Process last graduation date
+      // Processa data da última graduação
       const dataUltimaGrad = parseCSVDate(getValue('dataUltimaGraduacao')) || dataMatr;
 
-      // Process status
+      // Processa status
       const rawStatus = getValue('status').toLowerCase();
       let status: 'Ativo' | 'Inativo' = 'Ativo';
       if (rawStatus.includes('inativ') || rawStatus === 'inativo') {
