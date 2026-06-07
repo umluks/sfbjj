@@ -1,10 +1,13 @@
 name: Pipeline CI/CD
 
 on:
-  push:
-    branches:
-      - main # O deploy será acionado ao realizar push na branch main
-      - feat/ci-cd
+  workflow_dispatch: # Permite disparar o deploy manualmente pela aba Actions do GitHub
+    inputs:
+      push_image:
+        description: 'Fazer push da imagem para o Docker Hub?'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -26,7 +29,35 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }} -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest .
           
       - name: Push Image
+        if: ${{ inputs.push_image }}
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
+
+  deploy_ec2:
+    name: Deploy EC2
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      INSTANCE_KEY: ${{secrets.INSTANCE_KEY}}
+      PUBLIC_IP: ${{secrets.PUBLIC_IP}}
+
+    steps:
+     - name: Deploy EC2 SSH
+       run: |
+          echo "$INSTANCE_KEY" > chave-site.pem
+          chmod 400 chave-site.pem
+          ssh -i chave-site.pem -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP << EOF
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 215436574250.dkr.ecr.us-east-1.amazonaws.com
+            docker pull 215436574250.dkr.ecr.us-east-1.amazonaws.com/site_prod:v1.0
+            echo "parando container antigo site"
+            docker stop sfbjj || true
+            echo "removendo container antigo site"
+            docker rm sfbjj || true
+            echo "rodando nova tag da imagem"
+            docker run -d -p 8080:80 --name sfbjj umluks/sfbjj-app:latest
+            echo "Parabéns! Imagem foi atualizada!"
+            docker ps
+          EOF
+          rm chave-site.pem
           
