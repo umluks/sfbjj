@@ -1,6 +1,9 @@
 name: Pipeline CI/CD
 
 on:
+  push:
+    branches:
+      - feat/ci-cd
   workflow_dispatch: # Permite disparar o deploy manualmente pela aba Actions do GitHub
     inputs:
       push_image:
