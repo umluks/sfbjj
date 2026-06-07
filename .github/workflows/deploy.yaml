@@ -23,9 +23,10 @@ jobs:
 
       - name: Build Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest .
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }} -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest .
           
       - name: Push Image
         run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
           
