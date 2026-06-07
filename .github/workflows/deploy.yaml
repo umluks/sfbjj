@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main # O deploy será acionado ao realizar push na branch main
+      - feat/ci-cd
 
 jobs:
   build:
