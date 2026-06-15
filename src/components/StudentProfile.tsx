@@ -41,15 +41,31 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     );
   }
 
-  // Helper to format date as DD/MM/AAAA
-  const formatToDDMMAAAA = (dateStr: string) => {
-    if (!dateStr) return '';
-    if (dateStr.includes('/')) return dateStr;
+  // Helper para formatar data como MM/AAAA (apenas mês/ano)
+  const formatToMonthYear = (dateStr: string) => {
+    if (!dateStr) return '-';
     const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (parts.length >= 2) {
+      return `${parts[1]}/${parts[0]}`;
+    }
+    if (dateStr.includes('/')) {
+      const p = dateStr.split('/');
+      if (p.length >= 2) return `${p[1]}/${p[p.length - 1]}`;
     }
     return dateStr;
+  };
+
+  // Converte YYYY-MM-DD ou DD/MM/AAAA para YYYY-MM (para input type="month")
+  const toMonthInputValue = (dateStr: string) => {
+    if (!dateStr) return '';
+    if (dateStr.includes('/')) {
+      const p = dateStr.split('/');
+      if (p.length === 3) return `${p[2]}-${p[1].padStart(2, '0')}`;
+    }
+    if (dateStr.includes('-')) {
+      return dateStr.substring(0, 7);
+    }
+    return '';
   };
 
   // Active Tab: 'profile' or 'password' or 'graduacoes'
@@ -68,7 +84,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const [formGraus, setFormGraus] = useState<Degree>(isEditingAdmin ? 0 : (student?.graus || 0));
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>(isEditingAdmin ? 'Adulto' : (student?.turma || 'Adulto'));
 
-  const [formUltimaGraduacao, setFormUltimaGraduacao] = useState(isEditingAdmin ? '' : (student ? formatToDDMMAAAA(student.dataUltimaGraduacao) : ''));
+  const [formUltimaGraduacao, setFormUltimaGraduacao] = useState(isEditingAdmin ? '' : (student ? toMonthInputValue(student.dataUltimaGraduacao || '') : ''));
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaNome || ''));
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaTel || ''));
   const [formFotoPerfil, setFormFotoPerfil] = useState(isEditingAdmin ? (localStorage.getItem('sfbjj_admin_avatar') || '') : (student?.fotoPerfil || ''));
@@ -103,23 +119,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       .substring(0, 15);
   };
 
-  const formatBrazilianDate = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '$1/$2')
-      .replace(/(\d{2})(\d)/, '$1/$2')
-      .replace(/(\d{4})(\d)/, '$1')
-      .substring(0, 10);
-  };
-
-  const convertDDMMAAAAToYYYYMMDD = (dateStr: string) => {
-    if (!dateStr) return null;
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    return dateStr;
-  };
 
   const handleSaveInfo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +159,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    const dbUltimaGrad = convertDDMMAAAAToYYYYMMDD(formUltimaGraduacao);
+    // formUltimaGraduacao está no formato YYYY-MM (input type="month")
+    const dbUltimaGrad = formUltimaGraduacao ? `${formUltimaGraduacao}-01` : null;
 
     // Update in supabase
     const { error: updateError } = await supabase
@@ -338,7 +338,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     // Atualiza estados locais do formulário também
     setFormFaixa(newGradFaixa);
     setFormGraus(newGradGrau);
-    setFormUltimaGraduacao(formatBrazilianDate(newGradData.split('-').reverse().join('')));
+    setFormUltimaGraduacao(toMonthInputValue(newGradData));
 
     setShowGradModal(false);
   };
@@ -714,11 +714,10 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data da Última Graduação</label>
                         <input
-                          type="text"
+                          type="month"
                           value={formUltimaGraduacao}
-                          onChange={(e) => setFormUltimaGraduacao(formatBrazilianDate(e.target.value))}
+                          onChange={(e) => setFormUltimaGraduacao(e.target.value)}
                           className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                          placeholder="DD/MM/AAAA"
                         />
                       </div>
                     </div>
@@ -908,7 +907,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       student.historicoGraduacoes.slice().reverse().map((grad) => (
                         <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
-                            {formatToDDMMAAAA(grad.data)}
+                            {formatToMonthYear(grad.data)}
                           </td>
                           <td className="px-4 py-3">
                             {renderBeltBadge(grad.faixa, grad.graus)}
