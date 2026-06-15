@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { Aluno, PaymentStatus } from '../types';
+import { supabase } from '../lib/supabase';
 import {
   Search,
   History,
@@ -140,7 +141,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = (event.target?.result as string).replace(/^\uFEFF/, ''); // remove BOM
         const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
@@ -170,47 +171,107 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           if (alunoId) rowMap.set(alunoId, cols);
         }
 
-        let updatedCount = 0;
+        // Identificar o ano de referência a partir da primeira linha válida para limpar os registros do mesmo ano
+        let targetYear = yearFilter;
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          const yearVal = cols[colIndex('ano_ref')];
+          if (yearVal) {
+            targetYear = yearVal;
+            break;
+          }
+        }
 
-        setStudents(prev => prev.map(student => {
+        // Zera/deleta no Supabase todos os pagamentos dos alunos no ano de referência antes de salvar os novos do CSV
+        const { error: deleteError } = await supabase
+          .from('pagamentos')
+          .delete()
+          .like('mesRef', `%/${targetYear}`);
+
+        if (deleteError) {
+          console.error('Error clearing old payments:', deleteError);
+        }
+
+        let updatedCount = 0;
+        const paymentsToUpsert: any[] = [];
+        const studentUpdates: { [alunoId: number]: any[] } = {};
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        students.forEach(student => {
           const cols = rowMap.get(student.id);
-          if (!cols) return student;
+          if (!cols) return;
 
           const anoRef = cols[colIndex('ano_ref')];
-          let pagamentos = [...student.pagamentos];
+          // Limpa todos os pagamentos daquele ano do array local do estudante
+          let pagamentos = student.pagamentos.filter(p => !p.mesRef.endsWith(`/${anoRef}`));
           let modified = false;
 
           MONTH_SLUGS.forEach((slug, idx) => {
             const rawVal = (cols[colIndex(`mes_ref_${slug}`)] ?? '').toUpperCase().trim();
-            // Considera "tem fatura" qualquer valor diferente de NÃO, vazio ou 0
             const temFatura = rawVal !== '' && rawVal !== 'NÃO' && rawVal !== 'NAO' && rawVal !== '0' && rawVal !== 'FALSE';
             if (!temFatura) return;
 
-            // Valor SEMPRE fixo R$100, independente do que vier no CSV
             const mesRef = `${ALL_MONTHS[idx]}/${anoRef}`;
-            const existingIdx = pagamentos.findIndex(p => p.mesRef === mesRef);
 
-            if (existingIdx >= 0) {
-              // Mantém status e datas existentes, apenas normaliza valor
-              pagamentos[existingIdx] = { ...pagamentos[existingIdx], valor: VALOR_MENSALIDADE };
-            } else {
-              // Cria novo registro pendente com valor fixo
-              pagamentos.push({
-                id: Date.now() + Math.random(),
-                alunoId: student.id,
-                mesRef,
-                valor: VALOR_MENSALIDADE,
-                status: 'Pendente' as any,
-                dataVencimento: `${anoRef}-${String(idx + 1).padStart(2, '0')}-10`,
-                dataPagamento: null
-              } as any);
-            }
+            // Cria novo registro como PAGO com valor fixo diretamente da importação do CSV
+            const newPay = {
+              alunoId: student.id,
+              mesRef,
+              valor: VALOR_MENSALIDADE,
+              status: 'Pago' as any,
+              dataVencimento: `${anoRef}-${String(idx + 1).padStart(2, '0')}-10`,
+              dataPagamento: todayStr
+            };
+            paymentsToUpsert.push(newPay);
+            pagamentos.push(newPay as any);
             modified = true;
           });
 
-          if (modified) updatedCount++;
-          return { ...student, pagamentos };
-        }));
+          if (modified) {
+            updatedCount++;
+            studentUpdates[student.id] = pagamentos;
+          }
+        });
+
+        if (paymentsToUpsert.length > 0) {
+          const { error: upsertError } = await supabase
+            .from('pagamentos')
+            .upsert(paymentsToUpsert);
+
+          if (upsertError) {
+            console.error('Error persisting payments to Supabase:', upsertError);
+            setImportError('Erro ao salvar os pagamentos no banco de dados.');
+            return;
+          }
+        }
+
+        // Buscar alunos atualizados do banco de dados para recarregar com os novos registros (incluindo IDs criados pelo DB se houver)
+        const { data: refreshedData, error: refreshError } = await supabase
+          .from('alunos')
+          .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
+
+        if (!refreshError && refreshedData) {
+          const mapped = refreshedData.map((student: any) => ({
+            ...student,
+            historicoGraduacoes: (student.graduacoes_historico || []).map((g: any) => ({
+              id: g.id,
+              data: g.data_graduacao,
+              faixa: g.faixa,
+              graus: g.graus,
+              avaliador: g.avaliador
+            })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime())
+          }));
+          const sorted = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+          setStudents(sorted as any);
+        } else {
+          // Fallback para estado local caso ocorra um erro ao recarregar
+          setStudents(prev => prev.map(student => {
+            if (studentUpdates[student.id]) {
+              return { ...student, pagamentos: studentUpdates[student.id] };
+            }
+            return student;
+          }));
+        }
 
         setPaymentSuccessMsg(`Importação concluída: ${updatedCount} aluno(s) atualizado(s).`);
         setTimeout(() => setPaymentSuccessMsg(null), 5000);
@@ -222,9 +283,24 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   };
 
   // Registra o pagamento com a data selecionada
-  const handleRegisterPaymentWithDate = (alunoId: number, paymentId: number, dateStr: string) => {
+  const handleRegisterPaymentWithDate = async (alunoId: number, paymentId: number, dateStr: string) => {
     if (!dateStr) {
       alert("A data de pagamento é obrigatória.");
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from('pagamentos')
+      .update({
+        valor: VALOR_MENSALIDADE,
+        status: 'Pago',
+        dataPagamento: dateStr
+      })
+      .eq('id', paymentId);
+
+    if (updateError) {
+      console.error('Error updating payment in Supabase:', updateError);
+      alert('Erro ao registrar pagamento no banco de dados.');
       return;
     }
 
@@ -283,25 +359,35 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     const newPayment = {
       alunoId,
       mesRef: monthFilter,
-      valor: 100,
+      valor: VALOR_MENSALIDADE,
       status: 'Pendente',
       dataVencimento: defaultVencimento,
       dataPagamento: null
     };
 
-    // Nota: Se usar Supabase real, isso iria inserir em 'pagamentos'. 
-    // Aqui atualizamos o estado para refletir a alteração na UI.
-    const paymentWithId = { ...newPayment, id: Date.now() } as any;
+    const { data: insertedPayment, error: insertError } = await supabase
+      .from('pagamentos')
+      .insert(newPayment)
+      .select()
+      .single();
 
-    setStudents(prev => prev.map(s => {
-      if (s.id === alunoId) {
-        return {
-          ...s,
-          pagamentos: [...s.pagamentos, paymentWithId]
-        };
-      }
-      return s;
-    }));
+    if (insertError) {
+      console.error('Error creating payment in Supabase:', insertError);
+      alert('Erro ao gerar fatura no banco de dados.');
+      return;
+    }
+
+    if (insertedPayment) {
+      setStudents(prev => prev.map(s => {
+        if (s.id === alunoId) {
+          return {
+            ...s,
+            pagamentos: [...s.pagamentos, insertedPayment]
+          };
+        }
+        return s;
+      }));
+    }
     
     setPaymentSuccessMsg(`Fatura gerada para o mês ${monthFilter}.`);
     setTimeout(() => setPaymentSuccessMsg(null), 3000);
