@@ -90,14 +90,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
   ];
 
-  // Formata valor como "R$ X,XX"
-  const formatBRL = (val: number) =>
-    `R$ ${val.toFixed(2).replace('.', ',')}`;
-
-  // Converte "R$ X,XX" → number
-  const parseBRL = (str: string): number =>
-    parseFloat(str.replace(/R\$\s?/, '').replace(/\./g, '').replace(',', '.')) || 0;
-
   // ─── Exportação CSV (formato anual pivô) ──────────────────────────────────────
   const handleExportCSV = () => {
     const header = [
@@ -106,11 +98,11 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     ];
 
     const rows: string[][] = filteredStudents.map(student => {
+      // Cada mês: "SIM" se há fatura (= R$100), "NÃO" se não há
       const monthValues = ALL_MONTHS.map(monthName => {
         const mesRef = `${monthName}/${yearFilter}`;
-        // Valor sempre fixo R$100 se houver fatura, R$0 se não houver
         const hasFatura = student.pagamentos.some(p => p.mesRef === mesRef);
-        return formatBRL(hasFatura ? VALOR_MENSALIDADE : 0);
+        return hasFatura ? 'SIM' : 'NÃO';
       });
 
       return [
@@ -189,8 +181,10 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           let modified = false;
 
           MONTH_SLUGS.forEach((slug, idx) => {
-            const rawVal = parseBRL(cols[colIndex(`mes_ref_${slug}`)] ?? '');
-            if (rawVal === 0) return; // ignora meses sem fatura (R$0)
+            const rawVal = (cols[colIndex(`mes_ref_${slug}`)] ?? '').toUpperCase().trim();
+            // Considera "tem fatura" qualquer valor diferente de NÃO, vazio ou 0
+            const temFatura = rawVal !== '' && rawVal !== 'NÃO' && rawVal !== 'NAO' && rawVal !== '0' && rawVal !== 'FALSE';
+            if (!temFatura) return;
 
             // Valor SEMPRE fixo R$100, independente do que vier no CSV
             const mesRef = `${ALL_MONTHS[idx]}/${anoRef}`;
