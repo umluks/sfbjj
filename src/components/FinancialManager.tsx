@@ -70,8 +70,42 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     return acc + paid.length * VALOR_MENSALIDADE;
   }, 0);
 
+  // Total recebido no MÊS de referência selecionado por turma (Adulto / Kids)
+  const totalRecebidoMesAdulto = students.reduce((acc, student) => {
+    if (student.turma !== 'Adulto') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.mesRef === monthFilter && p.status === 'Pago'
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  const totalRecebidoMesKids = students.reduce((acc, student) => {
+    if (student.turma !== 'Kids') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.mesRef === monthFilter && p.status === 'Pago'
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
   // Total recebido no ANO selecionado (mesRef termina com /yearFilter e status Pago)
   const totalAnoRecebido = students.reduce((acc, student) => {
+    const paid = student.pagamentos.filter(p =>
+      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  // Total recebido no ANO selecionado por turma (Adulto / Kids)
+  const totalAnoRecebidoAdulto = students.reduce((acc, student) => {
+    if (student.turma !== 'Adulto') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  const totalAnoRecebidoKids = students.reduce((acc, student) => {
+    if (student.turma !== 'Kids') return acc;
     const paid = student.pagamentos.filter(p =>
       p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
     );
@@ -354,15 +388,17 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     return student.pagamentos.find(p => p.mesRef === monthFilter);
   };
 
-  const handleGeneratePayment = async (alunoId: number) => {
-    const defaultVencimento = new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0];
+
+
+  const handleRegisterPaidDirectly = async (alunoId: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const newPayment = {
       alunoId,
       mesRef: monthFilter,
       valor: VALOR_MENSALIDADE,
-      status: 'Pendente',
-      dataVencimento: defaultVencimento,
-      dataPagamento: null
+      status: 'Pago',
+      dataVencimento: todayStr,
+      dataPagamento: todayStr
     };
 
     const { data: insertedPayment, error: insertError } = await supabase
@@ -372,8 +408,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       .single();
 
     if (insertError) {
-      console.error('Error creating payment in Supabase:', insertError);
-      alert('Erro ao gerar fatura no banco de dados.');
+      console.error('Error creating paid payment in Supabase:', insertError);
+      alert('Erro ao registrar pagamento no banco de dados.');
       return;
     }
 
@@ -389,7 +425,36 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       }));
     }
     
-    setPaymentSuccessMsg(`Fatura gerada para o mês ${monthFilter}.`);
+    setPaymentSuccessMsg(`Pagamento registrado com sucesso para o mês ${monthFilter}.`);
+    setTimeout(() => setPaymentSuccessMsg(null), 3000);
+  };
+
+  const handleRemovePayment = async (alunoId: number, paymentId: number) => {
+    const confirmRemove = window.confirm("Deseja realmente retirar/remover este pagamento?");
+    if (!confirmRemove) return;
+
+    const { error: deleteError } = await supabase
+      .from('pagamentos')
+      .delete()
+      .eq('id', paymentId);
+
+    if (deleteError) {
+      console.error('Error removing payment from Supabase:', deleteError);
+      alert('Erro ao remover pagamento do banco de dados.');
+      return;
+    }
+
+    setStudents(prev => prev.map(s => {
+      if (s.id === alunoId) {
+        return {
+          ...s,
+          pagamentos: s.pagamentos.filter(p => p.id !== paymentId)
+        };
+      }
+      return s;
+    }));
+
+    setPaymentSuccessMsg("Pagamento removido com sucesso.");
     setTimeout(() => setPaymentSuccessMsg(null), 3000);
   };
 
@@ -494,26 +559,36 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       {/* Resumos Financeiros */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Selected Month Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-emerald-500 p-5">
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido em {monthFilter}</span>
-            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
-            <span className="text-[10px] text-slate-500 mt-1 block">Recebimentos no mês corrente</span>
+        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex flex-col justify-between border-l-4 border-l-emerald-500 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido em {monthFilter}</span>
+              <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
+            </div>
+            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hidden sm:block">
+              <CreditCard className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hidden sm:block">
-            <CreditCard className="w-5 h-5" />
+          <div className="mt-4 pt-3 border-t border-obsidian-750 flex justify-between text-xs text-slate-405 text-slate-400">
+            <span>Adulto: <strong className="text-slate-200">R$ {totalRecebidoMesAdulto.toFixed(2).replace('.', ',')}</strong></span>
+            <span>Kids: <strong className="text-slate-200">R$ {totalRecebidoMesKids.toFixed(2).replace('.', ',')}</strong></span>
           </div>
         </div>
 
         {/* Consolidated Year Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-blue-500 p-5">
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido ({yearFilter})</span>
-            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
-            <span className="text-[10px] text-slate-500 mt-1 block">Soma de recebimentos no ano selecionado</span>
+        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex flex-col justify-between border-l-4 border-l-blue-500 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido ({yearFilter})</span>
+              <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
+            </div>
+            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500 hidden sm:block">
+              <CreditCard className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500 hidden sm:block">
-            <CreditCard className="w-5 h-5" />
+          <div className="mt-4 pt-3 border-t border-obsidian-750 flex justify-between text-xs text-slate-450">
+            <span>Adulto: <strong className="text-slate-200">R$ {totalAnoRecebidoAdulto.toFixed(2).replace('.', ',')}</strong></span>
+            <span>Kids: <strong className="text-slate-200">R$ {totalAnoRecebidoKids.toFixed(2).replace('.', ',')}</strong></span>
           </div>
         </div>
       </div>
@@ -602,6 +677,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             <thead>
               <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
                 <th className="px-6 py-4">Aluno</th>
+                <th className="px-6 py-4 text-center">Turma</th>
                 <th className="px-6 py-4 text-center">Ref. Ciclo</th>
                 <th className="px-6 py-4 text-center">Valor</th>
                 <th className="px-6 py-4 text-center">Vencimento</th>
@@ -611,7 +687,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={7} className="text-center py-10 text-slate-500 font-medium">
                     Sem faturas encontradas com os filtros selecionados.
                   </td>
                 </tr>
@@ -630,6 +706,15 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                         <div className="text-xs text-slate-500 mt-0.5">
                           Faixa {student.faixa} • Status: {student.status}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                          student.turma === 'Kids' 
+                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        }`}>
+                          {student.turma}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="text-xs font-semibold text-slate-400">
@@ -651,11 +736,11 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                         <div className="flex items-center justify-end gap-2">
                           {!bill ? (
                             <button
-                              onClick={() => handleGeneratePayment(student.id)}
-                              className="text-[10px] text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-amber-500/20 transition-colors"
-                              title={`Gerar Fatura para ${monthFilter}`}
+                              onClick={() => handleRegisterPaidDirectly(student.id)}
+                              className="text-[10px] text-emerald-450 text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-emerald-500/20 transition-colors"
+                              title={`Registrar Pagamento para ${monthFilter}`}
                             >
-                              + Gerar Fatura
+                              Marcar Pago
                             </button>
                           ) : bill.status !== 'Pago' ? (
                             <button
@@ -666,9 +751,18 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                               <Check className="w-4 h-4" />
                             </button>
                           ) : (
-                            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24">
-                              <Check className="w-3 h-3" /> Pago
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-20">
+                                <Check className="w-3 h-3" /> Pago
+                              </span>
+                              <button
+                                onClick={() => handleRemovePayment(student.id, bill.id)}
+                                className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 transition-all h-8 w-8 flex items-center justify-center"
+                                title="Retirar Pagamento"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           )}
                           <button
                             onClick={() => handleOpenHistory(student)}
