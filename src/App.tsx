@@ -37,7 +37,7 @@ function App() {
 
   useEffect(() => {
     async function fetchStudents() {
-      const { data, error } = await supabase.from('alunos').select('*, pagamentos(*), graduacoes_historico(*)');
+      const { data, error } = await supabase.from('alunos').select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
       if (!error && data) {
         // Mapeia a resposta do banco de dados para os tipos Aluno
         const mapped = data.map((student: any) => ({
