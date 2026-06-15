@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Aluno, PaymentStatus } from '../types';
 import {
   Search,
@@ -9,7 +9,9 @@ import {
   X,
   CreditCard,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download,
+  Upload
 } from 'lucide-react';
 
 interface FinancialManagerProps {
@@ -88,6 +90,162 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
   // Indicador de animação de pagamento registrado
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ─── Exportação CSV ───────────────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    const header = ['id_aluno', 'nome_aluno', 'mes_ref', 'valor', 'status', 'data_vencimento', 'data_pagamento'];
+
+    const rows: string[][] = [];
+
+    filteredStudents.forEach((student) => {
+      const bill = student.pagamentos.find(p => p.mesRef === monthFilter);
+      if (bill) {
+        rows.push([
+          String(student.id),
+          student.nome,
+          bill.mesRef,
+          bill.valor.toFixed(2),
+          bill.status,
+          bill.dataVencimento,
+          bill.dataPagamento ?? ''
+        ]);
+      } else {
+        // Inclui aluno mesmo sem fatura (linha vazia de pagamento)
+        rows.push([
+          String(student.id),
+          student.nome,
+          monthFilter,
+          '',
+          'Sem fatura',
+          '',
+          ''
+        ]);
+      }
+    });
+
+    const csvContent = [
+      header.join(';'),
+      ...rows.map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
+    ].join('\n');
+
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeMonth = monthFilter.replace('/', '-');
+    a.href = url;
+    a.download = `financeiro_${safeMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    setPaymentSuccessMsg(`Exportação concluída: ${rows.length} registro(s) exportado(s).`);
+    setTimeout(() => setPaymentSuccessMsg(null), 4000);
+  };
+
+  // ─── Importação CSV ───────────────────────────────────────────────────────────
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Limpa o input para permitir reimportar o mesmo arquivo
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = (event.target?.result as string).replace(/^\uFEFF/, ''); // remove BOM
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+
+        if (lines.length < 2) {
+          setImportError('Arquivo CSV vazio ou sem dados.');
+          return;
+        }
+
+        const headerLine = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
+        const requiredCols = ['id_aluno', 'mes_ref', 'valor', 'status', 'data_vencimento', 'data_pagamento'];
+        const missingCols = requiredCols.filter(c => !headerLine.includes(c));
+        if (missingCols.length > 0) {
+          setImportError(`Colunas ausentes no CSV: ${missingCols.join(', ')}`);
+          return;
+        }
+
+        const colIndex = (name: string) => headerLine.indexOf(name);
+
+        let updatedCount = 0;
+        const updates: { alunoId: number; mesRef: string; valor: number; status: string; dataVencimento: string; dataPagamento: string | null }[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          const alunoId = Number(cols[colIndex('id_aluno')]);
+          const mesRef = cols[colIndex('mes_ref')];
+          const valorStr = cols[colIndex('valor')].replace(',', '.');
+          const status = cols[colIndex('status')] as any;
+          const dataVencimento = cols[colIndex('data_vencimento')];
+          const dataPagamento = cols[colIndex('data_pagamento')] || null;
+
+          if (!alunoId || !mesRef || status === 'Sem fatura') continue;
+
+          updates.push({
+            alunoId,
+            mesRef,
+            valor: isNaN(parseFloat(valorStr)) ? 100 : parseFloat(valorStr),
+            status,
+            dataVencimento,
+            dataPagamento
+          });
+        }
+
+        setStudents(prev => prev.map(student => {
+          const studentUpdates = updates.filter(u => u.alunoId === student.id);
+          if (studentUpdates.length === 0) return student;
+
+          let modified = false;
+          const updatedPagamentos = student.pagamentos.map(p => {
+            const upd = studentUpdates.find(u => u.mesRef === p.mesRef);
+            if (upd) {
+              modified = true;
+              return {
+                ...p,
+                valor: upd.valor,
+                status: upd.status,
+                dataVencimento: upd.dataVencimento || p.dataVencimento,
+                dataPagamento: upd.dataPagamento
+              };
+            }
+            return p;
+          });
+
+          // Se não havia pagamento para esse mês, cria um novo
+          const newPays = studentUpdates
+            .filter(u => !student.pagamentos.find(p => p.mesRef === u.mesRef))
+            .map(u => ({
+              id: Date.now() + Math.random(),
+              alunoId: student.id,
+              mesRef: u.mesRef,
+              valor: u.valor,
+              status: u.status,
+              dataVencimento: u.dataVencimento,
+              dataPagamento: u.dataPagamento
+            } as any));
+
+          if (modified || newPays.length > 0) updatedCount++;
+
+          return {
+            ...student,
+            pagamentos: [...updatedPagamentos, ...newPays]
+          };
+        }));
+
+        setPaymentSuccessMsg(`Importação concluída: ${updatedCount} aluno(s) atualizado(s).`);
+        setTimeout(() => setPaymentSuccessMsg(null), 5000);
+      } catch (err) {
+        setImportError('Erro ao processar o arquivo CSV. Verifique o formato.');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
 
   // Registra o pagamento com a data selecionada
   const handleRegisterPaymentWithDate = (alunoId: number, paymentId: number, dateStr: string) => {
@@ -245,6 +403,35 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos e inativos.
           </p>
         </div>
+
+        {/* Botões Exportar / Importar */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-blue-400 hover:text-blue-300 transition-all"
+            title={`Exportar registros de ${monthFilter} para CSV`}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Exportar CSV
+          </button>
+
+          {/* Input oculto para importação */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImportCSV}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-400 hover:text-amber-300 transition-all"
+            title="Importar pagamentos de um arquivo CSV"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Importar CSV
+          </button>
+        </div>
       </div>
 
       {/* Resumos Financeiros */}
@@ -273,6 +460,19 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           </div>
         </div>
       </div>
+
+      {/* Import error banner */}
+      {importError && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-md shadow-red-950/20 animate-fade-in">
+          <span className="text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            {importError}
+          </span>
+          <button onClick={() => setImportError(null)} className="text-red-400/70 hover:text-red-300 p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Payment registered banner */}
       {paymentSuccessMsg && (
