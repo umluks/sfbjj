@@ -57,33 +57,24 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
 
-  const getMonthAndYear = (filter: string) => {
-    const parts = filter.split('/');
-    if (parts.length !== 2) return null;
-    const monthIndex = ALL_MONTHS.indexOf(parts[0]);
-    if (monthIndex === -1) return null;
-    const monthNum = (monthIndex + 1).toString().padStart(2, '0');
-    return { month: monthNum, year: parts[1] };
-  };
 
-  const filterDate = getMonthAndYear(monthFilter);
 
+  const VALOR_MENSALIDADE = 100; // Valor fixo da mensalidade em R$
+
+  // Total recebido no MÊS de referência selecionado (mesRef === monthFilter e status Pago)
   const totalRecebidoMes = students.reduce((acc, student) => {
-    const monthlyPaid = student.pagamentos.filter(p => {
-      if (p.status !== 'Pago' || !p.dataPagamento || !filterDate) return false;
-      const payParts = p.dataPagamento.split('-');
-      return payParts.length >= 2 && payParts[0] === filterDate.year && payParts[1] === filterDate.month;
-    });
-    return acc + monthlyPaid.reduce((sum, p) => sum + p.valor, 0);
+    const paid = student.pagamentos.filter(p =>
+      p.mesRef === monthFilter && p.status === 'Pago'
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
   }, 0);
 
+  // Total recebido no ANO selecionado (mesRef termina com /yearFilter e status Pago)
   const totalAnoRecebido = students.reduce((acc, student) => {
-    const anoPaid = student.pagamentos.filter(p => {
-      if (p.status !== 'Pago' || !p.dataPagamento) return false;
-      const payParts = p.dataPagamento.split('-');
-      return payParts.length >= 1 && payParts[0] === yearFilter;
-    });
-    return acc + anoPaid.reduce((sum, p) => sum + p.valor, 0);
+    const paid = student.pagamentos.filter(p =>
+      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
   }, 0);
 
   const itemsPerPage = 10;
@@ -117,8 +108,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     const rows: string[][] = filteredStudents.map(student => {
       const monthValues = ALL_MONTHS.map(monthName => {
         const mesRef = `${monthName}/${yearFilter}`;
-        const payment = student.pagamentos.find(p => p.mesRef === mesRef);
-        return formatBRL(payment ? payment.valor : 0);
+        // Valor sempre fixo R$100 se houver fatura, R$0 se não houver
+        const hasFatura = student.pagamentos.some(p => p.mesRef === mesRef);
+        return formatBRL(hasFatura ? VALOR_MENSALIDADE : 0);
       });
 
       return [
@@ -197,22 +189,23 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           let modified = false;
 
           MONTH_SLUGS.forEach((slug, idx) => {
-            const valor = parseBRL(cols[colIndex(`mes_ref_${slug}`)] ?? '');
-            if (valor === 0) return; // ignora meses sem valor
+            const rawVal = parseBRL(cols[colIndex(`mes_ref_${slug}`)] ?? '');
+            if (rawVal === 0) return; // ignora meses sem fatura (R$0)
 
+            // Valor SEMPRE fixo R$100, independente do que vier no CSV
             const mesRef = `${ALL_MONTHS[idx]}/${anoRef}`;
             const existingIdx = pagamentos.findIndex(p => p.mesRef === mesRef);
 
             if (existingIdx >= 0) {
-              // Atualiza apenas o valor (mantém status/datas existentes)
-              pagamentos[existingIdx] = { ...pagamentos[existingIdx], valor };
+              // Mantém status e datas existentes, apenas normaliza valor
+              pagamentos[existingIdx] = { ...pagamentos[existingIdx], valor: VALOR_MENSALIDADE };
             } else {
-              // Cria novo registro pendente para o mês
+              // Cria novo registro pendente com valor fixo
               pagamentos.push({
                 id: Date.now() + Math.random(),
                 alunoId: student.id,
                 mesRef,
-                valor,
+                valor: VALOR_MENSALIDADE,
                 status: 'Pendente' as any,
                 dataVencimento: `${anoRef}-${String(idx + 1).padStart(2, '0')}-10`,
                 dataPagamento: null
@@ -243,13 +236,11 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
     setStudents(prev => prev.map(s => {
       if (s.id === alunoId) {
-        let paymentVal = 100;
         const updatedPagamentos = s.pagamentos.map(p => {
           if (p.id === paymentId) {
-            paymentVal = 100;
             return {
               ...p,
-              valor: 100,
+              valor: VALOR_MENSALIDADE,
               status: 'Pago' as PaymentStatus,
               dataPagamento: dateStr
             };
@@ -257,8 +248,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           return p;
         });
 
-        // Dispara mensagem de sucesso
-        setPaymentSuccessMsg(`Pagamento de R$ ${paymentVal.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
+        setPaymentSuccessMsg(`Pagamento de R$ ${VALOR_MENSALIDADE.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
         setTimeout(() => setPaymentSuccessMsg(null), 4000);
 
         return {
@@ -720,28 +710,43 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                   return filteredPays.map((pay) => (
                     <div
                       key={pay.id}
-                      className="flex flex-col gap-2 p-3 rounded-xl bg-obsidian-900 border border-obsidian-750/80 hover:border-gold-500/10 transition-all"
+                      className={`flex flex-col gap-2 p-3 rounded-xl border transition-all ${
+                        pay.status === 'Pago'
+                          ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
+                          : pay.status === 'Atrasado'
+                          ? 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'
+                          : 'bg-obsidian-900 border-obsidian-750/80 hover:border-amber-500/20'
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-4">
                         <span className="font-bold text-xs text-slate-200">
                           Ciclo {pay.mesRef}
                         </span>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <span className="text-xs font-black text-slate-100">
-                            R$ {pay.valor.toFixed(2).replace('.', ',')}
+                            R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}
                           </span>
                           <div className="min-w-24 flex justify-end">
-                            {pay.status === 'Pago' ? (
-                              renderStatusBadge(pay.status)
-                            ) : (
-                              <span className="text-xs text-amber-500 font-semibold uppercase tracking-wider">Pendente</span>
-                            )}
+                            {renderStatusBadge(pay.status as any)}
                           </div>
                         </div>
                       </div>
 
-
+                      {/* Linha de detalhe de data */}
+                      <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-0.5 border-t border-obsidian-750/50">
+                        {pay.status === 'Pago' && pay.dataPagamento ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-500" />
+                            Pago em {pay.dataPagamento.split('-').reverse().join('/')}
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3 text-amber-500" />
+                            Vence em {pay.dataVencimento ? pay.dataVencimento.split('-').reverse().join('/') : '—'}
+                          </>
+                        )}
+                      </div>
                     </div>
                   ));
                 })()}
