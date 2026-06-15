@@ -93,36 +93,41 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ─── Exportação CSV ───────────────────────────────────────────────────────────
+  // Slugs de meses para colunas do CSV (sem acento para compatibilidade)
+  const MONTH_SLUGS = [
+    'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ];
+
+  // Formata valor como "R$ X,XX"
+  const formatBRL = (val: number) =>
+    `R$ ${val.toFixed(2).replace('.', ',')}`;
+
+  // Converte "R$ X,XX" → number
+  const parseBRL = (str: string): number =>
+    parseFloat(str.replace(/R\$\s?/, '').replace(/\./g, '').replace(',', '.')) || 0;
+
+  // ─── Exportação CSV (formato anual pivô) ──────────────────────────────────────
   const handleExportCSV = () => {
-    const header = ['id_aluno', 'nome_aluno', 'mes_ref', 'valor', 'status', 'data_vencimento', 'data_pagamento'];
+    const header = [
+      'id_aluno', 'nome_aluno', 'turma', 'ano_ref',
+      ...MONTH_SLUGS.map(m => `mes_ref_${m}`)
+    ];
 
-    const rows: string[][] = [];
+    const rows: string[][] = filteredStudents.map(student => {
+      const monthValues = ALL_MONTHS.map(monthName => {
+        const mesRef = `${monthName}/${yearFilter}`;
+        const payment = student.pagamentos.find(p => p.mesRef === mesRef);
+        return formatBRL(payment ? payment.valor : 0);
+      });
 
-    filteredStudents.forEach((student) => {
-      const bill = student.pagamentos.find(p => p.mesRef === monthFilter);
-      if (bill) {
-        rows.push([
-          String(student.id),
-          student.nome,
-          bill.mesRef,
-          bill.valor.toFixed(2),
-          bill.status,
-          bill.dataVencimento,
-          bill.dataPagamento ?? ''
-        ]);
-      } else {
-        // Inclui aluno mesmo sem fatura (linha vazia de pagamento)
-        rows.push([
-          String(student.id),
-          student.nome,
-          monthFilter,
-          '',
-          'Sem fatura',
-          '',
-          ''
-        ]);
-      }
+      return [
+        String(student.id),
+        student.nome,
+        student.turma,
+        yearFilter,
+        ...monthValues
+      ];
     });
 
     const csvContent = [
@@ -133,23 +138,21 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const safeMonth = monthFilter.replace('/', '-');
     a.href = url;
-    a.download = `financeiro_${safeMonth}.csv`;
+    a.download = `financeiro_${yearFilter}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
-    setPaymentSuccessMsg(`Exportação concluída: ${rows.length} registro(s) exportado(s).`);
+    setPaymentSuccessMsg(`Exportação concluída: ${rows.length} aluno(s) exportado(s) — ano ${yearFilter}.`);
     setTimeout(() => setPaymentSuccessMsg(null), 4000);
   };
 
-  // ─── Importação CSV ───────────────────────────────────────────────────────────
+  // ─── Importação CSV (formato anual pivô) ──────────────────────────────────────
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImportError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Limpa o input para permitir reimportar o mesmo arquivo
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     const reader = new FileReader();
@@ -164,7 +167,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         }
 
         const headerLine = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
-        const requiredCols = ['id_aluno', 'mes_ref', 'valor', 'status', 'data_vencimento', 'data_pagamento'];
+
+        // Valida colunas obrigatórias do formato pivô
+        const requiredCols = ['id_aluno', 'ano_ref', ...MONTH_SLUGS.map(m => `mes_ref_${m}`)];
         const missingCols = requiredCols.filter(c => !headerLine.includes(c));
         if (missingCols.length > 0) {
           setImportError(`Colunas ausentes no CSV: ${missingCols.join(', ')}`);
@@ -173,69 +178,51 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
         const colIndex = (name: string) => headerLine.indexOf(name);
 
-        let updatedCount = 0;
-        const updates: { alunoId: number; mesRef: string; valor: number; status: string; dataVencimento: string; dataPagamento: string | null }[] = [];
-
+        // Pré-processa todas as linhas em um mapa id_aluno → cols
+        const rowMap = new Map<number, string[]>();
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
           const alunoId = Number(cols[colIndex('id_aluno')]);
-          const mesRef = cols[colIndex('mes_ref')];
-          const valorStr = cols[colIndex('valor')].replace(',', '.');
-          const status = cols[colIndex('status')] as any;
-          const dataVencimento = cols[colIndex('data_vencimento')];
-          const dataPagamento = cols[colIndex('data_pagamento')] || null;
-
-          if (!alunoId || !mesRef || status === 'Sem fatura') continue;
-
-          updates.push({
-            alunoId,
-            mesRef,
-            valor: isNaN(parseFloat(valorStr)) ? 100 : parseFloat(valorStr),
-            status,
-            dataVencimento,
-            dataPagamento
-          });
+          if (alunoId) rowMap.set(alunoId, cols);
         }
 
-        setStudents(prev => prev.map(student => {
-          const studentUpdates = updates.filter(u => u.alunoId === student.id);
-          if (studentUpdates.length === 0) return student;
+        let updatedCount = 0;
 
+        setStudents(prev => prev.map(student => {
+          const cols = rowMap.get(student.id);
+          if (!cols) return student;
+
+          const anoRef = cols[colIndex('ano_ref')];
+          let pagamentos = [...student.pagamentos];
           let modified = false;
-          const updatedPagamentos = student.pagamentos.map(p => {
-            const upd = studentUpdates.find(u => u.mesRef === p.mesRef);
-            if (upd) {
-              modified = true;
-              return {
-                ...p,
-                valor: upd.valor,
-                status: upd.status,
-                dataVencimento: upd.dataVencimento || p.dataVencimento,
-                dataPagamento: upd.dataPagamento
-              };
+
+          MONTH_SLUGS.forEach((slug, idx) => {
+            const valor = parseBRL(cols[colIndex(`mes_ref_${slug}`)] ?? '');
+            if (valor === 0) return; // ignora meses sem valor
+
+            const mesRef = `${ALL_MONTHS[idx]}/${anoRef}`;
+            const existingIdx = pagamentos.findIndex(p => p.mesRef === mesRef);
+
+            if (existingIdx >= 0) {
+              // Atualiza apenas o valor (mantém status/datas existentes)
+              pagamentos[existingIdx] = { ...pagamentos[existingIdx], valor };
+            } else {
+              // Cria novo registro pendente para o mês
+              pagamentos.push({
+                id: Date.now() + Math.random(),
+                alunoId: student.id,
+                mesRef,
+                valor,
+                status: 'Pendente' as any,
+                dataVencimento: `${anoRef}-${String(idx + 1).padStart(2, '0')}-10`,
+                dataPagamento: null
+              } as any);
             }
-            return p;
+            modified = true;
           });
 
-          // Se não havia pagamento para esse mês, cria um novo
-          const newPays = studentUpdates
-            .filter(u => !student.pagamentos.find(p => p.mesRef === u.mesRef))
-            .map(u => ({
-              id: Date.now() + Math.random(),
-              alunoId: student.id,
-              mesRef: u.mesRef,
-              valor: u.valor,
-              status: u.status,
-              dataVencimento: u.dataVencimento,
-              dataPagamento: u.dataPagamento
-            } as any));
-
-          if (modified || newPays.length > 0) updatedCount++;
-
-          return {
-            ...student,
-            pagamentos: [...updatedPagamentos, ...newPays]
-          };
+          if (modified) updatedCount++;
+          return { ...student, pagamentos };
         }));
 
         setPaymentSuccessMsg(`Importação concluída: ${updatedCount} aluno(s) atualizado(s).`);
