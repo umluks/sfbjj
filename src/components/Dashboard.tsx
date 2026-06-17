@@ -183,16 +183,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setAnnouncements(prev => prev.filter(ann => ann.id !== id));
   };
 
-  // Ordena os anúncios conforme selecionado pelo usuário
+const getAnnouncementTimestamp = (dateStr: string): number => {
+  if (!dateStr) return 0;
+  // Caso esteja no formato YYYY-MM-DD
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime();
+    }
+  }
+  // Caso esteja no formato DD/MM/YYYY
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3 && parts[2].length === 4) {
+      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+    }
+  }
+  
+  const parsed = Date.parse(dateStr);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+// Ordena os anúncios conforme selecionado pelo usuário
   const sortedAnnouncements = [...announcements].sort((a, b) => {
+    const timeA = getAnnouncementTimestamp(a.data);
+    const timeB = getAnnouncementTimestamp(b.data);
+
     if (sortAnnouncementsBy === 'fixados-data-desc') {
       if (a.fixado && !b.fixado) return -1;
       if (!a.fixado && b.fixado) return 1;
-      return new Date(b.data).getTime() - new Date(a.data).getTime();
+      return timeB - timeA;
     } else if (sortAnnouncementsBy === 'data-desc') {
-      return new Date(b.data).getTime() - new Date(a.data).getTime();
+      return timeB - timeA;
     } else if (sortAnnouncementsBy === 'data-asc') {
-      return new Date(a.data).getTime() - new Date(b.data).getTime();
+      return timeA - timeB;
     }
     return 0;
   });
