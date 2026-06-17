@@ -998,10 +998,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       </div>
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
         {/* Search */}
         <div className="sm:col-span-2 relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
           </span>
           <input
@@ -1012,7 +1012,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               setCurrentPage(1);
             }}
             placeholder="Buscar por nome ou bairro..."
-            className="input-premium w-full pl-9"
+            className="input-premium w-full pl-10"
           />
         </div>
 
@@ -1024,7 +1024,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               setSelectedBelt(e.target.value);
               setCurrentPage(1);
             }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200">
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
+          >
             <option value="Todos">Todas as Faixas</option>
             <option value="Branca">Branca</option>
             <option value="Cinza">Cinza</option>
@@ -1072,11 +1073,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       </div>
 
       {/* Desktop List / Table */}
-      <div className="bg-obsidian-800/50 border border-obsidian-800/90 rounded-xl overflow-hidden shadow-xl backdrop-blur-md">
+      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
+              <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
                 <th className="px-4 py-4 text-center w-16">Status</th>
                 <th className="px-6 py-4">Membro</th>
                 <th className="px-6 py-4">Nascimento / Idade</th>
@@ -1087,10 +1088,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
+            <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={8} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Nenhum aluno encontrado correspondente aos filtros.
                   </td>
                 </tr>
@@ -1098,14 +1099,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 paginatedStudents.map((student) => (
                   <tr
                     key={student.id}
-                    className="hover:bg-obsidian-700/20 transition-colors group"
+                    className="hover:bg-obsidian-800/15 transition-colors group"
                   >
                     {/* Status */}
                     <td className="px-4 py-4 text-center">
                       <span
-                        className={`inline-block w-3.5 h-3.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
-                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
-                            : 'bg-white border border-slate-300 shadow-[0_0_8px_rgba(255,255,255,0.4)]'
+                        className={`inline-block w-2.5 h-2.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
+                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                            : 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
                           }`}
                         title={student.status}
                       />
@@ -1113,21 +1114,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                     {/* Membro */}
                     <td className="px-6 py-4">
-                      <div className="font-bold text-slate-100 group-hover:text-gold-450 transition-colors">
+                      <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
                         {student.nome}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
+                      <div className="text-[10px] text-slate-500 font-semibold mt-1">
                         Matrícula: {formatDate(student.dataMatricula)}
                       </div>
                     </td>
 
                     {/* Nascimento / Idade */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                        <Calendar className="w-3.5 h-3.5 text-gold-500/80" />
+                      <div className="flex items-center gap-1.5 text-slate-350">
+                        <Calendar className="w-3.5 h-3.5 text-slate-450" />
                         {formatDate(student.dataNascimento)}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
+                      <div className="text-[10px] text-slate-500 font-semibold mt-1">
                         {(() => {
                           if (!student.dataNascimento) return '-';
                           const birthDate = new Date(student.dataNascimento);
@@ -1149,33 +1150,33 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                     {/* Turma */}
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.turma === 'Kids'
-                        ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${student.turma === 'Kids'
+                        ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10'
+                        : 'bg-indigo-500/5 text-indigo-400 border border-indigo-500/10'
                         }`}>
                         {student.turma || 'Adulto'}
                       </span>
                     </td>
 
                     {/* Última Graduação */}
-                    <td className="px-6 py-4 text-xs font-medium text-slate-300">
+                    <td className="px-6 py-4 text-slate-300 font-semibold font-mono">
                       {formatMonthYear(student.dataUltimaGraduacao || '')}
                     </td>
 
                     {/* Contato */}
                     <td className="px-6 py-4 min-w-[160px] whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-xs text-slate-200 whitespace-nowrap">
-                        <Phone className="w-3.5 h-3.5 text-gold-500/80 shrink-0" />
+                      <div className="flex items-center gap-1 text-slate-300 whitespace-nowrap">
+                        <Phone className="w-3.5 h-3.5 text-slate-450 shrink-0" />
                         <span className="font-mono">{student.telefone ? formatPhone(student.telefone) : '-'}</span>
                       </div>
                     </td>
 
                     {/* Ações */}
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleOpenEdit(student)}
-                          className="p-1.5 rounded bg-obsidian-850 hover:bg-obsidian-750 border border-obsidian-700 text-slate-300 hover:text-gold-500 transition-all"
+                          className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
                           title={isTeacher ? "Visualizar cadastro" : "Editar cadastro"}
                         >
                           {isTeacher ? <Eye className="w-3.5 h-3.5" /> : <Edit className="w-3.5 h-3.5" />}
@@ -1183,7 +1184,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                         {!isTeacher && (
                           <button
                             onClick={() => handleOpenDelete(student)}
-                            className="p-1.5 rounded bg-obsidian-850 hover:bg-red-500/10 border border-obsidian-700 hover:border-red-500/30 text-slate-300 hover:text-red-500 transition-all"
+                            className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"
                             title="Excluir Aluno"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1200,15 +1201,15 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
         {/* Pagination Section */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-750 bg-obsidian-850/20">
-            <span className="text-xs text-slate-400">
-              Mostrando <span className="text-slate-200">{startIndex + 1}</span> a <span className="text-slate-200">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-200">{totalItems}</span> membros
+          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              Mostrando <span className="text-slate-300">{startIndex + 1}</span> a <span className="text-slate-300">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-300">{totalItems}</span> membros
             </span>
             <div className="flex gap-2">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 Anterior
@@ -1216,7 +1217,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 Próximo
                 <ChevronRight className="w-3.5 h-3.5" />

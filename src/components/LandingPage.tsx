@@ -25,51 +25,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
   ];
 
   return (
-    <div className="bg-obsidian-950 text-slate-100 min-h-screen font-sans selection:bg-gold-500/20 selection:text-white overflow-x-hidden">
+    <div className="bg-obsidian-950 text-slate-100 min-h-screen font-sans selection:bg-slate-200/25 selection:text-white overflow-x-hidden">
 
       {/* HEADER / NAVIGATION */}
-      <header className="fixed w-full top-0 z-50 bg-obsidian-950/80 backdrop-blur-xl border-b border-obsidian-800/60 transition-all duration-300">
+      <header className="fixed w-full top-0 z-50 bg-obsidian-950/65 backdrop-blur-2xl border-b border-obsidian-850/45 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src={logoSFBJJ}
-              alt="Sagrada Família BJJ"
-              className="w-12 h-12 rounded-full border border-obsidian-700 object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
+            <div className="relative p-[1px] bg-gradient-to-br from-gold-500/30 to-transparent rounded-full">
+              <img
+                src={logoSFBJJ}
+                alt="Sagrada Família BJJ"
+                className="w-11 h-11 rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
             <div>
-              <span className="font-black tracking-wider text-lg uppercase text-slate-100 block leading-none">
-                Sagrada Família <span className="text-gold-500">BJJ</span>
+              <span className="font-extrabold tracking-wider text-base uppercase text-slate-100 block leading-none">
+                Sagrada Família <span className="text-gold-500 font-black">BJJ</span>
               </span>
-              <span className="text-[10px] tracking-widest text-slate-400 uppercase font-bold mt-1 block">
+              <span className="text-[9px] tracking-widest text-slate-450 uppercase font-semibold mt-1 block">
                 Brasília - DF
               </span>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-350">
+          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold uppercase tracking-wider text-slate-400">
             {announcements && announcements.length > 0 && (
-              <a href="#avisos" className="hover:text-slate-100 transition-colors">Avisos</a>
+              <a href="#avisos" className="hover:text-slate-100 transition-colors duration-300">Avisos</a>
             )}
-            <a href="#horarios" className="hover:text-slate-100 transition-colors">Horários & Localização</a>
-            <a href="#contato" className="hover:text-slate-100 transition-colors">Contato</a>
+            <a href="#horarios" className="hover:text-slate-100 transition-colors duration-300">Horários & Localização</a>
+            <a href="#contato" className="hover:text-slate-100 transition-colors duration-300">Contato</a>
+            <button
+              onClick={onAccessLogin}
+              className="btn-gold text-[10px] tracking-widest uppercase font-black px-4 py-2"
+            >
+              Entrar
+            </button>
           </nav>
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative min-h-[90vh] flex items-center justify-center pt-10 pb-20 px-4 overflow-hidden border-b border-obsidian-850">
+      <section className="relative min-h-[95vh] flex items-center justify-center pt-24 pb-20 px-4 overflow-hidden border-b border-obsidian-850/60">
         {/* Background stylized tatame and glow */}
         <div className="absolute inset-0 z-0 bg-radial-gradient">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gold-500/5 blur-[150px] pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-obsidian-950/20 via-obsidian-950/80 to-obsidian-950 pointer-events-none" />
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-gold-500/5 blur-[160px] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-obsidian-950/10 via-obsidian-950/70 to-obsidian-950 pointer-events-none" />
         </div>
 
-        {/* Outer subtle Flor de Lis silhouette / traditional styling elements */}
-        <div className="absolute right-[-10%] top-[10%] opacity-[0.02] text-slate-200 pointer-events-none select-none">
+        {/* Outer subtle Flor de Lis silhouette */}
+        <div className="absolute right-[-5%] top-[10%] opacity-[0.015] text-slate-200 pointer-events-none select-none">
           <svg width="600" height="600" viewBox="0 0 100 100" fill="currentColor">
             <path d="M50 0 C48 15, 35 25, 35 45 C35 60, 50 65, 50 80 C50 65, 65 60, 65 45 C65 25, 52 15, 50 0 Z" />
             <path d="M20 50 C30 50, 40 45, 45 40 C35 35, 25 38, 20 50 Z" />
@@ -80,13 +88,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
 
         <div className="max-w-5xl mx-auto z-10 text-center flex flex-col items-center">
           {/* Logo element center */}
-          <div className="relative mb-8 animate-float">
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-gold-500 to-gold-700 rounded-full blur-md opacity-35" />
-            <div className="relative p-1 bg-obsidian-900 border-2 border-obsidian-700/80 rounded-full">
+          <div className="relative mb-10 animate-float">
+            <div className="absolute -inset-2 bg-gradient-to-r from-gold-500/20 to-gold-500/5 rounded-full blur-xl opacity-40" />
+            <div className="relative p-1.5 bg-obsidian-900 border border-obsidian-850/80 rounded-full shadow-2xl">
               <img
                 src={logoSFBJJ}
                 alt="Logo Sagrada Família BJJ"
-                className="w-28 h-28 rounded-full object-cover shadow-2xl"
+                className="w-24 h-24 rounded-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
@@ -94,24 +102,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             </div>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-100 max-w-4xl leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-100 max-w-4xl leading-[1.15]">
             A evolução do seu Jiu-Jitsu <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-400 bg-clip-text text-transparent">
               começa fora do tatame.
             </span>
           </h1>
 
-          <p className="mt-6 text-base sm:text-lg md:text-xl text-slate-400 max-w-2xl leading-relaxed">
+          <p className="mt-6 text-sm sm:text-base md:text-lg text-slate-400 max-w-2xl leading-relaxed">
             O sistema de gestão interna da Sagrada Família BJJ que conecta administração eficiente ao desenvolvimento do atleta.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <div className="mt-12 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
             <button
               onClick={onAccessLogin}
-              className="w-full sm:w-auto btn-gold px-8 py-3.5 text-base font-bold shadow-2xl shadow-gold-500/10"
+              className="w-full sm:w-auto btn-gold px-10 py-4 text-sm font-bold shadow-2xl tracking-wider uppercase"
             >
               Acessar Painel (Login)
             </button>
+            <a
+              href="#horarios"
+              className="w-full sm:w-auto btn-obsidian px-10 py-4 text-sm font-bold tracking-wider uppercase"
+            >
+              Ver Horários
+            </a>
           </div>
         </div>
       </section>

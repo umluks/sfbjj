@@ -52,9 +52,11 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
       // 1. Verifica Login Admin
       if (username === 'admin' || cleanedCpfInput === '01334314101') {
         if (password === adminPassword) {
+          const adminStudent = students.find(s => s.cpf.replace(/\D/g, '') === '01334314101');
+          const adminName = adminStudent ? adminStudent.nome : 'Lucas Santiago Gonçalves dos Anjos';
           onLoginSuccess({
             role: 'admin',
-            nome: 'Administrador'
+            nome: adminName
           });
           setLoading(false);
           return;
@@ -116,46 +118,46 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
   return (
     <div className="min-h-screen flex items-center justify-center bg-obsidian-950 px-4 py-12 relative overflow-hidden">
       {/* Dynamic ambient backgrounds */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gold-500/5 blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[550px] h-[550px] rounded-full bg-gold-500/5 blur-[150px] pointer-events-none" />
+      <div className="absolute top-[-25%] left-[-15%] w-[600px] h-[600px] rounded-full bg-slate-500/5 blur-[160px] pointer-events-none" />
+      <div className="absolute bottom-[-25%] right-[-15%] w-[650px] h-[650px] rounded-full bg-slate-500/5 blur-[160px] pointer-events-none" />
 
       {/* Main Container */}
       <div className="w-full max-w-md z-10">
         {/* Brand Logo & Title */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="relative mb-3 group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-gold-500 to-gold-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-500" />
-            <div className="relative p-4 bg-obsidian-900 border border-obsidian-750 rounded-full flex items-center justify-center">
+        <div className="flex flex-col items-center mb-10 text-center">
+          <div className="relative mb-4 group">
+            <div className="absolute -inset-1.5 bg-gradient-to-r from-slate-200/20 to-slate-400/20 rounded-full blur opacity-45 group-hover:opacity-75 transition duration-500" />
+            <div className="relative p-1.5 bg-obsidian-900 border border-obsidian-850 rounded-full flex items-center justify-center shadow-xl">
               <img
                 src={logoSFBJJ}
                 alt="Sagrada Família BJJ Logo"
-                className="w-24 h-24 object-contain animate-float"
+                className="w-20 h-20 rounded-full object-cover animate-float"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   const fb = e.currentTarget.parentElement?.querySelector('.fallback-icon');
                   if (fb) fb.classList.remove('hidden');
                 }}
               />
-              <Flame className="w-12 h-12 text-gold-500 fallback-icon hidden" />
+              <Flame className="w-10 h-10 text-slate-300 fallback-icon hidden" />
             </div>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-wider text-slate-100 uppercase leading-none">
-            Sagrada Família <span className="text-gold-500">BJJ</span>
+          <h1 className="text-xl font-black tracking-wider text-slate-100 uppercase leading-none">
+            Sagrada Família <span className="text-gold-550 font-black">BJJ</span>
           </h1>
-          <p className="text-xs text-slate-400 font-medium tracking-widest uppercase mt-1.5">
+          <p className="text-[10px] text-slate-550 font-bold tracking-widest uppercase mt-2">
             Portal do Aluno & Gestão
           </p>
         </div>
 
         {/* Glassmorphic Login Card */}
-        <div className="bg-obsidian-850/60 backdrop-blur-xl border border-obsidian-750/90 rounded-2xl p-8 shadow-2xl shadow-black/50 relative overflow-hidden">
-          <h2 className="text-lg font-bold text-slate-100 mb-6 text-center">
+        <div className="bg-obsidian-800/40 border border-obsidian-750/60 rounded-2xl p-8 shadow-2xl backdrop-blur-lg relative overflow-hidden">
+          <h2 className="text-base font-bold text-slate-250 mb-6 text-center tracking-wide">
             Acesse sua Conta
           </h2>
 
           {error && (
-            <div className="mb-6 flex items-start gap-2.5 p-3.5 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-sm animate-shake">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="mb-6 flex items-start gap-2.5 p-3.5 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -163,19 +165,19 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* CPF / Username field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 CPF, Email ou Admin
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
-                  <User className="w-4.5 h-4.5" />
+                  <User className="w-4 h-4" />
                 </span>
                 <input
                   type="text"
                   value={cpfInput}
                   onChange={handleCpfChange}
                   placeholder="Seu CPF ou E-mail"
-                  className="input-premium w-full pl-11"
+                  className="input-premium w-full pl-10"
                   required
                   autoFocus
                 />
@@ -184,25 +186,25 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
 
             {/* Password field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 Senha
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
-                  <Lock className="w-4.5 h-4.5" />
+                  <Lock className="w-4 h-4" />
                 </span>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="input-premium w-full pl-11 pr-11"
+                  className="input-premium w-full pl-10 pr-10"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 hover:text-slate-350 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                 </button>
@@ -213,11 +215,11 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-gold py-3 text-sm mt-8 relative overflow-hidden"
+              className="w-full btn-gold py-3 text-xs tracking-wider font-bold uppercase mt-8 relative overflow-hidden"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-obsidian-950 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-obsidian-950 border-t-transparent rounded-full animate-spin" />
                   <span>Autenticando...</span>
                 </div>
               ) : (
@@ -227,7 +229,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
             <button
               type="button"
               onClick={onBackToLanding}
-              className="w-full text-center mt-4 text-xs text-slate-400 hover:text-slate-200 transition-all duration-200 uppercase tracking-widest font-bold"
+              className="w-full text-center mt-4 text-[10px] text-slate-550 hover:text-slate-300 transition-all duration-200 uppercase tracking-widest font-black"
             >
               ← Voltar para o início
             </button>
@@ -235,7 +237,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
         </div>
 
         {/* Footer info */}
-        <p className="text-[10px] text-center text-slate-500 mt-6 tracking-wide">
+        <p className="text-[9px] text-center text-slate-600 mt-8 tracking-widest uppercase font-bold">
           Sagrada Família BJJ • Área Restrita • © 2026
         </p>
       </div>

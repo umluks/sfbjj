@@ -121,28 +121,28 @@ export const TeacherManager: React.FC = () => {
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-100 flex items-center gap-2">
-            <Shield className="text-gold-500 w-8 h-8" /> Gestão de Professores
+          <h1 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
+            <Shield className="text-slate-400 w-6 h-6" /> Gestão de Professores
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Gerencie os professores e acessos ao sistema.</p>
+          <p className="text-slate-450 text-xs mt-1">Gerencie os professores e acessos ao sistema.</p>
         </div>
-        <button onClick={handleOpenCreate} className="btn-gold flex items-center gap-2">
+        <button onClick={handleOpenCreate} className="btn-gold text-[10px] uppercase font-black tracking-widest px-4 py-2 flex items-center gap-2">
           <UserPlus className="w-4 h-4" /> Novo Professor
         </button>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-3.5 w-4 h-4 text-slate-500" />
-        <input type="text" placeholder="Buscar professor..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="input-premium pl-9 w-full sm:w-80" />
+        <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
+        <input type="text" placeholder="Buscar professor..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="input-premium pl-10 w-full sm:w-80" />
       </div>
 
-      <div className="bg-obsidian-800/50 border border-obsidian-800/90 rounded-xl overflow-hidden shadow-xl">
+      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
         <table className="w-full text-left border-collapse min-w-[600px]">
           <thead>
-            <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
+            <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-455 bg-obsidian-950/40">
               <th className="px-6 py-4">Nome</th>
               <th className="px-6 py-4">CBJJ</th>
               <th className="px-6 py-4">Email / Login</th>
@@ -150,30 +150,32 @@ export const TeacherManager: React.FC = () => {
               <th className="px-6 py-4 text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
+          <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
             {paginated.map(t => (
-              <tr key={t.id} className="hover:bg-obsidian-700/20">
-                <td className="px-6 py-4 font-bold text-slate-100">{t.nome}</td>
+              <tr key={t.id} className="hover:bg-obsidian-800/15 transition-colors group">
+                <td className="px-6 py-4 font-bold text-slate-200 group-hover:text-slate-100 transition-colors">{t.nome}</td>
                 <td className="px-6 py-4">{t.cbjj || '-'}</td>
-                <td className="px-6 py-4">{t.email}</td>
+                <td className="px-6 py-4 font-mono">{t.email}</td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-gold-500"/> {t.telefone || '-'}</div>
+                  <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-500"/> <span className="font-mono">{t.telefone || '-'}</span></div>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button onClick={() => handleOpenEdit(t)} className="p-1.5 rounded bg-obsidian-850 hover:bg-obsidian-750 border border-obsidian-700 text-slate-300 hover:text-gold-500 transition-all mr-2"><Edit className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => { setTeacherToDelete(t); setShowDeleteModal(true); }} className="p-1.5 rounded bg-obsidian-850 hover:bg-red-500/10 border border-obsidian-700 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button onClick={() => handleOpenEdit(t)} className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"><Edit className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => { setTeacherToDelete(t); setShowDeleteModal(true); }} className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
                 </td>
               </tr>
             ))}
-            {paginated.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-500">Nenhum professor encontrado.</td></tr>}
+            {paginated.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">Nenhum professor encontrado.</td></tr>}
           </tbody>
         </table>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-750 bg-obsidian-850/20">
-            <span className="text-xs text-slate-400">Página {currentPage} de {totalPages}</span>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Página {currentPage} de {totalPages}</span>
             <div className="flex gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="btn-obsidian py-1.5 px-2.5 text-xs"><ChevronLeft className="w-3.5 h-3.5" /> Ant</button>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="btn-obsidian py-1.5 px-2.5 text-xs">Próx <ChevronRight className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest"><ChevronLeft className="w-3.5 h-3.5" /> Ant</button>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest">Próx <ChevronRight className="w-3.5 h-3.5" /></button>
             </div>
           </div>
         )}
@@ -181,43 +183,43 @@ export const TeacherManager: React.FC = () => {
 
       {showFormModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-lg shadow-2xl p-6">
+          <div className="bg-obsidian-900/90 border border-obsidian-850 rounded-2xl w-full max-w-lg shadow-2xl p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-slate-100">{editingTeacher ? 'Editar Professor' : 'Novo Professor'}</h2>
-              <button onClick={() => setShowFormModal(false)} className="text-slate-400 hover:text-gold-500"><X className="w-5 h-5"/></button>
+              <h2 className="text-base font-bold text-slate-100">{editingTeacher ? 'Editar Professor' : 'Novo Professor'}</h2>
+              <button onClick={() => setShowFormModal(false)} className="text-slate-400 hover:text-slate-200"><X className="w-5 h-5"/></button>
             </div>
             <form onSubmit={handleSaveTeacher} className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-400 font-bold uppercase">Nome</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Nome</label>
                 <input type="text" value={formNome} onChange={e => setFormNome(e.target.value)} className="input-premium w-full" required />
               </div>
-              <div>
-                <label className="text-xs text-slate-400 font-bold uppercase">Email (Login)</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email (Login)</label>
                 <input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} className="input-premium w-full" required />
               </div>
-              <div>
-                <label className="text-xs text-slate-400 font-bold uppercase">Senha</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Senha</label>
                 <div className="relative">
                   <input type={showPassword ? "text" : "password"} value={formSenha} onChange={e => setFormSenha(e.target.value)} className="input-premium w-full pr-10" required />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-slate-400 hover:text-gold-500 transition-colors">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-350 transition-colors">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-slate-400 font-bold uppercase">Telefone</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Telefone</label>
                   <input type="text" value={formTelefone} onChange={handleTelefoneChange} placeholder="(00) 00000-0000" className="input-premium w-full" />
                 </div>
-                <div>
-                  <label className="text-xs text-slate-400 font-bold uppercase">Número de Cadastro CBJJ</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cadastro CBJJ</label>
                   <input type="text" value={formCbjj} onChange={handleCbjjChange} placeholder="Ex: 123456" className="input-premium w-full" />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => setShowFormModal(false)} className="btn-obsidian">Cancelar</button>
-                <button type="submit" className="btn-gold">Salvar</button>
+              <div className="flex justify-end gap-2 pt-4">
+                <button type="button" onClick={() => setShowFormModal(false)} className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2">Cancelar</button>
+                <button type="submit" className="btn-gold text-[10px] uppercase font-black tracking-widest px-4 py-2">Salvar</button>
               </div>
             </form>
           </div>
@@ -226,12 +228,12 @@ export const TeacherManager: React.FC = () => {
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold text-slate-100">Excluir Professor?</h3>
-            <p className="text-sm text-slate-400 mt-2">Deseja remover {teacherToDelete?.nome}? Esta ação é irreversível.</p>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowDeleteModal(false)} className="btn-obsidian">Cancelar</button>
-              <button onClick={confirmDelete} className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-semibold text-xs">Excluir</button>
+          <div className="bg-obsidian-900/90 border border-obsidian-850 rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-base font-bold text-slate-100">Excluir Professor?</h3>
+            <p className="text-xs text-slate-400 mt-2">Deseja remover {teacherToDelete?.nome}? Esta ação é irreversível.</p>
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setShowDeleteModal(false)} className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2">Cancelar</button>
+              <button onClick={confirmDelete} className="bg-red-650 hover:bg-red-500 text-white text-[10px] uppercase font-black tracking-widest px-4 py-2 rounded-lg">Excluir</button>
             </div>
           </div>
         </div>

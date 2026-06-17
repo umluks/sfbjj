@@ -7,9 +7,6 @@
 @layer base {
   body {
     @apply bg-obsidian-900 text-slate-100 font-sans antialiased overflow-x-hidden;
-    background-image:
-      radial-gradient(at 0% 0%, rgba(244, 244, 245, 0.04) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(244, 244, 245, 0.02) 0px, transparent 50%);
   }
 
   /* Custom scrollbar */
@@ -29,19 +26,19 @@
 
 @layer components {
   .btn-gold {
-    @apply bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-obsidian-950 font-semibold px-4 py-2 rounded-lg transition-all duration-300 shadow-md shadow-gold-950/20 hover:shadow-gold-glow flex items-center justify-center gap-2 active:scale-[0.98];
+    @apply bg-slate-100 hover:bg-white text-obsidian-950 font-bold px-5 py-2.5 rounded-lg transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2 active:scale-[0.97] hover:shadow-gold-glow;
   }
 
   .btn-obsidian {
-    @apply bg-obsidian-800 border border-obsidian-700 hover:border-obsidian-600 hover:bg-obsidian-700 text-slate-200 px-4 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98];
+    @apply bg-obsidian-900/60 border border-obsidian-850 hover:border-obsidian-700 hover:bg-obsidian-800 text-slate-200 px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] backdrop-blur-sm;
   }
 
   .card-premium {
-    @apply bg-obsidian-800/80 border border-obsidian-800/90 rounded-xl p-6 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-gold-500/20 hover:shadow-gold-glow;
+    @apply bg-obsidian-800/40 border border-obsidian-750/60 rounded-xl p-6 shadow-2xl backdrop-blur-lg transition-all duration-300 hover:border-gold-500/15 hover:shadow-gold-glow hover:-translate-y-[2px];
   }
 
   .input-premium {
-    @apply bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all;
+    @apply bg-obsidian-950/80 border border-obsidian-800 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300;
   }
 
   /* Belt colors representation */

@@ -396,13 +396,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Profile Hero Card */}
-      <div className="bg-gradient-to-r from-obsidian-850/80 to-obsidian-800/80 border border-obsidian-800/90 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden backdrop-blur-md">
+      <div className="bg-obsidian-900/40 border border-obsidian-850/70 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden backdrop-blur-lg">
         {/* Glow decoration */}
-        <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] rounded-full bg-gold-500/5 blur-[100px] pointer-events-none" />
+        <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] rounded-full bg-slate-500/5 blur-[100px] pointer-events-none" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 z-10 relative">
           {/* Avatar / Profile Picture */}
-          <div className="w-24 h-24 rounded-2xl overflow-hidden border border-gold-500/30 bg-gradient-to-br from-gold-500/10 to-gold-600/5 flex items-center justify-center text-4xl shadow-md shrink-0 select-none">
+          <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-200/15 bg-gradient-to-br from-slate-100/5 to-slate-200/5 flex items-center justify-center text-4xl shadow-md shrink-0 select-none">
             {isEditingAdmin ? (
               formFotoPerfil ? (
                 formFotoPerfil.length === 2 ? (
@@ -431,12 +431,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 {isEditingAdmin ? formNome : student?.nome}
               </h1>
               {!isEditingAdmin && student && (
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-700/10 text-slate-400 border border-slate-750'}`}>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-750/10 text-slate-450 border border-slate-800'}`}>
                   {student.status}
                 </span>
               )}
               {isEditingAdmin && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100/10 text-slate-350 border border-slate-200/10">
                   Administrador
                 </span>
               )}
@@ -457,46 +457,46 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       {/* Main Tabs and Form Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
         {/* Navigation side card */}
-        <div className="md:col-span-1 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80 space-y-1">
+        <div className="md:col-span-1 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md space-y-1">
           <button
             onClick={() => setActiveSubTab('profile')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
               activeSubTab === 'profile'
-                ? 'bg-gold-500/10 border-l-2 border-gold-500 text-gold-400'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-750'
+                ? 'bg-slate-100/5 border-l-2 border-slate-350 text-slate-105'
+                : 'text-slate-450 hover:text-slate-200 hover:bg-obsidian-900/30'
             }`}
           >
-            <User className="w-4.5 h-4.5" />
+            <User className="w-4 h-4" />
             Dados Pessoais
           </button>
           {!isEditingAdmin && (
             <button
               onClick={() => setActiveSubTab('graduacoes')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
                 activeSubTab === 'graduacoes'
-                  ? 'bg-gold-500/10 border-l-2 border-gold-500 text-gold-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-750'
+                  ? 'bg-slate-100/5 border-l-2 border-slate-350 text-slate-105'
+                  : 'text-slate-450 hover:text-slate-200 hover:bg-obsidian-900/30'
               }`}
             >
-              <Award className="w-4.5 h-4.5" />
+              <Award className="w-4 h-4" />
               Graduações
             </button>
           )}
           <button
             onClick={() => setActiveSubTab('password')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
               activeSubTab === 'password'
-                ? 'bg-gold-500/10 border-l-2 border-gold-500 text-gold-400'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-750'
+                ? 'bg-slate-100/5 border-l-2 border-slate-350 text-slate-105'
+                : 'text-slate-450 hover:text-slate-200 hover:bg-obsidian-900/30'
             }`}
           >
-            <Lock className="w-4.5 h-4.5" />
+            <Lock className="w-4 h-4" />
             Alterar Senha
           </button>
         </div>
 
         {/* Form Container */}
-        <div className="md:col-span-3 card-premium">
+        <div className="md:col-span-3 card-premium bg-obsidian-900/20 border border-obsidian-900/60 shadow-2xl backdrop-blur-md">
           {activeSubTab === 'profile' ? (
             <div className="space-y-6">
               <div>

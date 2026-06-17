@@ -191,10 +191,6 @@ function App() {
 
       {/* Main Workspace Container */}
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto h-screen relative">
-        {/* Decorative ambient background glows */}
-        <div className="absolute top-[-10%] left-[20%] w-[350px] h-[350px] rounded-full bg-gold-500/5 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[10%] right-[10%] w-[250px] h-[250px] rounded-full bg-gold-500/3 blur-[100px] pointer-events-none" />
-
         {/* Dynamic page content */}
         <div className="max-w-6xl mx-auto pb-12">
           {renderContent()}

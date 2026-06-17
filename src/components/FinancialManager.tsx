@@ -514,15 +514,15 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-            Controle Financeiro e Mensalidades
+          <h1 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
+            <span className="text-slate-400">💵</span> Controle Financeiro e Mensalidades
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos e inativos.
+          <p className="text-slate-450 text-xs mt-1">
+            Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos.
           </p>
         </div>
 
@@ -530,7 +530,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-blue-400 hover:text-blue-300 transition-all"
+            className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
             title={`Exportar registros de ${monthFilter} para CSV`}
           >
             <Download className="w-3.5 h-3.5" />
@@ -547,7 +547,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-400 hover:text-amber-300 transition-all"
+            className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
             title="Importar pagamentos de um arquivo CSV"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -557,36 +557,36 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       </div>
 
       {/* Resumos Financeiros */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Selected Month Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex flex-col justify-between border-l-4 border-l-emerald-500 p-5">
+        <div className="card-premium flex flex-col justify-between border-l-2 border-l-emerald-500/80 bg-obsidian-900/40 p-5">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido em {monthFilter}</span>
-              <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Total Recebido em {monthFilter}</span>
+              <span className="text-3xl font-black text-slate-100 mt-2 block tracking-tight">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
             </div>
-            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hidden sm:block">
+            <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-emerald-400 hidden sm:block">
               <CreditCard className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-obsidian-750 flex justify-between text-xs text-slate-405 text-slate-400">
+          <div className="mt-4 pt-3.5 border-t border-obsidian-850/80 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-450">
             <span>Adulto: <strong className="text-slate-200">R$ {totalRecebidoMesAdulto.toFixed(2).replace('.', ',')}</strong></span>
             <span>Kids: <strong className="text-slate-200">R$ {totalRecebidoMesKids.toFixed(2).replace('.', ',')}</strong></span>
           </div>
         </div>
 
         {/* Consolidated Year Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex flex-col justify-between border-l-4 border-l-blue-500 p-5">
+        <div className="card-premium flex flex-col justify-between border-l-2 border-l-slate-400 bg-obsidian-900/40 p-5">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido ({yearFilter})</span>
-              <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Total Recebido ({yearFilter})</span>
+              <span className="text-3xl font-black text-slate-100 mt-2 block tracking-tight">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
             </div>
-            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500 hidden sm:block">
+            <div className="p-3 bg-slate-100/5 border border-slate-200/10 rounded-xl text-slate-350 hidden sm:block">
               <CreditCard className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-obsidian-750 flex justify-between text-xs text-slate-450">
+          <div className="mt-4 pt-3.5 border-t border-obsidian-850/80 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-450">
             <span>Adulto: <strong className="text-slate-200">R$ {totalAnoRecebidoAdulto.toFixed(2).replace('.', ',')}</strong></span>
             <span>Kids: <strong className="text-slate-200">R$ {totalAnoRecebidoKids.toFixed(2).replace('.', ',')}</strong></span>
           </div>
@@ -595,8 +595,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
       {/* Import error banner */}
       {importError && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-md shadow-red-950/20 animate-fade-in">
-          <span className="text-xs font-semibold flex items-center gap-2">
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-2xl animate-fade-in text-xs font-semibold">
+          <span className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
             {importError}
           </span>
@@ -608,8 +608,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
       {/* Payment registered banner */}
       {paymentSuccessMsg && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-md shadow-emerald-950/20 animate-fade-in">
-          <span className="text-xs font-semibold flex items-center gap-2">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-2xl animate-fade-in text-xs font-semibold">
+          <span className="flex items-center gap-2">
             <Check className="w-4 h-4" />
             {paymentSuccessMsg}
           </span>
@@ -620,9 +620,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       )}
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
         <div className="relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
           </span>
           <input
@@ -633,7 +633,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               setCurrentPage(1);
             }}
             placeholder="Buscar por nome..."
-            className="input-premium w-full pl-9"
+            className="input-premium w-full pl-10"
           />
         </div>
 
@@ -671,11 +671,11 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       </div>
 
       {/* Main Billing Table */}
-      <div className="bg-obsidian-800/50 border border-obsidian-800/90 rounded-xl overflow-hidden shadow-xl backdrop-blur-md">
+      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
+              <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
                 <th className="px-6 py-4">Aluno</th>
                 <th className="px-6 py-4 text-center">Turma</th>
                 <th className="px-6 py-4 text-center">Ref. Ciclo</th>
@@ -684,10 +684,10 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
+            <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={7} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Sem faturas encontradas com os filtros selecionados.
                   </td>
                 </tr>
@@ -697,39 +697,39 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                   return (
                     <tr
                       key={student.id}
-                      className="hover:bg-obsidian-700/20 transition-colors group"
+                      className="hover:bg-obsidian-800/15 transition-colors group"
                     >
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-100 group-hover:text-gold-400 transition-colors">
+                        <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
                           {student.nome}
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5">
+                        <div className="text-[10px] text-slate-500 font-semibold mt-1">
                           Faixa {student.faixa} • Status: {student.status}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                           student.turma === 'Kids' 
-                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
-                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10' 
+                            : 'bg-indigo-500/5 text-indigo-400 border border-indigo-500/10'
                         }`}>
                           {student.turma}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="text-xs font-semibold text-slate-400">
+                        <span className="font-semibold text-slate-400 font-mono">
                           {bill ? bill.mesRef : monthFilter}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         {bill ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="text-xs text-slate-400">R$</span>
-                            <span className="font-bold text-slate-200 text-sm">100,00</span>
+                          <div className="flex items-center justify-center gap-1 font-mono font-bold text-slate-300">
+                            <span className="text-[10px] text-slate-500 font-sans">R$</span>
+                            <span>100,00</span>
                           </div>
                         ) : '-'}
                       </td>
-                      <td className="px-6 py-4 text-center text-xs text-slate-400 font-mono">
+                      <td className="px-6 py-4 text-center text-slate-400 font-mono">
                         {bill ? bill.dataVencimento.split('-').reverse().join('/') : '-'}
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -737,7 +737,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                           {!bill ? (
                             <button
                               onClick={() => handleRegisterPaidDirectly(student.id)}
-                              className="text-[10px] text-emerald-450 text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-emerald-500/20 transition-colors"
+                              className="text-[9px] uppercase tracking-wider text-emerald-450 hover:text-emerald-400 font-black bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-emerald-500/15 transition-all"
                               title={`Registrar Pagamento para ${monthFilter}`}
                             >
                               Marcar Pago
@@ -745,19 +745,19 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                           ) : bill.status !== 'Pago' ? (
                             <button
                               onClick={() => handleRegisterPaymentWithDate(student.id, bill.id, new Date().toISOString().split('T')[0])}
-                              className="p-1.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-all h-8 w-8 flex items-center justify-center"
+                              className="p-1.5 rounded bg-emerald-500/5 hover:bg-emerald-500/15 border border-emerald-500/15 text-emerald-400 hover:text-emerald-350 transition-all h-8 w-8 flex items-center justify-center"
                               title={`Registrar Pagamento de ${student.nome}`}
                             >
                               <Check className="w-4 h-4" />
                             </button>
                           ) : (
                             <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-20">
+                              <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-bold bg-emerald-500/5 border border-emerald-500/15 px-3 py-1.5 rounded h-8 flex items-center justify-center gap-1 w-20">
                                 <Check className="w-3 h-3" /> Pago
                               </span>
                               <button
                                 onClick={() => handleRemovePayment(student.id, bill.id)}
-                                className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 transition-all h-8 w-8 flex items-center justify-center"
+                                className="p-1.5 rounded bg-red-500/5 hover:bg-red-500/15 border border-red-500/15 text-red-400 hover:text-red-300 transition-all h-8 w-8 flex items-center justify-center"
                                 title="Retirar Pagamento"
                               >
                                 <X className="w-4 h-4" />
@@ -766,7 +766,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                           )}
                           <button
                             onClick={() => handleOpenHistory(student)}
-                            className="p-1.5 rounded bg-obsidian-850 hover:bg-obsidian-700 border border-obsidian-700 text-slate-400 hover:text-gold-500 transition-all h-8 w-8 flex items-center justify-center"
+                            className="p-1.5 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 text-slate-400 hover:text-slate-200 transition-all h-8 w-8 flex items-center justify-center"
                             title="Histórico de Mensalidades"
                           >
                             <History className="w-4 h-4" />
@@ -783,15 +783,15 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-750 bg-obsidian-850/20">
-            <span className="text-xs text-slate-400">
-              Mostrando <span className="text-slate-200">{startIndex + 1}</span> a <span className="text-slate-200">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-200">{totalItems}</span> faturas
+          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              Mostrando <span className="text-slate-300">{startIndex + 1}</span> a <span className="text-slate-300">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-300">{totalItems}</span> faturas
             </span>
             <div className="flex gap-2">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 Anterior
@@ -799,7 +799,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 Próximo
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -811,42 +811,42 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
       {/* History Modal */}
       {showHistoryModal && selectedStudent && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-obsidian-900/90 border border-obsidian-850 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 bg-obsidian-850 rounded-t-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-850 bg-obsidian-950 rounded-t-2xl">
               <div>
-                <h2 className="text-md font-bold text-slate-100 flex items-center gap-2">
-                  <History className="w-4 h-4 text-gold-500" />
+                <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                  <History className="w-4 h-4 text-slate-400" />
                   Histórico de Faturas: {selectedStudent.nome}
                 </h2>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
                   Lista completa de faturas registradas no sistema.
                 </p>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-slate-400 hover:text-gold-500 p-1 transition-colors"
+                className="text-slate-400 hover:text-slate-200 p-1 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Filter Tabs/Abas */}
-            <div className="px-6 py-2 border-b border-obsidian-750 bg-obsidian-850/40 flex flex-wrap items-center justify-between gap-3">
+            <div className="px-6 py-2 border-b border-obsidian-850 bg-obsidian-950/40 flex flex-wrap items-center justify-between gap-3">
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setHistoryViewTab('all')}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${historyViewTab === 'all' ? 'bg-gold-500/15 text-gold-450 border border-gold-500/25' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all ${historyViewTab === 'all' ? 'bg-slate-100/5 text-slate-200 border border-slate-200/10' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Todos os pagamentos
                 </button>
                 <button
                   type="button"
                   onClick={() => setHistoryViewTab('by_month')}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${historyViewTab === 'by_month' ? 'bg-gold-500/15 text-gold-450 border border-gold-500/25' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all ${historyViewTab === 'by_month' ? 'bg-slate-100/5 text-slate-200 border border-slate-200/10' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Ver os pagamentos por mês
                 </button>
@@ -866,72 +866,100 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             </div>
 
             {/* Modal History Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="space-y-3">
-                {(() => {
-                  const filteredPays = [...selectedStudent.pagamentos]
-                    .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
-                    .sort((a, b) => b.mesRef.localeCompare(a.mesRef));
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
+              {(() => {
+                const MONTH_ORDER: { [key: string]: number } = {
+                  'Janeiro': 0,
+                  'Fevereiro': 1,
+                  'Março': 2,
+                  'Abril': 3,
+                  'Maio': 4,
+                  'Junho': 5,
+                  'Julho': 6,
+                  'Agosto': 7,
+                  'Setembro': 8,
+                  'Outubro': 9,
+                  'Novembro': 10,
+                  'Dezembro': 11
+                };
 
-                  if (filteredPays.length === 0) {
-                    return (
-                      <div className="text-center py-6 text-slate-500 text-xs">
-                        Nenhum registro de faturamento encontrado.
-                      </div>
-                    );
-                  }
+                const parseMesRef = (ref: string) => {
+                  const [m, y] = ref.split('/');
+                  return {
+                    year: parseInt(y, 10) || 0,
+                    monthIdx: MONTH_ORDER[m] ?? 0
+                  };
+                };
 
-                  return filteredPays.map((pay) => (
-                    <div
-                      key={pay.id}
-                      className={`flex flex-col gap-2 p-3 rounded-xl border transition-all ${
-                        pay.status === 'Pago'
-                          ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
-                          : pay.status === 'Atrasado'
-                          ? 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'
-                          : 'bg-obsidian-900 border-obsidian-750/80 hover:border-amber-500/20'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="font-bold text-xs text-slate-200">
-                          Ciclo {pay.mesRef}
+                const filteredPays = [...selectedStudent.pagamentos]
+                  .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
+                  .sort((a, b) => {
+                    const valA = parseMesRef(a.mesRef);
+                    const valB = parseMesRef(b.mesRef);
+                    if (valA.year !== valB.year) {
+                      return valA.year - valB.year;
+                    }
+                    return valA.monthIdx - valB.monthIdx;
+                  });
+
+                if (filteredPays.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-slate-550 text-xs font-semibold uppercase tracking-wider">
+                      Nenhum registro de faturamento encontrado.
+                    </div>
+                  );
+                }
+
+                return filteredPays.map((pay) => (
+                  <div
+                    key={pay.id}
+                    className={`flex flex-col gap-2 p-3.5 rounded-xl border transition-all ${
+                      pay.status === 'Pago'
+                        ? 'bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30'
+                        : pay.status === 'Atrasado'
+                        ? 'bg-red-500/5 border-red-500/15 hover:border-red-500/30'
+                        : 'bg-obsidian-950 border-obsidian-900 hover:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="font-bold text-xs text-slate-200 font-mono">
+                        {pay.mesRef}
+                      </span>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold font-mono text-slate-300">
+                          R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}
                         </span>
-
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-black text-slate-100">
-                            R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}
-                          </span>
-                          <div className="min-w-24 flex justify-end">
-                            {renderStatusBadge(pay.status as any)}
-                          </div>
+                        <div className="min-w-24 flex justify-end">
+                          {renderStatusBadge(pay.status as any)}
                         </div>
                       </div>
-
-                      {/* Linha de detalhe de data */}
-                      <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-0.5 border-t border-obsidian-750/50">
-                        {pay.status === 'Pago' && pay.dataPagamento ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-500" />
-                            Pago em {pay.dataPagamento.split('-').reverse().join('/')}
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="w-3 h-3 text-amber-500" />
-                            Vence em {pay.dataVencimento ? pay.dataVencimento.split('-').reverse().join('/') : '—'}
-                          </>
-                        )}
-                      </div>
                     </div>
-                  ));
-                })()}
-              </div>
+
+                    {/* Linha de detalhe de data */}
+                    <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pt-2 border-t border-obsidian-900/60">
+                      {pay.status === 'Pago' && pay.dataPagamento ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          Pago em {pay.dataPagamento.split('-').reverse().join('/')}
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 text-amber-500" />
+                          Vence em {pay.dataVencimento ? pay.dataVencimento.split('-').reverse().join('/') : '—'}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-obsidian-750 bg-obsidian-850 rounded-b-2xl flex justify-end">
+            <div className="px-6 py-4 border-t border-obsidian-850 bg-obsidian-950 rounded-b-2xl flex justify-end">
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="btn-obsidian text-xs px-4 py-2"
+                className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
               >
                 Fechar
               </button>
@@ -940,9 +968,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           </div>
         </div>
       )}
-
-
-
     </div>
   );
 };
