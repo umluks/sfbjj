@@ -12,7 +12,8 @@ import {
   Plus,
   Trash2,
   Pin,
-  CalendarCheck
+  CalendarCheck,
+  Edit
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -34,6 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [newNoticeDate, setNewNoticeDate] = useState('');
   const [newNoticePinned, setNewNoticePinned] = useState(false);
   const [sortAnnouncementsBy, setSortAnnouncementsBy] = useState<string>('fixados-data-desc');
+  const [editingNotice, setEditingNotice] = useState<Aviso | null>(null);
 
   // Cálculo de estatísticas
   const totalActive = students.filter(s => s.status === 'Ativo').length;
@@ -64,41 +66,107 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     const selectedDate = newNoticeDate || new Date().toISOString().split('T')[0];
 
-    const newAnnouncementObj = {
-      titulo: newNoticeTitle,
-      conteudo: newNoticeContent,
-      data: selectedDate,
-      fixado: newNoticePinned
-    };
-
-    try {
-      const { data: insertedData, error } = await supabase
-        .from('avisos')
-        .insert(newAnnouncementObj)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (insertedData) {
-        setAnnouncements(prev => [insertedData, ...prev]);
-      }
-    } catch (err) {
-      console.error('Error saving notice to database, falling back to local state:', err);
-      const fallbackAnnouncement: Aviso = {
-        id: Date.now(),
+    if (editingNotice) {
+      // Editar comunicado existente
+      const updatedAnnouncementObj = {
         titulo: newNoticeTitle,
         conteudo: newNoticeContent,
         data: selectedDate,
         fixado: newNoticePinned
       };
-      setAnnouncements(prev => [fallbackAnnouncement, ...prev]);
+
+      try {
+        const { error } = await supabase
+          .from('avisos')
+          .update(updatedAnnouncementObj)
+          .eq('id', editingNotice.id);
+
+        if (error) throw error;
+
+        setAnnouncements(prev => prev.map(ann => {
+          if (ann.id === editingNotice.id) {
+            return {
+              ...ann,
+              titulo: newNoticeTitle,
+              conteudo: newNoticeContent,
+              data: selectedDate,
+              fixado: newNoticePinned
+            };
+          }
+          return ann;
+        }));
+      } catch (err) {
+        console.error('Error updating notice in database, falling back to local state:', err);
+        setAnnouncements(prev => prev.map(ann => {
+          if (ann.id === editingNotice.id) {
+            return {
+              ...ann,
+              titulo: newNoticeTitle,
+              conteudo: newNoticeContent,
+              data: selectedDate,
+              fixado: newNoticePinned
+            };
+          }
+          return ann;
+        }));
+      }
+    } else {
+      // Criar novo comunicado
+      const newAnnouncementObj = {
+        titulo: newNoticeTitle,
+        conteudo: newNoticeContent,
+        data: selectedDate,
+        fixado: newNoticePinned
+      };
+
+      try {
+        const { data: insertedData, error } = await supabase
+          .from('avisos')
+          .insert(newAnnouncementObj)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        if (insertedData) {
+          setAnnouncements(prev => [insertedData, ...prev]);
+        }
+      } catch (err) {
+        console.error('Error saving notice to database, falling back to local state:', err);
+        const fallbackAnnouncement: Aviso = {
+          id: Date.now(),
+          titulo: newNoticeTitle,
+          conteudo: newNoticeContent,
+          data: selectedDate,
+          fixado: newNoticePinned
+        };
+        setAnnouncements(prev => [fallbackAnnouncement, ...prev]);
+      }
     }
 
     setNewNoticeTitle('');
     setNewNoticeContent('');
     setNewNoticeDate('');
     setNewNoticePinned(false);
+    setEditingNotice(null);
+    setShowAddNotice(false);
+  };
+
+  const handleEditNoticeClick = (ann: Aviso) => {
+    setEditingNotice(ann);
+    setNewNoticeTitle(ann.titulo);
+    setNewNoticeContent(ann.conteudo);
+    setNewNoticeDate(ann.data);
+    setNewNoticePinned(ann.fixado || false);
+    setShowAddNotice(true);
+  };
+
+  const handleCancelNoticeForm = () => {
+    setNewNoticeTitle('');
+    setNewNoticeContent('');
+    setNewNoticeDate('');
+    setNewNoticePinned(false);
+    setEditingNotice(null);
     setShowAddNotice(false);
   };
 
@@ -238,7 +306,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Atividades & Avisos
               </h2>
               <button
-                onClick={() => setShowAddNotice(!showAddNotice)}
+                onClick={() => {
+                  if (showAddNotice) {
+                    handleCancelNoticeForm();
+                  } else {
+                    setShowAddNotice(true);
+                  }
+                }}
                 className="btn-gold text-[9px] uppercase font-bold tracking-widest px-2.5 py-1.5"
               >
                 <Plus className="w-3 h-3" />
@@ -249,7 +323,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {/* Add Notice Panel */}
             {showAddNotice && (
               <form onSubmit={handleAddNotice} className="bg-obsidian-900 border border-obsidian-800 p-4 space-y-3">
-                <h3 className="text-[10px] font-bold text-zinc-350 uppercase tracking-widest">Novo Comunicado</h3>
+                <h3 className="text-[10px] font-bold text-zinc-350 uppercase tracking-widest">
+                  {editingNotice ? 'Editar Comunicado' : 'Novo Comunicado'}
+                </h3>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Título</label>
@@ -300,7 +376,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex justify-end gap-2 pt-1.5">
                   <button
                     type="button"
-                    onClick={() => setShowAddNotice(false)}
+                    onClick={handleCancelNoticeForm}
                     className="btn-obsidian text-[9px] uppercase font-bold tracking-widest px-3 py-1.5"
                   >
                     Cancelar
@@ -309,7 +385,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     type="submit"
                     className="btn-gold text-[9px] uppercase font-bold tracking-widest px-3 py-1.5"
                   >
-                    Publicar
+                    {editingNotice ? 'Salvar' : 'Publicar'}
                   </button>
                 </div>
               </form>
@@ -365,7 +441,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </p>
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-obsidian-850 flex justify-end">
+                    <div className="mt-3 pt-2 border-t border-obsidian-850 flex justify-end gap-3">
+                      <button
+                        onClick={() => handleEditNoticeClick(ann)}
+                        className="text-zinc-400 hover:text-zinc-200 text-[9px] uppercase font-bold tracking-wider flex items-center gap-1"
+                      >
+                        <Edit className="w-3 h-3" />
+                        Editar
+                      </button>
                       <button
                         onClick={() => handleDeleteNotice(ann.id)}
                         className="text-red-400/80 hover:text-red-400 text-[9px] uppercase font-bold tracking-wider flex items-center gap-1"
