@@ -1210,14 +1210,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     {/* Ações */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
-                        {/* Status Dot */}
-                        <span
-                          className={`inline-block w-2.5 h-2.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
-                              ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                              : 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
-                            }`}
-                          title={student.status}
-                        />
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleOpenEdit(student)}
@@ -1236,6 +1228,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                             </button>
                           )}
                         </div>
+                        {/* Status Dot (em último lugar) */}
+                        <span
+                          className={`inline-block w-2.5 h-2.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
+                              ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                              : 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
+                            }`}
+                          title={student.status}
+                        />
                       </div>
                     </td>
                   </tr>
