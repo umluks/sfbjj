@@ -73,6 +73,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedTurma, setSelectedTurma] = useState<string>('Todos');
+  const [sortBy, setSortBy] = useState<string>('dataMatricula-desc');
 
   // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -538,7 +539,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     document.body.removeChild(link);
   };
 
-  // Filtra e ordena alunos alfabeticamente
+  // Filtra e ordena alunos
   const filteredStudents = students
     .filter(student => {
       const matchesSearch =
@@ -551,7 +552,20 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       return matchesSearch && matchesBelt && matchesStatus && matchesTurma;
     })
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    .sort((a, b) => {
+      if (sortBy === 'nome-asc') {
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      } else if (sortBy === 'nome-desc') {
+        return b.nome.localeCompare(a.nome, 'pt-BR');
+      } else if (sortBy === 'dataMatricula-desc') {
+        return new Date(b.dataMatricula || 0).getTime() - new Date(a.dataMatricula || 0).getTime();
+      } else if (sortBy === 'dataMatricula-asc') {
+        return new Date(a.dataMatricula || 0).getTime() - new Date(b.dataMatricula || 0).getTime();
+      } else if (sortBy === 'dataUltimaGraduacao-desc') {
+        return new Date(b.dataUltimaGraduacao || 0).getTime() - new Date(a.dataUltimaGraduacao || 0).getTime();
+      }
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
 
   // Calcula a paginação
   const totalItems = filteredStudents.length;
@@ -998,7 +1012,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       </div>
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
+      <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
         {/* Search */}
         <div className="sm:col-span-2 relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
@@ -1070,6 +1084,24 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <option value="Inativo">Inativos</option>
           </select>
         </div>
+
+        {/* Sorting Selection */}
+        <div>
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
+          >
+            <option value="dataMatricula-desc">Matrícula (Recente)</option>
+            <option value="dataMatricula-asc">Matrícula (Antiga)</option>
+            <option value="nome-asc">Nome (A-Z)</option>
+            <option value="nome-desc">Nome (Z-A)</option>
+            <option value="dataUltimaGraduacao-desc">Última Graduação</option>
+          </select>
+        </div>
       </div>
 
       {/* Desktop List / Table */}
@@ -1114,11 +1146,27 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                     {/* Membro */}
                     <td className="px-6 py-4">
-                      <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
-                        {student.nome}
-                      </div>
-                      <div className="text-[10px] text-slate-500 font-semibold mt-1">
-                        Matrícula: {formatDate(student.dataMatricula)}
+                      <div className="flex items-center gap-3">
+                        {/* Foto de Perfil */}
+                        <div className="w-9 h-9 rounded-full overflow-hidden border border-obsidian-750/80 bg-obsidian-950 flex items-center justify-center text-lg shadow-inner select-none shrink-0">
+                          {student.fotoPerfil ? (
+                            student.fotoPerfil.length <= 2 ? (
+                              <span>{student.fotoPerfil}</span>
+                            ) : (
+                              <img src={student.fotoPerfil} alt={student.nome} className="w-full h-full object-cover" />
+                            )
+                          ) : (
+                            <span className="text-slate-500 text-xs">🥋</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
+                            {student.nome}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-semibold mt-1">
+                            Matrícula: {formatDate(student.dataMatricula)}
+                          </div>
+                        </div>
                       </div>
                     </td>
 

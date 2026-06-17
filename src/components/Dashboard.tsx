@@ -337,13 +337,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         key={student.id}
                         className="flex items-center justify-between p-2 bg-obsidian-950 border border-obsidian-900"
                       >
-                        <div className="min-w-0">
-                          <span className="font-bold text-[11px] block text-zinc-300 truncate max-w-[130px]">
-                            {student.nome}
-                          </span>
-                          <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5 block">
-                            Faixa {student.faixa}
-                          </span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Foto de Perfil */}
+                          <div className="w-7 h-7 rounded-full overflow-hidden border border-obsidian-800 bg-obsidian-900 flex items-center justify-center text-xs select-none shrink-0">
+                            {student.fotoPerfil ? (
+                              student.fotoPerfil.length <= 2 ? (
+                                <span>{student.fotoPerfil}</span>
+                              ) : (
+                                <img src={student.fotoPerfil} alt={student.nome} className="w-full h-full object-cover" />
+                              )
+                            ) : (
+                              <span className="text-zinc-650 text-[10px]">🥋</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-[11px] block text-zinc-300 truncate max-w-[110px]">
+                              {student.nome}
+                            </span>
+                            <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5 block">
+                              Faixa {student.faixa}
+                            </span>
+                          </div>
                         </div>
                         <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 border ${
                           isToday 
