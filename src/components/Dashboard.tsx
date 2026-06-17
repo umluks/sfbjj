@@ -203,11 +203,11 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// Ordena os anúncios por data mais próxima/recente (newest first)
+// Ordena os anúncios por data (oldest first)
   const sortedAnnouncements = [...announcements].sort((a, b) => {
     const timeA = getAnnouncementTimestamp(a.data);
     const timeB = getAnnouncementTimestamp(b.data);
-    return timeB - timeA;
+    return timeA - timeB;
   });
 
   return (
