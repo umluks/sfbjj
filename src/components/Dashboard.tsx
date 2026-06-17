@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
 import type {
   Aluno,
   Aviso,
@@ -30,7 +31,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [newNoticeTitle, setNewNoticeTitle] = useState('');
   const [newNoticeContent, setNewNoticeContent] = useState('');
+  const [newNoticeDate, setNewNoticeDate] = useState('');
   const [newNoticePinned, setNewNoticePinned] = useState(false);
+  const [sortAnnouncementsBy, setSortAnnouncementsBy] = useState<string>('fixados-data-desc');
 
   // Cálculo de estatísticas
   const totalActive = students.filter(s => s.status === 'Ativo').length;
@@ -55,34 +58,75 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return birthMonth === currentMonthNum && birthDay >= currentDayNum;
   });
 
-  const handleAddNotice = (e: React.FormEvent) => {
+  const handleAddNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoticeTitle.trim() || !newNoticeContent.trim()) return;
 
-    const newAnnouncement: Aviso = {
-      id: Date.now(),
+    const selectedDate = newNoticeDate || new Date().toISOString().split('T')[0];
+
+    const newAnnouncementObj = {
       titulo: newNoticeTitle,
       conteudo: newNoticeContent,
-      data: new Date().toISOString().split('T')[0],
+      data: selectedDate,
       fixado: newNoticePinned
     };
 
-    setAnnouncements(prev => [newAnnouncement, ...prev]);
+    try {
+      const { data: insertedData, error } = await supabase
+        .from('avisos')
+        .insert(newAnnouncementObj)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (insertedData) {
+        setAnnouncements(prev => [insertedData, ...prev]);
+      }
+    } catch (err) {
+      console.error('Error saving notice to database, falling back to local state:', err);
+      const fallbackAnnouncement: Aviso = {
+        id: Date.now(),
+        titulo: newNoticeTitle,
+        conteudo: newNoticeContent,
+        data: selectedDate,
+        fixado: newNoticePinned
+      };
+      setAnnouncements(prev => [fallbackAnnouncement, ...prev]);
+    }
+
     setNewNoticeTitle('');
     setNewNoticeContent('');
+    setNewNoticeDate('');
     setNewNoticePinned(false);
     setShowAddNotice(false);
   };
 
-  const handleDeleteNotice = (id: number) => {
+  const handleDeleteNotice = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('avisos')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error deleting notice from database:', err);
+    }
     setAnnouncements(prev => prev.filter(ann => ann.id !== id));
   };
 
-  // Ordena os anúncios para mostrar os fixados primeiro
+  // Ordena os anúncios conforme selecionado pelo usuário
   const sortedAnnouncements = [...announcements].sort((a, b) => {
-    if (a.fixado && !b.fixado) return -1;
-    if (!a.fixado && b.fixado) return 1;
-    return new Date(b.data).getTime() - new Date(a.data).getTime();
+    if (sortAnnouncementsBy === 'fixados-data-desc') {
+      if (a.fixado && !b.fixado) return -1;
+      if (!a.fixado && b.fixado) return 1;
+      return new Date(b.data).getTime() - new Date(a.data).getTime();
+    } else if (sortAnnouncementsBy === 'data-desc') {
+      return new Date(b.data).getTime() - new Date(a.data).getTime();
+    } else if (sortAnnouncementsBy === 'data-asc') {
+      return new Date(a.data).getTime() - new Date(b.data).getTime();
+    }
+    return 0;
   });
 
   return (
@@ -230,7 +274,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Data do Comunicado</label>
+                  <input
+                    type="date"
+                    value={newNoticeDate}
+                    onChange={(e) => setNewNoticeDate(e.target.value)}
+                    className="input-premium py-1.5 text-xs text-zinc-300 bg-obsidian-950 border border-obsidian-850"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
                   <input
                     type="checkbox"
                     id="noticePinned"
@@ -243,7 +297,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </label>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-1">
+                <div className="flex justify-end gap-2 pt-1.5">
                   <button
                     type="button"
                     onClick={() => setShowAddNotice(false)}
@@ -260,6 +314,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </form>
             )}
+
+            {/* Order Select for Notices */}
+            <div className="flex items-center justify-between p-2 bg-obsidian-900/40 border border-obsidian-800 rounded-lg text-[10px] uppercase font-bold tracking-wide">
+              <span className="text-zinc-500 flex items-center gap-1">
+                <span>Ordenar por:</span>
+              </span>
+              <select
+                value={sortAnnouncementsBy}
+                onChange={(e) => setSortAnnouncementsBy(e.target.value)}
+                className="bg-transparent text-zinc-350 focus:outline-none border-none p-0 cursor-pointer select-none font-bold text-[10px] uppercase tracking-wider"
+              >
+                <option value="fixados-data-desc" className="bg-obsidian-900 text-zinc-200">Fixados + Recentes</option>
+                <option value="data-desc" className="bg-obsidian-900 text-zinc-200">Mais Recentes</option>
+                <option value="data-asc" className="bg-obsidian-900 text-zinc-200">Mais Antigos</option>
+              </select>
+            </div>
 
             {/* Notices List */}
             <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
