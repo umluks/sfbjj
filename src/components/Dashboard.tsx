@@ -34,7 +34,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [newNoticeContent, setNewNoticeContent] = useState('');
   const [newNoticeDate, setNewNoticeDate] = useState('');
   const [newNoticePinned, setNewNoticePinned] = useState(false);
-  const [sortAnnouncementsBy, setSortAnnouncementsBy] = useState<string>('fixados-data-desc');
   const [editingNotice, setEditingNotice] = useState<Aviso | null>(null);
 
   // Cálculo de estatísticas
@@ -204,21 +203,11 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// Ordena os anúncios conforme selecionado pelo usuário
+// Ordena os anúncios por data mais próxima/recente (newest first)
   const sortedAnnouncements = [...announcements].sort((a, b) => {
     const timeA = getAnnouncementTimestamp(a.data);
     const timeB = getAnnouncementTimestamp(b.data);
-
-    if (sortAnnouncementsBy === 'fixados-data-desc') {
-      if (a.fixado && !b.fixado) return -1;
-      if (!a.fixado && b.fixado) return 1;
-      return timeB - timeA;
-    } else if (sortAnnouncementsBy === 'data-desc') {
-      return timeB - timeA;
-    } else if (sortAnnouncementsBy === 'data-asc') {
-      return timeA - timeB;
-    }
-    return 0;
+    return timeB - timeA;
   });
 
   return (
@@ -415,21 +404,7 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
               </form>
             )}
 
-            {/* Order Select for Notices */}
-            <div className="flex items-center justify-between p-2 bg-obsidian-900/40 border border-obsidian-800 rounded-lg text-[10px] uppercase font-bold tracking-wide">
-              <span className="text-zinc-500 flex items-center gap-1">
-                <span>Ordenar por:</span>
-              </span>
-              <select
-                value={sortAnnouncementsBy}
-                onChange={(e) => setSortAnnouncementsBy(e.target.value)}
-                className="bg-transparent text-zinc-350 focus:outline-none border-none p-0 cursor-pointer select-none font-bold text-[10px] uppercase tracking-wider"
-              >
-                <option value="fixados-data-desc" className="bg-obsidian-900 text-zinc-200">Fixados + Recentes</option>
-                <option value="data-desc" className="bg-obsidian-900 text-zinc-200">Mais Recentes</option>
-                <option value="data-asc" className="bg-obsidian-900 text-zinc-200">Mais Antigos</option>
-              </select>
-            </div>
+
 
             {/* Notices List */}
             <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
