@@ -26,19 +26,19 @@
 
 @layer components {
   .btn-gold {
-    @apply bg-slate-100 hover:bg-white text-obsidian-950 font-bold px-5 py-2.5 rounded-lg transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2 active:scale-[0.97] hover:shadow-gold-glow;
+    @apply bg-zinc-100 hover:bg-white text-zinc-950 font-bold px-5 py-2.5 rounded-none transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2 active:scale-[0.97] border border-zinc-200 hover:shadow-gold-glow;
   }
 
   .btn-obsidian {
-    @apply bg-obsidian-900/60 border border-obsidian-850 hover:border-obsidian-700 hover:bg-obsidian-800 text-slate-200 px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] backdrop-blur-sm;
+    @apply bg-obsidian-900/60 border border-obsidian-800 hover:border-obsidian-600 hover:bg-obsidian-850 text-slate-200 px-5 py-2.5 rounded-none transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] backdrop-blur-sm;
   }
 
   .card-premium {
-    @apply bg-obsidian-800/40 border border-obsidian-750/60 rounded-xl p-6 shadow-2xl backdrop-blur-lg transition-all duration-300 hover:border-gold-500/15 hover:shadow-gold-glow hover:-translate-y-[2px];
+    @apply bg-obsidian-850/80 border border-obsidian-800 rounded-none p-6 shadow-2xl backdrop-blur-lg transition-all duration-300 hover:border-zinc-500/20 hover:shadow-gold-glow;
   }
 
   .input-premium {
-    @apply bg-obsidian-950/80 border border-obsidian-800 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300;
+    @apply bg-obsidian-950/80 border border-obsidian-800 rounded-none px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 focus:ring-0 transition-all duration-300;
   }
 
   /* Belt colors representation */

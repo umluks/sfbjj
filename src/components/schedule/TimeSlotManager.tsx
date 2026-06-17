@@ -37,7 +37,7 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
       const [hIni, hFim] = aula.hora.split(' - ');
       setHoraInicio(hIni || '18:00');
       setHoraFim(hFim || '19:00');
-      setDiasSemana(Array.isArray(aula.diasSemana) ? aula.diasSemana : []);
+      setDiasSemana(Array.isArray(aula.diasSemana) ? aula.diasSemana.map(Number) : []);
       setTurmaId(aula.turmaId || '');
       setProfessorId(aula.professorId || '');
     } else {
@@ -94,7 +94,8 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (diasSemana.length === 0) {
+    const normalizedDias = diasSemana.map(Number);
+    if (normalizedDias.length === 0) {
       setError('Selecione pelo menos um dia da semana.');
       return;
     }
@@ -127,7 +128,7 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
       professor: prof ? prof.nome : 'Sem Professor',
       professorId: Number(professorId),
       turmaId: Number(turmaId),
-      diasSemana
+      diasSemana: normalizedDias
     };
 
     if (editingId) {
@@ -137,10 +138,9 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
         .update({
           hora: `${horaIncio} - ${horaFim}`,
           categoria: turma ? turma.categoria : 'Sem Categoria',
-          professor: prof ? prof.nome : 'Sem Professor',
           professorId: Number(professorId),
           turmaId: Number(turmaId),
-          diasSemana
+          diasSemana: normalizedDias
         })
         .eq('id', editingId);
 
@@ -158,10 +158,9 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
         .insert({
           hora: `${horaIncio} - ${horaFim}`,
           categoria: turma ? turma.categoria : 'Sem Categoria',
-          professor: prof ? prof.nome : 'Sem Professor',
           professorId: Number(professorId),
           turmaId: Number(turmaId),
-          diasSemana
+          diasSemana: normalizedDias
         })
         .select()
         .single();
@@ -201,9 +200,10 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
   };
 
   const toggleDay = (d: number) => {
-    setDiasSemana(prev => 
-      prev.includes(d) ? prev.filter(day => day !== d) : [...prev, d]
-    );
+    setDiasSemana(prev => {
+      const current = Array.isArray(prev) ? prev.map(Number) : [];
+      return current.includes(d) ? current.filter(day => day !== d) : [...current, d];
+    });
   };
 
   return (
@@ -317,7 +317,7 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ schedule, setS
                       type="button"
                       onClick={() => toggleDay(day.id)}
                       className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                        diasSemana.includes(day.id)
+                        Array.isArray(diasSemana) && diasSemana.map(Number).includes(day.id)
                           ? 'bg-gold-500 text-obsidian-950'
                           : 'bg-obsidian-800 text-slate-400 hover:bg-obsidian-750'
                       }`}

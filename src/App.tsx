@@ -180,7 +180,7 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-obsidian-900 text-slate-100">
+    <div className="flex flex-col md:flex-row min-h-screen bg-obsidian-950 text-slate-100 font-sans">
       {/* Sidebar Navigation */}
       <Sidebar 
         currentTab={currentTab} 
@@ -190,9 +190,8 @@ function App() {
       />
 
       {/* Main Workspace Container */}
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto h-screen relative">
-        {/* Dynamic page content */}
-        <div className="max-w-6xl mx-auto pb-12">
+      <main className="flex-1 overflow-y-auto h-screen relative bg-obsidian-950">
+        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 md:p-8">
           {renderContent()}
         </div>
       </main>
