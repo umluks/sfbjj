@@ -1110,7 +1110,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
-                <th className="px-4 py-4 text-center w-16">Status</th>
                 <th className="px-6 py-4">Membro</th>
                 <th className="px-6 py-4">Nascimento / Idade</th>
                 <th className="px-6 py-4">Faixa Atual</th>
@@ -1123,7 +1122,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
+                  <td colSpan={7} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Nenhum aluno encontrado correspondente aos filtros.
                   </td>
                 </tr>
@@ -1133,22 +1132,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     key={student.id}
                     className="hover:bg-obsidian-800/15 transition-colors group"
                   >
-                    {/* Status */}
-                    <td className="px-4 py-4 text-center">
-                      <span
-                        className={`inline-block w-2.5 h-2.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
-                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                            : 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
-                          }`}
-                        title={student.status}
-                      />
-                    </td>
-
                     {/* Membro */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
+                       <div className="flex items-center gap-3">
                         {/* Foto de Perfil */}
-                        <div className="w-9 h-9 rounded-full overflow-hidden border border-obsidian-750/80 bg-obsidian-950 flex items-center justify-center text-lg shadow-inner select-none shrink-0">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-obsidian-750/80 bg-obsidian-950 flex items-center justify-center text-xl shadow-inner select-none shrink-0">
                           {student.fotoPerfil ? (
                             student.fotoPerfil.length <= 2 ? (
                               <span>{student.fotoPerfil}</span>
@@ -1156,7 +1144,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                               <img src={student.fotoPerfil} alt={student.nome} className="w-full h-full object-cover" />
                             )
                           ) : (
-                            <span className="text-slate-500 text-xs">🥋</span>
+                            <span className="text-slate-500 text-sm">🥋</span>
                           )}
                         </div>
                         <div>
@@ -1221,23 +1209,33 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                     {/* Ações */}
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(student)}
-                          className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
-                          title={isTeacher ? "Visualizar cadastro" : "Editar cadastro"}
-                        >
-                          {isTeacher ? <Eye className="w-3.5 h-3.5" /> : <Edit className="w-3.5 h-3.5" />}
-                        </button>
-                        {!isTeacher && (
+                      <div className="flex items-center justify-end gap-3">
+                        {/* Status Dot */}
+                        <span
+                          className={`inline-block w-2.5 h-2.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
+                              ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                              : 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
+                            }`}
+                          title={student.status}
+                        />
+                        <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => handleOpenDelete(student)}
-                            className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"
-                            title="Excluir Aluno"
+                            onClick={() => handleOpenEdit(student)}
+                            className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                            title={isTeacher ? "Visualizar cadastro" : "Editar cadastro"}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            {isTeacher ? <Eye className="w-3.5 h-3.5" /> : <Edit className="w-3.5 h-3.5" />}
                           </button>
-                        )}
+                          {!isTeacher && (
+                            <button
+                              onClick={() => handleOpenDelete(student)}
+                              className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"
+                              title="Excluir Aluno"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
               <img 
                 src={logoSFBJJ} 
                 alt="Logo SFBJJ" 
-                className="w-14 h-14 rounded-none object-cover"
+                className="w-20 h-20 rounded-none object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
