@@ -73,7 +73,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedTurma, setSelectedTurma] = useState<string>('Todos');
-  const [sortBy, setSortBy] = useState<string>('dataMatricula-desc');
+  const [sortBy, setSortBy] = useState<string>('nome-asc');
 
   // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
