@@ -459,6 +459,9 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
         ...prev,
         [student.id]: `Não é permitido rebaixar a faixa de ${faixaAntiga} para ${config.faixa}.`
       }));
+      setTimeout(() => {
+        setStudentError((prev) => ({ ...prev, [student.id]: null }));
+      }, 4000);
       return;
     }
     if (config.faixa === faixaAntiga && config.graus < grausAntigos) {
@@ -466,6 +469,9 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
         ...prev,
         [student.id]: `Não é permitido diminuir a quantidade de graus.`
       }));
+      setTimeout(() => {
+        setStudentError((prev) => ({ ...prev, [student.id]: null }));
+      }, 4000);
       return;
     }
 
@@ -540,12 +546,18 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
         ...prev,
         [student.id]: `Graduação salva no histórico!`
       }));
+      setTimeout(() => {
+        setStudentSuccess((prev) => ({ ...prev, [student.id]: null }));
+      }, 4000);
     } catch (err: any) {
       console.error(err);
       setStudentError((prev) => ({
         ...prev,
         [student.id]: err.message || 'Erro ao graduar.'
       }));
+      setTimeout(() => {
+        setStudentError((prev) => ({ ...prev, [student.id]: null }));
+      }, 4000);
     } finally {
       setStudentProcessing((prev) => ({ ...prev, [student.id]: false }));
     }

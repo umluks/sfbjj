@@ -168,10 +168,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     const oldGraus = student.graus_atuais ?? student.graus;
     if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
       setInfoError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${formFaixa}.`);
+      setTimeout(() => setInfoError(null), 4000);
       return;
     }
     if (formFaixa === oldFaixa && formGraus < oldGraus) {
       setInfoError('Não é permitido diminuir a quantidade de graus.');
+      setTimeout(() => setInfoError(null), 4000);
       return;
     }
 
@@ -309,10 +311,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     const oldGraus = student.graus_atuais ?? student.graus;
     if (BELT_RANKS[newGradFaixa] < BELT_RANKS[oldFaixa]) {
       setGradError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${newGradFaixa}.`);
+      setTimeout(() => setGradError(null), 4000);
       return;
     }
     if (newGradFaixa === oldFaixa && newGradGrau < oldGraus) {
       setGradError('Não é permitido diminuir a quantidade de graus.');
+      setTimeout(() => setGradError(null), 4000);
       return;
     }
 
