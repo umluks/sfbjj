@@ -20,7 +20,8 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    if (val.toLowerCase().startsWith('a')) {
+    // Se for admin, iniciar com letra 'a' ou conter '@' ou conter outras letras, não aplica máscara de CPF
+    if (val.toLowerCase().startsWith('a') || val.includes('@') || /[a-zA-Z]/.test(val)) {
       setCpfInput(val.toLowerCase());
     } else {
       // Máscara de CPF (000.000.000-00)
