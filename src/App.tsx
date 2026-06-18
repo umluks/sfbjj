@@ -9,6 +9,7 @@ import { TeacherManager } from './components/TeacherManager';
 import { StudentProfile } from './components/StudentProfile';
 import { Contact } from './components/Contact';
 import { LandingPage } from './components/LandingPage';
+import { BatchGraduation } from './components/BatchGraduation';
 import type { Aluno, Aviso, LoggedUser } from './types';
 import { INITIAL_ANNOUNCEMENTS } from './mockData';
 import { supabase } from './lib/supabase';
@@ -82,7 +83,7 @@ function App() {
     if (loggedUser) {
       if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'contact') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact') {
         setCurrentTab('schedule');
       } else if (loggedUser.role === 'admin' && currentTab === 'profile') {
         setCurrentTab('dashboard');
@@ -128,6 +129,14 @@ function App() {
       case 'students':
         return (
           <StudentManager 
+            students={students} 
+            setStudents={setStudents} 
+            loggedUser={loggedUser}
+          />
+        );
+      case 'batch-graduation':
+        return (
+          <BatchGraduation 
             students={students} 
             setStudents={setStudents} 
             loggedUser={loggedUser}

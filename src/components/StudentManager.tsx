@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Aluno, Belt, Degree, Gender, LoggedUser } from '../types';
+import { BELT_RANKS, getBeltsByAge, getBjjAge } from '../types';
 import { supabase } from '../lib/supabase';
 import {
   Search,
@@ -16,7 +17,9 @@ import {
   Upload,
   FileSpreadsheet,
   Download,
-  Eye
+  Eye,
+  Square,
+  CheckSquare
 } from 'lucide-react';
 
 const parseCSVDate = (dateStr: string): string => {
@@ -68,6 +71,9 @@ interface StudentManagerProps {
 
 export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents, loggedUser }) => {
   const isTeacher = loggedUser?.role === 'teacher';
+  // Seleção múltipla
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  
   // Estado de Busca e Filtro
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
@@ -77,7 +83,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
   // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
   // Estado dos modais
   const [showFormModal, setShowFormModal] = useState(false);
@@ -110,7 +116,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formDataUltimaGraduacao, setFormDataUltimaGraduacao] = useState('');
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState('');
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
-  const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo' | 'Graduado'>('Ativo');
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>('Adulto');
   const [formFotoPerfil, setFormFotoPerfil] = useState('');
   const [formHistoricoGraduacoes, setFormHistoricoGraduacoes] = useState<any[]>([]);
@@ -205,6 +211,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     e.preventDefault();
     if (!formNome || !formDataNascimento || !formBairro) return;
 
+    // Validar regras de faixa por idade
+    const age = getBjjAge(formDataNascimento);
+    const allowed = getBeltsByAge(formDataNascimento);
+    if (!allowed.includes(formFaixa)) {
+      alert(`A faixa "${formFaixa}" não é permitida para a idade de ${age} anos.`);
+      return;
+    }
+
     // formDataUltimaGraduacao está no formato YYYY-MM (input type="month")
     // Converte para YYYY-MM-01 para armazenar no banco
     const dbUltimaGrad = formDataUltimaGraduacao
@@ -212,6 +226,18 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       : new Date().toISOString().split('T')[0];
 
     if (editingStudent) {
+      // Validar rebaixamento de faixa ou graus
+      const oldFaixa = editingStudent.faixa_atual || editingStudent.faixa;
+      const oldGraus = editingStudent.graus_atuais ?? editingStudent.graus;
+
+      if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
+        alert(`Não é permitido rebaixar a faixa do aluno de ${oldFaixa} para ${formFaixa}.`);
+        return;
+      }
+      if (formFaixa === oldFaixa && formGraus < oldGraus) {
+        alert('Não é permitido diminuir a quantidade de graus do aluno.');
+        return;
+      }
       // Atualiza o aluno no supabase
       const { error: updateError } = await supabase
         .from('alunos')
@@ -436,6 +462,98 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setStudentToDelete(null);
   };
 
+  // Seleção múltipla para ações em lote
+  const handleToggleSelectStudent = (id: number) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+
+
+  // Alteração de status em lote
+  const handleBatchStatusChange = async (newStatus: 'Ativo' | 'Inativo') => {
+    if (selectedStudentIds.length === 0) return;
+    
+    const confirmMessage = `Deseja realmente alterar o status de ${selectedStudentIds.length} aluno(s) para "${newStatus}"?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    // Atualiza no supabase
+    const { error } = await supabase
+      .from('alunos')
+      .update({ status: newStatus })
+      .in('id', selectedStudentIds);
+
+    if (error) {
+      console.error('Error updating batch status:', error);
+      alert('Erro ao atualizar status dos alunos no banco de dados.');
+      return;
+    }
+
+    // Atualiza localmente
+    setStudents(prev =>
+      prev.map(s => (selectedStudentIds.includes(s.id) ? { ...s, status: newStatus } : s))
+    );
+
+    setSelectedStudentIds([]);
+    alert('Status atualizado com sucesso!');
+  };
+
+  // Exclusão em lote
+  const handleBatchDelete = async () => {
+    if (selectedStudentIds.length === 0) return;
+
+    const confirmMessage = `ATENÇÃO: Deseja realmente excluir permanentemente ${selectedStudentIds.length} aluno(s) selecionado(s)? Esta ação não pode ser desfeita e removerá históricos e pagamentos associados.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    // 1. Exclui pagamentos de todos os selecionados
+    const { error: payError } = await supabase
+      .from('pagamentos')
+      .delete()
+      .in('alunoId', selectedStudentIds);
+
+    if (payError) {
+      console.error('Error deleting batch payments:', payError);
+    }
+
+    // 2. Exclui histórico de graduações antiga
+    const { error: histError } = await supabase
+      .from('graduacoes_historico')
+      .delete()
+      .in('aluno_id', selectedStudentIds);
+
+    if (histError) {
+      console.error('Error deleting batch graduation history:', histError);
+    }
+
+    // 3. Exclui da nova tabela graduacoes
+    const { error: gradLoteError } = await supabase
+      .from('graduacoes')
+      .delete()
+      .in('aluno_id', selectedStudentIds);
+
+    if (gradLoteError) {
+      console.error('Error deleting batch graduacoes:', gradLoteError);
+    }
+
+    // 4. Exclui alunos
+    const { error: deleteError } = await supabase
+      .from('alunos')
+      .delete()
+      .in('id', selectedStudentIds);
+
+    if (deleteError) {
+      console.error('Error deleting batch students:', deleteError);
+      alert('Erro ao excluir alunos do banco de dados.');
+      return;
+    }
+
+    // Atualiza localmente
+    setStudents(prev => prev.filter(s => !selectedStudentIds.includes(s.id)));
+    setSelectedStudentIds([]);
+    alert('Alunos excluídos com sucesso!');
+  };
+
   // Função para exportar para CSV
   const handleExportCSV = () => {
     const BOM = "\uFEFF";
@@ -573,6 +691,22 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
 
+  const handleToggleSelectAllPage = () => {
+    const pageIds = paginatedStudents.map(s => s.id);
+    const allSelected = pageIds.every(id => selectedStudentIds.includes(id));
+
+    if (allSelected) {
+      setSelectedStudentIds(prev => prev.filter(id => !pageIds.includes(id)));
+    } else {
+      setSelectedStudentIds(prev => [
+        ...prev,
+        ...pageIds.filter(id => !prev.includes(id))
+      ]);
+    }
+  };
+
+  const isAllPageSelected = paginatedStudents.length > 0 && paginatedStudents.every(s => selectedStudentIds.includes(s.id));
+
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
@@ -584,50 +718,72 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const renderBeltBadge = (faixa: Belt, graus: Degree) => {
     let beltClass = '';
     let barColor = 'bg-black'; // Black sleeve bar standard
+    let stripeStyle: React.CSSProperties | undefined;
 
-    switch (faixa) {
-      case 'Branca':
-        beltClass = 'bg-white text-slate-900 border border-slate-300';
-        barColor = 'bg-neutral-900';
-        break;
-      case 'Cinza':
-        beltClass = 'bg-slate-400 text-slate-950 border border-slate-500';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Amarela':
-        beltClass = 'bg-yellow-400 text-slate-950 border border-yellow-500';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Laranja':
-        beltClass = 'bg-orange-500 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Verde':
-        beltClass = 'bg-emerald-600 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Azul':
-        beltClass = 'bg-blue-600 text-white border border-blue-700';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Roxa':
-        beltClass = 'bg-purple-700 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Marrom':
-        beltClass = 'bg-amber-900 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Preta':
-        beltClass = 'bg-neutral-950 border border-gold-500/75 text-gold-450';
-        barColor = 'bg-red-600'; // Red sleeve bar for black belts
-        break;
+    const lowerFaixa = faixa.toLowerCase();
+
+    if (lowerFaixa.includes('cinza')) {
+      beltClass = 'bg-slate-400 text-slate-950 border border-slate-500';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('amarela')) {
+      beltClass = 'bg-yellow-400 text-slate-950 border border-yellow-500';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('laranja')) {
+      beltClass = 'bg-orange-500 text-white';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('verde')) {
+      beltClass = 'bg-emerald-600 text-white';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'azul') {
+      beltClass = 'bg-blue-600 text-white border border-blue-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'roxa') {
+      beltClass = 'bg-purple-700 text-white border border-purple-800';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'marrom') {
+      beltClass = 'bg-amber-900 text-white border border-amber-950';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'preta') {
+      beltClass = 'bg-neutral-950 border border-gold-500/75 text-gold-450';
+      barColor = 'bg-red-650';
+    } else if (lowerFaixa === 'vermelha e preta') {
+      stripeStyle = {
+        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #171717 15px, #171717 30px)'
+      };
+      beltClass = 'text-white border border-red-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'vermelha e branca') {
+      stripeStyle = {
+        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #f8fafc 15px, #f8fafc 30px)'
+      };
+      beltClass = 'text-neutral-950 border border-red-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'vermelha') {
+      beltClass = 'bg-red-750 text-white border border-red-850';
+      barColor = 'bg-neutral-950';
+    } else {
+      beltClass = 'bg-white text-slate-900 border border-slate-300';
+      barColor = 'bg-neutral-900';
     }
 
+    const hasWhiteStripe = (lowerFaixa.includes('e branca') && !lowerFaixa.includes('vermelha'));
+    const hasBlackStripe = (lowerFaixa.includes('e preta') && !lowerFaixa.includes('vermelha'));
+
     return (
-      <div className={`w-28 h-6 rounded flex items-center relative overflow-hidden font-extrabold text-[10px] tracking-wider shadow-sm select-none ${beltClass}`}>
+      <div 
+        className={`w-28 h-6 rounded flex items-center relative overflow-hidden font-extrabold text-[10px] tracking-wider shadow-sm select-none ${beltClass}`}
+        style={stripeStyle}
+      >
         {/* Belt Name */}
-        <span className="pl-2 uppercase z-10">{faixa}</span>
+        <span className={`pl-2 uppercase z-10 ${lowerFaixa === 'vermelha e branca' ? 'text-black bg-white/60 px-1 rounded-sm' : ''}`}>{faixa}</span>
+
+        {/* Horizontal stripe for child mixed belts */}
+        {hasWhiteStripe && (
+          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-white border-y border-neutral-300/30 z-0 pointer-events-none" />
+        )}
+        {hasBlackStripe && (
+          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-neutral-950 border-y border-neutral-800/30 z-0 pointer-events-none" />
+        )}
 
         {/* Sleeve section for stripes (degrees) */}
         <div className={`absolute right-0 top-0 bottom-0 w-8 ${barColor} flex items-center justify-around px-0.5 border-l border-obsidian-950/45`}>
@@ -1012,95 +1168,167 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       </div>
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
-        {/* Search */}
-        <div className="sm:col-span-2 relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
-            <Search className="w-4 h-4" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Buscar por nome ou bairro..."
-            className="input-premium w-full pl-10"
-          />
+      <div className="space-y-4 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+          {/* Search */}
+          <div className="sm:col-span-2 relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por nome ou bairro..."
+              className="input-premium w-full pl-10"
+            />
+          </div>
+
+          {/* Belt Filter */}
+          <div>
+            <select
+              value={selectedBelt}
+              onChange={(e) => {
+                setSelectedBelt(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="Todos">Todas as Faixas</option>
+              <option value="Branca">Branca</option>
+              <option value="Cinza">Cinza</option>
+              <option value="Amarela">Amarela</option>
+              <option value="Laranja">Laranja</option>
+              <option value="Verde">Verde</option>
+              <option value="Azul">Azul</option>
+              <option value="Roxa">Roxa</option>
+              <option value="Marrom">Marrom</option>
+              <option value="Preta">Preta</option>
+            </select>
+          </div>
+
+          {/* Turma Filter */}
+          <div>
+            <select
+              value={selectedTurma}
+              onChange={(e) => {
+                setSelectedTurma(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="Todos">Todas as Turmas</option>
+              <option value="Adulto">Adultos</option>
+              <option value="Kids">Kids</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="Todos">Status: Todos</option>
+              <option value="Ativo">Ativos</option>
+              <option value="Inativo">Inativos</option>
+            </select>
+          </div>
+
+          {/* Sorting Selection */}
+          <div>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="dataMatricula-desc">Matrícula (Recente)</option>
+              <option value="dataMatricula-asc">Matrícula (Antiga)</option>
+              <option value="nome-asc">Nome (A-Z)</option>
+              <option value="nome-desc">Nome (Z-A)</option>
+              <option value="dataUltimaGraduacao-desc">Última Graduação</option>
+            </select>
+          </div>
         </div>
 
-        {/* Belt Filter */}
-        <div>
-          <select
-            value={selectedBelt}
-            onChange={(e) => {
-              setSelectedBelt(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Todas as Faixas</option>
-            <option value="Branca">Branca</option>
-            <option value="Cinza">Cinza</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Laranja">Laranja</option>
-            <option value="Verde">Verde</option>
-            <option value="Azul">Azul</option>
-            <option value="Roxa">Roxa</option>
-            <option value="Marrom">Marrom</option>
-            <option value="Preta">Preta</option>
-          </select>
-        </div>
+        {/* Sub-bar de Ações em Lote e Quantidade por Página */}
+        <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t border-obsidian-850/50 gap-3">
+          {/* Mostrador de Itens por Página */}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Mostrar:</span>
+            <select
+              value={itemsPerPage === 999999 ? 'Todos' : itemsPerPage}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'Todos') {
+                  setItemsPerPage(999999);
+                } else {
+                  setItemsPerPage(Number(val));
+                }
+                setCurrentPage(1);
+              }}
+              className="bg-obsidian-950 border border-obsidian-800 rounded px-2 py-1 text-slate-200 text-xs focus:border-gold-500/50 outline-none"
+            >
+              <option value={1}>1 membro</option>
+              <option value={10}>10 membros</option>
+              <option value={20}>20 membros</option>
+              <option value={30}>30 membros</option>
+              <option value={40}>40 membros</option>
+              <option value={50}>50 membros</option>
+              <option value="Todos">Todos</option>
+            </select>
+          </div>
 
-        {/* Turma Filter */}
-        <div>
-          <select
-            value={selectedTurma}
-            onChange={(e) => {
-              setSelectedTurma(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Todas as Turmas</option>
-            <option value="Adulto">Adultos</option>
-            <option value="Kids">Kids</option>
-          </select>
-        </div>
-
-        {/* Status Filter */}
-        <div>
-          <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Status: Todos</option>
-            <option value="Ativo">Ativos</option>
-            <option value="Inativo">Inativos</option>
-          </select>
-        </div>
-
-        {/* Sorting Selection */}
-        <div>
-          <select
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="dataMatricula-desc">Matrícula (Recente)</option>
-            <option value="dataMatricula-asc">Matrícula (Antiga)</option>
-            <option value="nome-asc">Nome (A-Z)</option>
-            <option value="nome-desc">Nome (Z-A)</option>
-            <option value="dataUltimaGraduacao-desc">Última Graduação</option>
-          </select>
+          {/* Ações em Lote */}
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {selectedStudentIds.length > 0 ? (
+              <>
+                <span className="text-[10px] text-gold-450 font-bold uppercase tracking-wider">
+                  {selectedStudentIds.length} selecionado(s):
+                </span>
+                <button
+                  onClick={() => setSelectedStudentIds([])}
+                  className="px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider text-slate-400 hover:text-slate-200 bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-750 transition-colors rounded"
+                >
+                  Limpar
+                </button>
+                {!isTeacher && (
+                  <>
+                    <button
+                      onClick={() => handleBatchStatusChange('Ativo')}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[9px] uppercase tracking-wider py-1 px-2.5 rounded transition-colors"
+                    >
+                      Ativar
+                    </button>
+                    <button
+                      onClick={() => handleBatchStatusChange('Inativo')}
+                      className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-[9px] uppercase tracking-wider py-1 px-2.5 rounded transition-colors"
+                    >
+                      Inativar
+                    </button>
+                    <button
+                      onClick={handleBatchDelete}
+                      className="bg-red-600/90 hover:bg-red-600 text-white font-bold text-[9px] uppercase tracking-wider py-1 px-2.5 rounded border border-red-500/20 transition-colors"
+                    >
+                      Excluir
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <span className="text-[10px] text-slate-500 italic">Selecione alunos usando as caixas de seleção na tabela para ações em lote</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1110,6 +1338,18 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
+                <th className="px-6 py-4 w-12 text-center">
+                  <button
+                    onClick={handleToggleSelectAllPage}
+                    className="text-slate-450 hover:text-slate-200 transition-colors"
+                  >
+                    {isAllPageSelected ? (
+                      <CheckSquare className="w-4 h-4 text-gold-500" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-6 py-4">Membro</th>
                 <th className="px-6 py-4">Nascimento / Idade</th>
                 <th className="px-6 py-4">Faixa Atual</th>
@@ -1122,7 +1362,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
+                  <td colSpan={8} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Nenhum aluno encontrado correspondente aos filtros.
                   </td>
                 </tr>
@@ -1130,8 +1370,22 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 paginatedStudents.map((student) => (
                   <tr
                     key={student.id}
-                    className="hover:bg-obsidian-800/15 transition-colors group"
+                    className="hover:bg-obsidian-800/15 transition-colors group cursor-pointer"
+                    onClick={() => handleToggleSelectStudent(student.id)}
                   >
+                    {/* Checkbox de Seleção */}
+                    <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleToggleSelectStudent(student.id)}
+                        className="text-slate-400 hover:text-slate-200 transition-colors"
+                      >
+                        {selectedStudentIds.includes(student.id) ? (
+                          <CheckSquare className="w-4 h-4 text-gold-500" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                    </td>
                     {/* Membro */}
                     <td className="px-6 py-4">
                        <div className="flex items-center gap-3">
@@ -1208,7 +1462,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     </td>
 
                     {/* Ações */}
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-3">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -1321,7 +1575,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     <input
                       type="date"
                       value={formDataNascimento}
-                      onChange={(e) => setFormDataNascimento(e.target.value)}
+                      onChange={(e) => {
+                        const newDate = e.target.value;
+                        setFormDataNascimento(newDate);
+                        const allowed = getBeltsByAge(newDate);
+                        if (!allowed.includes(formFaixa)) {
+                          setFormFaixa(allowed[0]);
+                        }
+                      }}
                       className="input-premium"
                       required
                       disabled={isTeacher}
@@ -1478,15 +1739,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       className="input-premium bg-obsidian-950 text-slate-200"
                       disabled={isTeacher}
                     >
-                      <option value="Branca">Branca</option>
-                      <option value="Cinza">Cinza</option>
-                      <option value="Amarela">Amarela</option>
-                      <option value="Laranja">Laranja</option>
-                      <option value="Verde">Verde</option>
-                      <option value="Azul">Azul</option>
-                      <option value="Roxa">Roxa</option>
-                      <option value="Marrom">Marrom</option>
-                      <option value="Preta">Preta</option>
+                      {getBeltsByAge(formDataNascimento).map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1852,6 +2107,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           </div>
         </div>
       )}
+
     </div>
   );
 };

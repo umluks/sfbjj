@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Aluno, Belt, Degree, Gender, LoggedUser, GraduacaoHistorico } from '../types';
+import { BELT_RANKS, getBeltsByAge, getBjjAge } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   User, 
@@ -154,8 +155,23 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
 
     if (!student) return;
 
-    if (!formDataNascimento) {
-      setInfoError('Data de Nascimento é obrigatória.');
+    // Validar faixa por idade
+    const age = getBjjAge(formDataNascimento);
+    const allowed = getBeltsByAge(formDataNascimento);
+    if (!allowed.includes(formFaixa)) {
+      setInfoError(`A faixa "${formFaixa}" não é permitida para a idade de ${age} anos.`);
+      return;
+    }
+
+    // Validar rebaixamento de faixa ou graus
+    const oldFaixa = student.faixa_atual || student.faixa;
+    const oldGraus = student.graus_atuais ?? student.graus;
+    if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
+      setInfoError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${formFaixa}.`);
+      return;
+    }
+    if (formFaixa === oldFaixa && formGraus < oldGraus) {
+      setInfoError('Não é permitido diminuir a quantidade de graus.');
       return;
     }
 
@@ -280,6 +296,26 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
+    // Validar faixa por idade
+    const age = getBjjAge(student.dataNascimento);
+    const allowed = getBeltsByAge(student.dataNascimento);
+    if (!allowed.includes(newGradFaixa)) {
+      setGradError(`A faixa "${newGradFaixa}" não é permitida para a idade de ${age} anos.`);
+      return;
+    }
+
+    // Validar rebaixamento de faixa ou graus
+    const oldFaixa = student.faixa_atual || student.faixa;
+    const oldGraus = student.graus_atuais ?? student.graus;
+    if (BELT_RANKS[newGradFaixa] < BELT_RANKS[oldFaixa]) {
+      setGradError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${newGradFaixa}.`);
+      return;
+    }
+    if (newGradFaixa === oldFaixa && newGradGrau < oldGraus) {
+      setGradError('Não é permitido diminuir a quantidade de graus.');
+      return;
+    }
+
     // Insere novo registro de graduação no supabase
     const { data: newGradDataDb, error: gradInsertError } = await supabase
       .from('graduacoes_historico')
@@ -344,44 +380,75 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   };
 
   const renderBeltBadge = (faixa: Belt, graus: Degree) => {
-    let beltClass = 'bg-slate-200 text-slate-800'; // Default branca
-    let barColor = 'bg-black'; // Default black sleeve bar
+    let beltClass = '';
+    let barColor = 'bg-black'; // Black sleeve bar standard
+    let stripeStyle: React.CSSProperties | undefined;
 
-    switch (faixa) {
-      case 'Branca':
-        beltClass = 'bg-slate-200 text-slate-800 border border-slate-350';
-        break;
-      case 'Cinza':
-        beltClass = 'bg-gray-500 text-white';
-        break;
-      case 'Amarela':
-        beltClass = 'bg-yellow-400 text-black';
-        break;
-      case 'Laranja':
-        beltClass = 'bg-orange-500 text-white';
-        break;
-      case 'Verde':
-        beltClass = 'bg-green-600 text-white';
-        break;
-      case 'Azul':
-        beltClass = 'bg-blue-600 text-white border border-blue-700';
-        break;
-      case 'Roxa':
-        beltClass = 'bg-purple-700 text-white';
-        break;
-      case 'Marrom':
-        beltClass = 'bg-amber-900 text-white';
-        break;
-      case 'Preta':
-        beltClass = 'bg-black border border-gold-500/60 text-gold-500';
-        barColor = 'bg-red-600'; // Red sleeve bar for black belts
-        break;
+    const lowerFaixa = faixa.toLowerCase();
+
+    if (lowerFaixa.includes('cinza')) {
+      beltClass = 'bg-slate-400 text-slate-950 border border-slate-500';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('amarela')) {
+      beltClass = 'bg-yellow-400 text-slate-950 border border-yellow-500';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('laranja')) {
+      beltClass = 'bg-orange-500 text-white';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('verde')) {
+      beltClass = 'bg-emerald-600 text-white';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'azul') {
+      beltClass = 'bg-blue-600 text-white border border-blue-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'roxa') {
+      beltClass = 'bg-purple-700 text-white border border-purple-800';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'marrom') {
+      beltClass = 'bg-amber-900 text-white border border-amber-950';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'preta') {
+      beltClass = 'bg-neutral-950 border border-gold-500/75 text-gold-450';
+      barColor = 'bg-red-650';
+    } else if (lowerFaixa === 'vermelha e preta') {
+      stripeStyle = {
+        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #171717 15px, #171717 30px)'
+      };
+      beltClass = 'text-white border border-red-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'vermelha e branca') {
+      stripeStyle = {
+        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #f8fafc 15px, #f8fafc 30px)'
+      };
+      beltClass = 'text-neutral-950 border border-red-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'vermelha') {
+      beltClass = 'bg-red-750 text-white border border-red-850';
+      barColor = 'bg-neutral-950';
+    } else {
+      beltClass = 'bg-white text-slate-900 border border-slate-300';
+      barColor = 'bg-neutral-900';
     }
 
+    const hasWhiteStripe = (lowerFaixa.includes('e branca') && !lowerFaixa.includes('vermelha'));
+    const hasBlackStripe = (lowerFaixa.includes('e preta') && !lowerFaixa.includes('vermelha'));
+
     return (
-      <div className={`w-32 h-6 rounded flex items-center relative overflow-hidden font-bold text-[10px] tracking-wide shadow-sm ${beltClass}`}>
-        <span className="pl-2 uppercase z-10">{faixa}</span>
-        <div className={`absolute right-0 top-0 bottom-0 w-10 ${barColor === 'bg-red-600' ? 'bg-red-650' : 'bg-neutral-900'} flex items-center justify-around px-0.5 border-l border-obsidian-950`}>
+      <div 
+        className={`w-32 h-6 rounded flex items-center relative overflow-hidden font-extrabold text-[10px] tracking-wider shadow-sm select-none ${beltClass}`}
+        style={stripeStyle}
+      >
+        <span className={`pl-2 uppercase z-10 ${lowerFaixa === 'vermelha e branca' ? 'text-black bg-white/60 px-1 rounded-sm' : ''}`}>{faixa}</span>
+
+        {/* Horizontal stripe for child mixed belts */}
+        {hasWhiteStripe && (
+          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-white border-y border-neutral-300/30 z-0 pointer-events-none" />
+        )}
+        {hasBlackStripe && (
+          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-neutral-950 border-y border-neutral-800/30 z-0 pointer-events-none" />
+        )}
+
+        <div className={`absolute right-0 top-0 bottom-0 w-10 ${barColor} flex items-center justify-around px-0.5 border-l border-obsidian-950`}>
           {Array.from({ length: 4 }).map((_, idx) => (
             <div
               key={idx}
@@ -567,7 +634,14 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       <input
                         type="date"
                         value={formDataNascimento}
-                        onChange={(e) => setFormDataNascimento(e.target.value)}
+                        onChange={(e) => {
+                          const newDate = e.target.value;
+                          setFormDataNascimento(newDate);
+                          const allowed = getBeltsByAge(newDate);
+                          if (!allowed.includes(formFaixa)) {
+                            setFormFaixa(allowed[0]);
+                          }
+                        }}
                         className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         required
                         disabled={isStudent}
@@ -730,15 +804,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           onChange={(e) => setFormFaixa(e.target.value as Belt)}
                           className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <option value="Branca">Branca</option>
-                          <option value="Cinza">Cinza</option>
-                          <option value="Amarela">Amarela</option>
-                          <option value="Laranja">Laranja</option>
-                          <option value="Verde">Verde</option>
-                          <option value="Azul">Azul</option>
-                          <option value="Roxa">Roxa</option>
-                          <option value="Marrom">Marrom</option>
-                          <option value="Preta">Preta</option>
+                          {getBeltsByAge(formDataNascimento).map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -885,7 +953,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 </div>
                 {isStudent && (
                   <button 
-                    onClick={() => setShowGradModal(true)}
+                    onClick={() => {
+                      setShowGradModal(true);
+                      setGradError(null);
+                      setNewGradFaixa(student?.faixa || 'Branca');
+                      setNewGradGrau(student?.graus || 0);
+                    }}
                     className="btn-gold flex items-center gap-2 text-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -949,15 +1022,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           onChange={(e) => setNewGradFaixa(e.target.value as Belt)}
                           className="input-premium w-full bg-obsidian-950"
                         >
-                          <option value="Branca">Branca</option>
-                          <option value="Cinza">Cinza</option>
-                          <option value="Amarela">Amarela</option>
-                          <option value="Laranja">Laranja</option>
-                          <option value="Verde">Verde</option>
-                          <option value="Azul">Azul</option>
-                          <option value="Roxa">Roxa</option>
-                          <option value="Marrom">Marrom</option>
-                          <option value="Preta">Preta</option>
+                          {getBeltsByAge(student?.dataNascimento).map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
                         </select>
                       </div>
 

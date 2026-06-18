@@ -10,7 +10,8 @@ import {
   User,
   LogOut,
   Mail,
-  Shield
+  Shield,
+  Award
 } from 'lucide-react';
 import type { LoggedUser } from '../types';
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
@@ -41,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
     menuItems = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'students', label: 'Gestão de Alunos', icon: Users },
+      { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Professores', icon: Shield },
       { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
@@ -50,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
     menuItems = [
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
       { id: 'students', label: 'Consultar Alunos', icon: Users },
+      { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   } else {
