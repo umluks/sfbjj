@@ -10,6 +10,7 @@ import { StudentProfile } from './components/StudentProfile';
 import { Contact } from './components/Contact';
 import { LandingPage } from './components/LandingPage';
 import { BatchGraduation } from './components/BatchGraduation';
+import { GraduationSystem } from './components/GraduationSystem';
 import type { Aluno, Aviso, LoggedUser } from './types';
 import { INITIAL_ANNOUNCEMENTS } from './mockData';
 import { supabase } from './lib/supabase';
@@ -81,9 +82,9 @@ function App() {
   // Ajusta a aba de roteamento se as permissões de função não corresponderem
   useEffect(() => {
     if (loggedUser) {
-      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact') {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
         setCurrentTab('schedule');
       } else if (loggedUser.role === 'admin' && currentTab === 'profile') {
         setCurrentTab('dashboard');
@@ -151,7 +152,8 @@ function App() {
             setStudents={setStudents} 
           />
         );
-
+      case 'graduation-system':
+        return <GraduationSystem />;
       case 'contact':
         return <Contact loggedUser={loggedUser} />;
       case 'schedule':

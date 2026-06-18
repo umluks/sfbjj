@@ -32,7 +32,7 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
   // Seleção para download/impressão em lote
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
@@ -75,7 +75,7 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedStudents = useMemo(() => {
     return filteredStudents.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredStudents, startIndex]);
+  }, [filteredStudents, startIndex, itemsPerPage]);
 
   // Inicializa ou obtém a configuração individual de um aluno
   const getStudentConfig = (student: Aluno) => {
@@ -712,7 +712,7 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
       </div>
 
       {/* Busca e Filtros Rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
         <div className="relative md:col-span-2">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
@@ -757,6 +757,24 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
             <option value="Todos">Todas as Turmas</option>
             <option value="Adulto">Adulto</option>
             <option value="Kids">Kids</option>
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
+          >
+            <option value={10}>10 por página</option>
+            <option value={20}>20 por página</option>
+            <option value={30}>30 por página</option>
+            <option value={40}>40 por página</option>
+            <option value={50}>50 por página</option>
+            <option value={9999}>Todos</option>
           </select>
         </div>
       </div>

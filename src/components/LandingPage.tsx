@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MapPin,
-  Megaphone
+  Megaphone,
+  X
 } from 'lucide-react';
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
 import bjjKidsClass from '../assets/bjj_kids_class.png';
@@ -9,6 +10,7 @@ import bjjAdultsSparring from '../assets/bjj_adults_sparring.png';
 import bjjTeamGroup from '../assets/bjj_team_group.png';
 import type { Aviso } from '../types';
 import { Contact } from './Contact';
+import { GraduationSystem } from './GraduationSystem';
 
 interface LandingPageProps {
   announcements?: Aviso[];
@@ -16,6 +18,7 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], onAccessLogin }) => {
+  const [showGraduationModal, setShowGraduationModal] = useState(false);
 
   // Horários customizados para exibição
   const quickSchedule = [
@@ -57,6 +60,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               <a href="#avisos" className="hover:text-slate-100 transition-colors duration-300">Avisos</a>
             )}
             <a href="#horarios" className="hover:text-slate-100 transition-colors duration-300">Horários & Localização</a>
+            <button
+              onClick={() => setShowGraduationModal(true)}
+              className="hover:text-slate-100 transition-colors duration-300 uppercase"
+            >
+              Graduação IBJJF
+            </button>
             <a href="#contato" className="hover:text-slate-100 transition-colors duration-300">Contato</a>
             <button
               onClick={onAccessLogin}
@@ -120,12 +129,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             >
               Acessar Painel (Login)
             </button>
-            <a
-              href="#horarios"
-              className="w-full sm:w-auto btn-obsidian px-10 py-4 text-sm font-bold tracking-wider uppercase"
+            <button
+              onClick={() => setShowGraduationModal(true)}
+              className="w-full sm:w-auto btn-obsidian px-10 py-4 text-sm font-bold tracking-wider uppercase border border-obsidian-800"
             >
-              Ver Horários
-            </a>
+              Sistema de Graduação
+            </button>
           </div>
         </div>
       </section>
@@ -403,6 +412,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             <li><a href="#avisos" className="hover:text-slate-200 transition-colors">Avisos</a></li>
           )}
           <li><a href="#horarios" className="hover:text-slate-200 transition-colors">Horários Semanal</a></li>
+          <li><button onClick={() => setShowGraduationModal(true)} className="hover:text-slate-250 transition-colors text-left uppercase">Graduação IBJJF</button></li>
           <li><a href="#contato" className="hover:text-slate-200 transition-colors">Contato</a></li>
           <li><button onClick={onAccessLogin} className="hover:text-slate-200 transition-colors text-left">Acessar Painel</button></li>
         </ul>
@@ -432,6 +442,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
           </span>
         </div>
       </footer>
+
+      {/* MODAL SISTEMA DE GRADUAÇÃO IBJJF */}
+      {showGraduationModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/95 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-7xl bg-obsidian-900 border border-obsidian-800 p-6 md:p-8 shadow-2xl my-8">
+            <button
+              onClick={() => setShowGraduationModal(false)}
+              className="absolute right-4 top-4 text-zinc-450 hover:text-zinc-200 transition-colors p-2 bg-obsidian-950 border border-obsidian-800 rounded-none z-10"
+              aria-label="Fechar modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="max-h-[80vh] overflow-y-auto pr-2 mt-4">
+              <GraduationSystem />
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
