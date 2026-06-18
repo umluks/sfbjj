@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, Calendar, Eye, BookOpen, AlertCircle, Check, Download, Printer, Scale, Skull, FileText } from 'lucide-react';
+import { Award, Eye, BookOpen, AlertCircle, Check, Download, Printer, Scale, Skull, FileText } from 'lucide-react';
 
 interface BeltInfo {
   name: string;
@@ -30,7 +30,7 @@ interface WeightDivision {
 }
 
 export const GraduationSystem: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'poster' | 'rules' | 'calculator' | 'weights' | 'fouls'>('poster');
+  const [activeTab, setActiveTab] = useState<'poster' | 'rules' | 'calculator-belts' | 'calculator-weights' | 'weights' | 'fouls'>('poster');
   const [selectedBelt, setSelectedBelt] = useState<BeltInfo | null>(null);
   const [calcAge, setCalcAge] = useState<number>(18);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<'all' | 'infantil' | 'adulto'>('all');
@@ -198,6 +198,17 @@ export const GraduationSystem: React.FC = () => {
 
     // Grupo Adulto (16+ anos)
     {
+      name: 'Branca (Adulto)',
+      color: '#FFFFFF',
+      textColor: '#0F0F11',
+      barColor: '#000000',
+      minAge: 16,
+      minTime: 'Nenhuma carência',
+      description: 'Faixa de iniciante para jovens e adultos (a partir de 16 anos). Foco em aprender as posições básicas de guarda, escapes e controle postural.',
+      category: 'adulto',
+      stripes: 4
+    },
+    {
       name: 'Azul',
       color: '#0055FF',
       textColor: '#FFFFFF',
@@ -236,8 +247,8 @@ export const GraduationSystem: React.FC = () => {
       textColor: '#FFFFFF',
       barColor: '#E60000',
       minAge: 19,
-      minTime: '31 anos de docência ativa e graus para Coral',
-      description: 'O verdadeiro início dos estudos do Jiu-Jitsu. Representa maestria técnica, autodisciplina e a responsabilidade de passar a tradição adiante. Possui até 6 graus.',
+      minTime: '31 anos de dedicação na preta para atingir o topo',
+      description: 'O verdadeiro início dos estudos do Jiu-Jitsu. Representa maestria técnica, autodisciplina e a responsabilidade de passar a tradição adiante. Possui do 0 ao 6º Grau.',
       category: 'adulto',
       stripes: 6
     },
@@ -249,10 +260,10 @@ export const GraduationSystem: React.FC = () => {
       textColor: '#FFFFFF',
       barColor: '#FFFFFF',
       minAge: 50,
-      minTime: '7 anos na faixa Vermelha e Preta',
-      description: 'Faixa Especial correspondente ao 7º Grau (Mestre). Exige idade mínima de 50 anos e pelo menos 31 anos de faixa preta ativa.',
+      minTime: '7 anos como faixa preta 6º grau',
+      description: 'Faixa Especial correspondente ao 7º Grau (Mestre / Coral). Requer idade mínima de 50 anos e pelo menos 31 anos de faixa preta ativa.',
       category: 'coral_vermelha',
-      stripes: 0
+      stripes: 7
     },
     {
       name: 'Vermelha e Branca (Coral)',
@@ -260,10 +271,10 @@ export const GraduationSystem: React.FC = () => {
       textColor: '#FFFFFF',
       barColor: '#151518',
       minAge: 57,
-      minTime: '10 anos na faixa Vermelha e Branca',
-      description: 'Faixa Especial correspondente ao 8º Grau (Mestre). Exige pelo menos 7 anos de atividade na faixa anterior.',
+      minTime: '7 anos como faixa vermelha e preta 7º grau',
+      description: 'Faixa Especial correspondente ao 8º Grau (Mestre / Coral). Exige idade mínima de 57 anos.',
       category: 'coral_vermelha',
-      stripes: 0
+      stripes: 8
     },
     {
       name: 'Vermelha',
@@ -271,10 +282,10 @@ export const GraduationSystem: React.FC = () => {
       textColor: '#FFFFFF',
       barColor: '#D4AF37',
       minAge: 67,
-      minTime: 'Vitalícia',
-      description: 'A faixa máxima do Jiu-Jitsu brasileiro correspondente ao 9º Grau (Grande Mestre). Reservada para aqueles que dedicaram suas vidas inteiras à arte.',
+      minTime: '10 anos como faixa vermelha e branca 8º grau',
+      description: 'A faixa máxima do Jiu-Jitsu brasileiro correspondente ao 9º Grau (Grande Mestre). Requer idade mínima de 67 anos.',
       category: 'coral_vermelha',
-      stripes: 0
+      stripes: 9
     }
   ];
 
@@ -399,13 +410,13 @@ export const GraduationSystem: React.FC = () => {
         </div>
 
         {/* Tab Controls */}
-        <div className="flex flex-wrap bg-obsidian-900 border border-obsidian-850 p-1">
+        <div className="flex flex-wrap gap-2 bg-obsidian-900/60 border border-obsidian-850/80 p-1.5 rounded-xl shadow-lg backdrop-blur-md">
           <button
             onClick={() => setActiveTab('poster')}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-300 border ${
               activeTab === 'poster'
-                ? 'bg-zinc-100 text-obsidian-950 font-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-slate-100 border-slate-200 text-obsidian-950 font-black shadow-md shadow-black/10'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-obsidian-850/40'
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
@@ -413,10 +424,10 @@ export const GraduationSystem: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('rules')}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-300 border ${
               activeTab === 'rules'
-                ? 'bg-zinc-100 text-obsidian-950 font-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-slate-100 border-slate-200 text-obsidian-950 font-black shadow-md shadow-black/10'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-obsidian-850/40'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -424,10 +435,10 @@ export const GraduationSystem: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('fouls')}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-300 border ${
               activeTab === 'fouls'
-                ? 'bg-zinc-100 text-obsidian-950 font-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-slate-100 border-slate-200 text-obsidian-950 font-black shadow-md shadow-black/10'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-obsidian-850/40'
             }`}
           >
             <Skull className="w-3.5 h-3.5" />
@@ -435,25 +446,36 @@ export const GraduationSystem: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('weights')}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-300 border ${
               activeTab === 'weights'
-                ? 'bg-zinc-100 text-obsidian-950 font-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-slate-100 border-slate-200 text-obsidian-950 font-black shadow-md shadow-black/10'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-obsidian-850/40'
             }`}
           >
             <Scale className="w-3.5 h-3.5" />
             Tabela de Pesos
           </button>
           <button
-            onClick={() => setActiveTab('calculator')}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider transition-all ${
-              activeTab === 'calculator'
-                ? 'bg-zinc-100 text-obsidian-950 font-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+            onClick={() => setActiveTab('calculator-belts')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-300 border ${
+              activeTab === 'calculator-belts'
+                ? 'bg-slate-100 border-slate-200 text-obsidian-950 font-black shadow-md shadow-black/10'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-obsidian-850/40'
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            Calculadora
+            <Award className="w-3.5 h-3.5" />
+            Calculadora Faixas
+          </button>
+          <button
+            onClick={() => setActiveTab('calculator-weights')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-300 border ${
+              activeTab === 'calculator-weights'
+                ? 'bg-slate-100 border-slate-200 text-obsidian-950 font-black shadow-md shadow-black/10'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-obsidian-850/40'
+            }`}
+          >
+            <Scale className="w-3.5 h-3.5" />
+            Calculadora Pesos
           </button>
         </div>
       </div>
@@ -820,7 +842,7 @@ export const GraduationSystem: React.FC = () => {
 
       {/* -------------------- TAB 4: TABELA DE PESOS E CATEGORIAS -------------------- */}
       {activeTab === 'weights' && (
-        <div className="space-y-6 max-w-5xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto">
           
           <div className="bg-obsidian-900 border border-obsidian-800 p-6 space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-obsidian-850 pb-4">
@@ -876,9 +898,10 @@ export const GraduationSystem: React.FC = () => {
                 <thead>
                   <tr className="border-b border-obsidian-800 bg-obsidian-950 text-zinc-450 uppercase tracking-widest text-[9px]">
                     <th className="py-3.5 px-4">Categoria de Peso</th>
-                    <th className="py-3.5 px-4">Adulto (18-29 anos)</th>
-                    <th className="py-3.5 px-4">Master (30+ anos)</th>
-                    <th className="py-3.5 px-4 text-right">Juvenil (16-17 anos)</th>
+                    <th className="py-3.5 px-4">Adulto (18-29)</th>
+                    <th className="py-3.5 px-4">Master 1 (30-35)</th>
+                    <th className="py-3.5 px-4">Master 2+ (36+)</th>
+                    <th className="py-3.5 px-4 text-right">Juvenil (16-17)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-obsidian-850">
@@ -888,6 +911,7 @@ export const GraduationSystem: React.FC = () => {
                       <td className="py-3.5 px-4 font-bold text-slate-200">{row.class}</td>
                       <td className="py-3.5 px-4 text-zinc-350">{row.adultLimit}</td>
                       <td className="py-3.5 px-4 text-zinc-400">{row.masterLimit}</td>
+                      <td className="py-3.5 px-4 text-zinc-450">{row.masterLimit}</td>
                       <td className="py-3.5 px-4 text-right text-zinc-450">{row.juvenilLimit || 'N/A'}</td>
                     </tr>
                   ))}
@@ -898,6 +922,7 @@ export const GraduationSystem: React.FC = () => {
                       <td className="py-3.5 px-4 font-bold text-slate-200">{row.class}</td>
                       <td className="py-3.5 px-4 text-zinc-350">{row.adultLimit}</td>
                       <td className="py-3.5 px-4 text-zinc-400">{row.masterLimit}</td>
+                      <td className="py-3.5 px-4 text-zinc-450">{row.masterLimit}</td>
                       <td className="py-3.5 px-4 text-right text-zinc-450">{row.juvenilLimit || 'N/A'}</td>
                     </tr>
                   ))}
@@ -908,6 +933,7 @@ export const GraduationSystem: React.FC = () => {
                       <td className="py-3.5 px-4 font-bold text-slate-200">{row.class}</td>
                       <td className="py-3.5 px-4 text-zinc-350">{row.adultLimit}</td>
                       <td className="py-3.5 px-4 text-zinc-400">{row.masterLimit}</td>
+                      <td className="py-3.5 px-4 text-zinc-450">{row.masterLimit}</td>
                       <td className="py-3.5 px-4 text-right text-zinc-450">{row.juvenilLimit || 'N/A'}</td>
                     </tr>
                   ))}
@@ -918,6 +944,7 @@ export const GraduationSystem: React.FC = () => {
                       <td className="py-3.5 px-4 font-bold text-slate-200">{row.class}</td>
                       <td className="py-3.5 px-4 text-zinc-350">{row.adultLimit}</td>
                       <td className="py-3.5 px-4 text-zinc-400">{row.masterLimit}</td>
+                      <td className="py-3.5 px-4 text-zinc-450">{row.masterLimit}</td>
                       <td className="py-3.5 px-4 text-right text-zinc-450">{row.juvenilLimit || 'N/A'}</td>
                     </tr>
                   ))}
@@ -933,8 +960,8 @@ export const GraduationSystem: React.FC = () => {
         </div>
       )}
 
-      {/* -------------------- TAB 5: CALCULADORA DE ELEGIBILIDADE -------------------- */}
-      {activeTab === 'calculator' && (
+      {/* -------------------- TAB 5: CALCULADORA DE ELEGIBILIDADE DE FAIXAS -------------------- */}
+      {activeTab === 'calculator-belts' && (
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="bg-obsidian-900 border border-obsidian-800 p-6 md:p-8 space-y-6">
             <div className="text-center max-w-xl mx-auto">
@@ -1007,6 +1034,324 @@ export const GraduationSystem: React.FC = () => {
         </div>
       )}
 
+      {/* -------------------- TAB 6: CALCULADORA DE PESOS E CATEGORIAS -------------------- */}
+      {activeTab === 'calculator-weights' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="bg-obsidian-900 border border-obsidian-800 p-6 md:p-8 space-y-6">
+            <WeightAndCategoryCalculator 
+              weightsMascGi={weightsMascGi} 
+              weightsMascNoGi={weightsMascNoGi} 
+              weightsFemGi={weightsFemGi} 
+              weightsFemNoGi={weightsFemNoGi} 
+            />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+
+// Componente Interno Auxiliar para a Calculadora de Pesos e Categorias
+const WeightAndCategoryCalculator: React.FC<{
+  weightsMascGi: WeightDivision[];
+  weightsMascNoGi: WeightDivision[];
+  weightsFemGi: WeightDivision[];
+  weightsFemNoGi: WeightDivision[];
+}> = ({ weightsMascGi, weightsMascNoGi, weightsFemGi, weightsFemNoGi }) => {
+  const currentYear = new Date().getFullYear();
+  const [birthYear, setBirthYear] = useState<number>(currentYear - 25);
+  const [gender, setGender] = useState<'masculino' | 'feminino'>('masculino');
+  const [modality, setModality] = useState<'gi' | 'nogi'>('gi');
+  const [weightKg, setWeightKg] = useState<number>(75);
+  const [beltColor, setBeltColor] = useState<string>('Branca');
+
+  const calculatedAge = currentYear - birthYear;
+
+  // Tabela de Categorias, Faixa-Etária e Tempo Regulamentar
+  const getCategoryAndFightTime = (age: number, belt: string) => {
+    let category = '';
+    let fightTime = '';
+    let isMasterOrAdult = false;
+
+    if (age === 4) {
+      category = 'PRÉ-MIRIM I';
+      fightTime = '02 minutos';
+    } else if (age === 5) {
+      category = 'PRÉ-MIRIM II';
+      fightTime = '02 minutos';
+    } else if (age === 6) {
+      category = 'PRÉ-MIRIM III';
+      fightTime = '02 minutos';
+    } else if (age === 7) {
+      category = 'MIRIM I';
+      fightTime = '03 minutos';
+    } else if (age === 8) {
+      category = 'MIRIM II';
+      fightTime = '03 minutos';
+    } else if (age === 9) {
+      category = 'MIRIM III';
+      fightTime = '03 minutos';
+    } else if (age === 10) {
+      category = 'INFANTIL I';
+      fightTime = '04 minutos';
+    } else if (age === 11) {
+      category = 'INFANTIL II';
+      fightTime = '04 minutos';
+    } else if (age === 12) {
+      category = 'INFANTIL III';
+      fightTime = '04 minutos';
+    } else if (age === 13) {
+      category = 'INFANTO-JUVENIL I';
+      fightTime = '04 minutos';
+    } else if (age === 14) {
+      category = 'INFANTO-JUVENIL II';
+      fightTime = '04 minutos';
+    } else if (age === 15) {
+      category = 'INFANTO-JUVENIL III';
+      fightTime = '04 minutos';
+    } else if (age === 16) {
+      category = 'JUVENIL I';
+      fightTime = '05 minutos';
+    } else if (age === 17) {
+      category = 'JUVENIL II';
+      fightTime = '05 minutos';
+    } else if (age >= 18 && age < 30) {
+      category = 'ADULTO';
+      isMasterOrAdult = true;
+      if (belt === 'Branca') fightTime = '05 minutos';
+      else if (belt === 'Azul') fightTime = '06 minutos';
+      else if (belt === 'Roxa') fightTime = '07 minutos';
+      else if (belt === 'Marrom') fightTime = '08 minutos';
+      else fightTime = '10 minutos'; // Preta
+    } else if (age >= 30 && age < 36) {
+      category = 'MASTER 1';
+      isMasterOrAdult = true;
+      if (belt === 'Branca' || belt === 'Azul') fightTime = '05 minutos';
+      else fightTime = '06 minutos'; // Roxa, Marrom, Preta
+    } else if (age >= 36 && age < 41) {
+      category = 'MASTER 2';
+      isMasterOrAdult = true;
+      fightTime = '05 minutos';
+    } else if (age >= 41 && age < 46) {
+      category = 'MASTER 3';
+      isMasterOrAdult = true;
+      fightTime = '05 minutos';
+    } else if (age >= 46 && age < 51) {
+      category = 'MASTER 4';
+      isMasterOrAdult = true;
+      fightTime = '05 minutos';
+    } else if (age >= 51 && age < 56) {
+      category = 'MASTER 5';
+      isMasterOrAdult = true;
+      fightTime = '05 minutos';
+    } else if (age >= 56 && age < 61) {
+      category = 'MASTER 6';
+      isMasterOrAdult = true;
+      fightTime = '05 minutos';
+    } else if (age >= 61) {
+      category = 'MASTER 7';
+      isMasterOrAdult = true;
+      fightTime = '05 minutos';
+    } else {
+      category = 'Não elegível (Idade inferior a 4 anos)';
+      fightTime = '0 minutos';
+    }
+
+    return { category, fightTime, isMasterOrAdult };
+  };
+
+  const { category: finalCategory, fightTime: finalFightTime } = getCategoryAndFightTime(calculatedAge, beltColor);
+
+  // Determinar limite de peso e divisão baseados no peso informado e dados da tabela
+  const getWeightClass = () => {
+    let activeList: WeightDivision[] = [];
+    if (gender === 'masculino') {
+      activeList = modality === 'gi' ? weightsMascGi : weightsMascNoGi;
+    } else {
+      activeList = modality === 'gi' ? weightsFemGi : weightsFemNoGi;
+    }
+
+    // Filtragem simples baseada nos limites de peso da tabela
+    // Extrai o número do limite (ex: "Até 76.00 kg" -> 76.00)
+    const parseLimit = (limitStr: string): number => {
+      if (limitStr.includes('Sem limite') || limitStr.includes('Sem limite de peso')) return 999;
+      const match = limitStr.match(/[\d.]+/);
+      return match ? parseFloat(match[0]) : 999;
+    };
+
+    // Identifica a coluna correta a consultar
+    let divisionFound = activeList[activeList.length - 1]; // Padrão: Pesadíssimo/Ultra-pesado
+    
+    for (const div of activeList) {
+      let limitStr = div.adultLimit;
+      if (calculatedAge >= 30) {
+        limitStr = div.masterLimit;
+      } else if (calculatedAge === 16 || calculatedAge === 17) {
+        limitStr = div.juvenilLimit || div.adultLimit;
+      }
+      
+      const limitVal = parseLimit(limitStr);
+      if (weightKg <= limitVal) {
+        divisionFound = div;
+        break;
+      }
+    }
+
+    let limitText = divisionFound.adultLimit;
+    if (calculatedAge >= 30) {
+      limitText = divisionFound.masterLimit;
+    } else if (calculatedAge === 16 || calculatedAge === 17) {
+      limitText = divisionFound.juvenilLimit || divisionFound.adultLimit;
+    }
+
+    return {
+      name: divisionFound.class,
+      limit: limitText
+    };
+  };
+
+  const weightClass = getWeightClass();
+
+  return (
+    <div className="mt-8 border-t border-obsidian-850 pt-8 space-y-6">
+      <div className="border-l-2 border-gold-500 pl-3">
+        <h3 className="text-sm font-black tracking-widest text-zinc-300 uppercase">
+          Calculadora Dinâmica de Pesos e Categorias
+        </h3>
+        <p className="text-[11px] text-zinc-550 mt-1">
+          Informe seu ano de nascimento e dados físicos para saber exatamente sua categoria, tempo regulamentar de luta e divisão de peso oficial.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-obsidian-950 p-6 border border-obsidian-850">
+        
+        {/* Entradas */}
+        <div className="md:col-span-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                Ano de Nascimento
+              </label>
+              <input
+                type="number"
+                min={currentYear - 90}
+                max={currentYear}
+                value={birthYear}
+                onChange={(e) => setBirthYear(parseInt(e.target.value) || currentYear)}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-100 px-3 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                Peso Atual (kg)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="10"
+                max="250"
+                value={weightKg}
+                onChange={(e) => setWeightKg(parseFloat(e.target.value) || 70)}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-100 px-3 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                Gênero
+              </label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as any)}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-200 px-2 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+              >
+                <option value="masculino">Masculino</option>
+                <option value="feminino">Feminino</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                Modalidade
+              </label>
+              <select
+                value={modality}
+                onChange={(e) => setModality(e.target.value as any)}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-200 px-2 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+              >
+                <option value="gi">De Kimono (Gi)</option>
+                <option value="nogi">Sem Kimono (No-Gi)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                Faixa
+              </label>
+              <select
+                value={beltColor}
+                onChange={(e) => setBeltColor(e.target.value)}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-200 px-2 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+              >
+                <option value="Branca">Branca</option>
+                <option value="Azul">Azul</option>
+                <option value="Roxa">Roxa</option>
+                <option value="Marrom">Marrom</option>
+                <option value="Preta">Preta</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Resultados */}
+        <div className="md:col-span-6 bg-obsidian-900/40 border border-obsidian-800 p-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <span className="text-[9px] font-black text-gold-500 uppercase tracking-widest block">
+              Resultado Calculado (Ano de Referência: {currentYear})
+            </span>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Idade</span>
+                <span className="text-sm font-black text-slate-200 block">{finalCategory}</span>
+                <span className="text-[10px] text-zinc-650 font-bold block mt-0.5">{calculatedAge} anos de idade</span>
+              </div>
+
+              <div>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Tempo Reg. de Luta</span>
+                <span className="text-sm font-black text-slate-200 block">{finalFightTime}</span>
+                <span className="text-[10px] text-zinc-650 font-semibold block mt-0.5">
+                  Final: {finalCategory.startsWith('MASTER') || finalCategory.startsWith('ADULTO') 
+                    ? 'Mesmo tempo' 
+                    : 'Dobro do tempo regulamentar'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t border-obsidian-850 pt-3">
+              <div>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Peso</span>
+                <span className="text-sm font-black text-slate-200 block">Peso {weightClass.name}</span>
+              </div>
+
+              <div>
+                <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Limite de Peso Divisão</span>
+                <span className="text-sm font-black text-slate-200 block">{weightClass.limit}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-2.5 bg-obsidian-950 border border-obsidian-850/50 text-[10px] text-zinc-500">
+            Finais das categorias juvenis/infantis possuem tempo regulamentar estendido ou dobrado nas semifinais/finais conforme a organização oficial do evento.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
