@@ -5,13 +5,15 @@ import { StudentManager } from './components/StudentManager';
 import { FinancialManager } from './components/FinancialManager';
 import { ScheduleGrid } from './components/ScheduleGrid';
 import { Login } from './components/Login';
+import { TeacherManager } from './components/TeacherManager';
 import { StudentProfile } from './components/StudentProfile';
 import { Contact } from './components/Contact';
-import type { Student, Announcement, LoggedUser } from './types';
-import { 
-  INITIAL_STUDENTS, 
-  INITIAL_ANNOUNCEMENTS 
-} from './mockData';
+import { LandingPage } from './components/LandingPage';
+import { BatchGraduation } from './components/BatchGraduation';
+import { GraduationSystem } from './components/GraduationSystem';
+import type { Aluno, Aviso, LoggedUser } from './types';
+import { INITIAL_ANNOUNCEMENTS } from './mockData';
+import { supabase } from './lib/supabase';
 
 function App() {
   const [loggedUser, setLoggedUser] = useState<LoggedUser | null>(() => {
@@ -19,118 +21,71 @@ function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [showLogin, setShowLogin] = useState(false);
+
   const [currentTab, setCurrentTab] = useState<string>(() => {
     const saved = localStorage.getItem('sfbjj_logged_user');
     if (saved) {
       const user = JSON.parse(saved) as LoggedUser;
-      return user.role === 'admin' ? 'dashboard' : 'profile';
+      if (user.role === 'admin') return 'dashboard';
+      if (user.role === 'teacher') return 'schedule';
+      return 'profile';
     }
     return 'dashboard';
   });
 
-  // Unified State with LocalStorage Persistence
-  const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem('sfbjj_students_v3');
-    let loadedStudents = INITIAL_STUDENTS;
-    if (saved) {
-      try {
-        const savedStudents: Student[] = JSON.parse(saved);
-        
-        // Map and update existing students with fields from INITIAL_STUDENTS if they exist
-        const merged = savedStudents.map(savedStudent => {
-          const initial = INITIAL_STUDENTS.find(i => 
-            i.id === savedStudent.id || 
-            i.nome.toLowerCase().trim() === savedStudent.nome.toLowerCase().trim()
-          );
-          if (initial) {
-            const updatedPagamentos = (savedStudent.pagamentos || []).map(savedPay => {
-              const initialPay = initial.pagamentos.find(p => p.mesRef === savedPay.mesRef);
-              if (initialPay && savedPay.mesRef === 'Abril/2026') {
-                return {
-                  ...savedPay,
-                  status: initialPay.status,
-                  dataPagamento: initialPay.dataPagamento,
-                  valor: initialPay.valor
-                };
-              }
-              return savedPay;
-            });
-            // If any initial payments are missing in saved student, append them
-            initial.pagamentos.forEach(initPay => {
-              if (!updatedPagamentos.some(p => p.mesRef === initPay.mesRef)) {
-                updatedPagamentos.push(initPay);
-              }
-            });
-            return {
-              ...savedStudent,
-              ...initial,
-              pagamentos: updatedPagamentos
-            };
-          }
-          return savedStudent;
-        });
+  // Estado Unificado
+  const [students, setStudents] = useState<Aluno[]>([]);
 
-        // Merge missing initial mock students by ID and Nome
-        INITIAL_STUDENTS.forEach(initial => {
-          const exists = merged.some(s => 
-            s.id === initial.id || 
-            s.nome.toLowerCase().trim() === initial.nome.toLowerCase().trim()
-          );
-          if (!exists) {
-            merged.push(initial);
-          }
-        });
-        loadedStudents = merged;
-      } catch (e) {
-        loadedStudents = INITIAL_STUDENTS;
+  useEffect(() => {
+    async function fetchStudents() {
+      const { data, error } = await supabase.from('alunos').select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
+      if (!error && data) {
+        // Mapeia a resposta do banco de dados para os tipos Aluno
+        const mapped = data.map((student: any) => ({
+          ...student,
+          historicoGraduacoes: (student.graduacoes_historico || []).map((g: any) => ({
+            id: g.id,
+            data: g.data_graduacao,
+            faixa: g.faixa,
+            graus: g.graus,
+            avaliador: g.avaliador
+          })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()) // sort oldest to newest
+        }));
+        // Ordena os alunos alfabeticamente
+        const sorted = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        setStudents(sorted as any);
       }
     }
+    fetchStudents();
+  }, []);
 
-    // Ensure all students have the 'turma' field set (based on birth year if missing)
-    const finalizedStudents = loadedStudents.map(s => {
-      if (!s.turma) {
-        let isKids = false;
-        if (s.dataNascimento) {
-          const birthParts = s.dataNascimento.split('-');
-          const year = parseInt(birthParts[0], 10);
-          if (year >= 2010) {
-            isKids = true;
-          }
-        }
-        return { ...s, turma: (isKids ? 'Kids' : 'Adulto') as 'Kids' | 'Adulto' };
-      }
-      return s;
-    });
-
-    // Remove empty/blank students and duplicate entries by name
-    const uniqueStudentsMap = new Map<string, Student>();
-    finalizedStudents.forEach(s => {
-      if (s && s.nome && s.nome.trim() !== "") {
-        const key = s.nome.toLowerCase().trim();
-        if (!uniqueStudentsMap.has(key)) {
-          uniqueStudentsMap.set(key, s);
-        }
-      }
-    });
-    return Array.from(uniqueStudentsMap.values());
-  });
-
-  const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
+  const [announcements, setAnnouncements] = useState<Aviso[]>(() => {
     const saved = localStorage.getItem('sfbjj_announcements');
     return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
   });
 
-
-  // Sync state changes to localStorage
+  useEffect(() => {
+    async function fetchAnnouncements() {
+      const { data, error } = await supabase.from('avisos').select('*');
+      if (!error && data && data.length > 0) {
+        setAnnouncements(data);
+      }
+    }
+    fetchAnnouncements();
+  }, []);
+  // Sincroniza as alterações de estado com o localStorage
   useEffect(() => {
     localStorage.setItem('sfbjj_students_v3', JSON.stringify(students));
   }, [students]);
 
-  // Adjust routing tab if role permissions mismatch
+  // Ajusta a aba de roteamento se as permissões de função não corresponderem
   useEffect(() => {
     if (loggedUser) {
-      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact') {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
         setCurrentTab('profile');
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
+        setCurrentTab('schedule');
       } else if (loggedUser.role === 'admin' && currentTab === 'profile') {
         setCurrentTab('dashboard');
       }
@@ -142,6 +97,8 @@ function App() {
     setLoggedUser(user);
     if (user.role === 'admin') {
       setCurrentTab('dashboard');
+    } else if (user.role === 'teacher') {
+      setCurrentTab('schedule');
     } else {
       setCurrentTab('profile');
     }
@@ -158,7 +115,7 @@ function App() {
 
 
 
-  // Render active tab view
+  // Renderiza a visão da aba ativa
   const renderContent = () => {
     switch (currentTab) {
       case 'dashboard':
@@ -175,8 +132,19 @@ function App() {
           <StudentManager 
             students={students} 
             setStudents={setStudents} 
+            loggedUser={loggedUser}
           />
         );
+      case 'batch-graduation':
+        return (
+          <BatchGraduation 
+            students={students} 
+            setStudents={setStudents} 
+            loggedUser={loggedUser}
+          />
+        );
+      case 'teachers':
+        return <TeacherManager />;
       case 'financial':
         return (
           <FinancialManager 
@@ -184,15 +152,16 @@ function App() {
             setStudents={setStudents} 
           />
         );
-
+      case 'graduation-system':
+        return <GraduationSystem />;
       case 'contact':
         return <Contact loggedUser={loggedUser} />;
       case 'schedule':
-        return <ScheduleGrid />;
+        return <ScheduleGrid loggedUser={loggedUser} />;
       case 'profile':
         return (
           <StudentProfile 
-            studentId={loggedUser?.role === 'student' ? loggedUser.studentId : undefined}
+            alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
             students={students}
             setStudents={setStudents}
             loggedUser={loggedUser}
@@ -209,11 +178,20 @@ function App() {
   };
 
   if (!loggedUser) {
-    return <Login students={students} onLoginSuccess={handleLoginSuccess} />;
+    if (showLogin) {
+      return (
+        <Login 
+          students={students} 
+          onLoginSuccess={handleLoginSuccess} 
+          onBackToLanding={() => setShowLogin(false)} 
+        />
+      );
+    }
+    return <LandingPage announcements={announcements} onAccessLogin={() => setShowLogin(true)} />;
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-obsidian-900 text-slate-100">
+    <div className="flex flex-col md:flex-row min-h-screen bg-obsidian-950 text-slate-100 font-sans">
       {/* Sidebar Navigation */}
       <Sidebar 
         currentTab={currentTab} 
@@ -223,13 +201,8 @@ function App() {
       />
 
       {/* Main Workspace Container */}
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto h-screen relative">
-        {/* Decorative ambient background glows */}
-        <div className="absolute top-[-10%] left-[20%] w-[350px] h-[350px] rounded-full bg-gold-500/5 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[10%] right-[10%] w-[250px] h-[250px] rounded-full bg-gold-500/3 blur-[100px] pointer-events-none" />
-
-        {/* Dynamic page content */}
-        <div className="max-w-6xl mx-auto pb-12">
+      <main className="flex-1 overflow-y-auto h-screen relative bg-obsidian-950">
+        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 md:p-8">
           {renderContent()}
         </div>
       </main>

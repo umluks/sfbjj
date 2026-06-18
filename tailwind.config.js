@@ -29,7 +29,9 @@ export default {
           500: '#535357',
           600: '#3D3D40',
           700: '#2A2A2C',
+          750: '#202022',
           800: '#18181A', // Card / Sidebar Backgrounds
+          850: '#131315',
           900: '#0F0F11', // Deep Workspace Background
           950: '#080809',
         }

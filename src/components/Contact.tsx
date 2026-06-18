@@ -17,15 +17,15 @@ export const Contact: React.FC<ContactProps> = ({ loggedUser }) => {
     e.preventDefault();
     if (!nome || !email || !mensagem) return;
 
-    // Simulate sending email
+    // Simula envio de e-mail
     setEnviado(true);
     
-    // Construct mailto link to open email client
+    // Constrói o link mailto para abrir o cliente de e-mail
     const mailtoUrl = `mailto:lucas.sga@gmaill.com?subject=${encodeURIComponent(assunto || 'Mensagem do Portal SFBJJ')}&body=${encodeURIComponent(
       `Nome: ${nome}\nEmail: ${email}\n\nMensagem:\n${mensagem}`
     )}`;
     
-    // Delay opening mailto to show success state first
+    // Atraso para abrir o mailto e mostrar o estado de sucesso primeiro
     setTimeout(() => {
       window.location.href = mailtoUrl;
     }, 1000);

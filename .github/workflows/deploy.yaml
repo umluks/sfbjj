@@ -1,0 +1,69 @@
+name: Pipeline CI/CD
+
+on:
+  push:
+    branches:
+      - feat/ci-cd
+  workflow_dispatch: # Permite disparar o deploy manualmente pela aba Actions do GitHub
+    inputs:
+      push_image:
+        description: 'Fazer push da imagem para o Docker Hub?'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read        
+
+jobs:
+  build:
+    name: Build_App
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }} -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest .
+          
+      - name: Push Image
+        if: ${{ inputs.push_image }}
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
+
+  deploy_ec2:
+    name: Deploy EC2
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      INSTANCE_KEY: ${{secrets.INSTANCE_KEY}}
+      PUBLIC_IP: ${{secrets.PUBLIC_IP}}
+
+    steps:
+     - name: Deploy EC2 SSH
+       run: |
+          echo "$INSTANCE_KEY" > chave-site.pem
+          chmod 400 chave-site.pem
+          ssh -i chave-site.pem -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP << EOF
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
+            echo "parando container antigo site"
+            docker stop sfbjj || true
+            echo "removendo container antigo site"
+            docker rm sfbjj || true
+            echo "rodando nova tag da imagem"
+            docker run -d -p 8080:80 --name sfbjj ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
+            echo "Parabéns! Imagem foi atualizada!"
+            docker ps
+          EOF
+          rm chave-site.pem
+          

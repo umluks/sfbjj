@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import type { Student, PaymentStatus } from '../types';
+import React, { useState, useRef } from 'react';
+import type { Aluno, PaymentStatus } from '../types';
+import { supabase } from '../lib/supabase';
 import {
   Search,
   History,
@@ -9,68 +10,341 @@ import {
   X,
   CreditCard,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download,
+  Upload
 } from 'lucide-react';
 
 interface FinancialManagerProps {
-  students: Student[];
-  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  students: Aluno[];
+  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
 }
 
 export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, setStudents }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal for payment history
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  // Modal para histórico de pagamentos
+  const [selectedStudent, setSelectedStudent] = useState<Aluno | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyViewTab, setHistoryViewTab] = useState<'all' | 'by_month'>('all');
-  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>('Maio/2026');
+  const ALL_MONTHS = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
 
-  // Pagination state
+  const currentYear = new Date().getFullYear().toString();
+  
+  // Extrai anos únicos do histórico de pagamentos dos alunos, mais o ano atual
+  const yearsFromRecords = students.flatMap(s => s.pagamentos.map(p => p.mesRef.split('/')[1]));
+  const availableYears = Array.from(new Set([currentYear, ...yearsFromRecords.filter(Boolean)])).sort((a, b) => Number(b) - Number(a));
+
+  const [yearFilter, setYearFilter] = useState<string>(currentYear);
+
+  // Gera os meses com base no ano selecionado
+  const availableMonths = ALL_MONTHS.map(m => `${m}/${yearFilter}`);
+
+  const getDefaultMonth = (year: string) => {
+    if (year === currentYear) {
+      return `${ALL_MONTHS[new Date().getMonth()]}/${year}`;
+    }
+    return `Janeiro/${year}`;
+  };
+
+  const [monthFilter, setMonthFilter] = useState<string>(getDefaultMonth(currentYear));
+
+  // Também precisa da lógica selectedHistoryMonth para o modal de Histórico
+  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>(getDefaultMonth(currentYear));
+
+  // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Summaries
-  const [monthFilter, setMonthFilter] = useState<string>('Maio/2026');
 
+
+  const VALOR_MENSALIDADE = 100; // Valor fixo da mensalidade em R$
+
+  // Total recebido no MÊS de referência selecionado (mesRef === monthFilter e status Pago)
   const totalRecebidoMes = students.reduce((acc, student) => {
-    const monthlyPaid = student.pagamentos.filter(p => 
+    const paid = student.pagamentos.filter(p =>
       p.mesRef === monthFilter && p.status === 'Pago'
     );
-    return acc + monthlyPaid.reduce((sum, p) => sum + p.valor, 0);
+    return acc + paid.length * VALOR_MENSALIDADE;
   }, 0);
 
-  const totalGeralRecebido = students.reduce((acc, student) => {
-    const allPaid = student.pagamentos.filter(p => p.status === 'Pago');
-    return acc + allPaid.reduce((sum, p) => sum + p.valor, 0);
+  // Total recebido no MÊS de referência selecionado por turma (Adulto / Kids)
+  const totalRecebidoMesAdulto = students.reduce((acc, student) => {
+    if (student.turma !== 'Adulto') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.mesRef === monthFilter && p.status === 'Pago'
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  const totalRecebidoMesKids = students.reduce((acc, student) => {
+    if (student.turma !== 'Kids') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.mesRef === monthFilter && p.status === 'Pago'
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  // Total recebido no ANO selecionado (mesRef termina com /yearFilter e status Pago)
+  const totalAnoRecebido = students.reduce((acc, student) => {
+    const paid = student.pagamentos.filter(p =>
+      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  // Total recebido no ANO selecionado por turma (Adulto / Kids)
+  const totalAnoRecebidoAdulto = students.reduce((acc, student) => {
+    if (student.turma !== 'Adulto') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
+  }, 0);
+
+  const totalAnoRecebidoKids = students.reduce((acc, student) => {
+    if (student.turma !== 'Kids') return acc;
+    const paid = student.pagamentos.filter(p =>
+      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
+    );
+    return acc + paid.length * VALOR_MENSALIDADE;
   }, 0);
 
   const itemsPerPage = 10;
 
-  // Registered payment animation indicator
+  // Indicador de animação de pagamento registrado
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Register payment with selected date
-  const handleRegisterPaymentWithDate = (studentId: string, paymentId: string, dateStr: string) => {
-    // Rigid validation preventing future payment dates beyond today's date in 2026 (2026-05-25)
+  // Slugs de meses para colunas do CSV (sem acento para compatibilidade)
+  const MONTH_SLUGS = [
+    'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ];
+
+  // ─── Exportação CSV (formato anual pivô) ──────────────────────────────────────
+  const handleExportCSV = () => {
+    const header = [
+      'id_aluno', 'nome_aluno', 'turma', 'ano_ref',
+      ...MONTH_SLUGS.map(m => `mes_ref_${m}`)
+    ];
+
+    const rows: string[][] = filteredStudents.map(student => {
+      // Cada mês: "SIM" se há fatura (= R$100), "NÃO" se não há
+      const monthValues = ALL_MONTHS.map(monthName => {
+        const mesRef = `${monthName}/${yearFilter}`;
+        const hasFatura = student.pagamentos.some(p => p.mesRef === mesRef);
+        return hasFatura ? 'SIM' : 'NÃO';
+      });
+
+      return [
+        String(student.id),
+        student.nome,
+        student.turma,
+        yearFilter,
+        ...monthValues
+      ];
+    });
+
+    const csvContent = [
+      header.join(';'),
+      ...rows.map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
+    ].join('\n');
+
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `financeiro_${yearFilter}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    setPaymentSuccessMsg(`Exportação concluída: ${rows.length} aluno(s) exportado(s) — ano ${yearFilter}.`);
+    setTimeout(() => setPaymentSuccessMsg(null), 4000);
+  };
+
+  // ─── Importação CSV (formato anual pivô) ──────────────────────────────────────
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = (event.target?.result as string).replace(/^\uFEFF/, ''); // remove BOM
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+
+        if (lines.length < 2) {
+          setImportError('Arquivo CSV vazio ou sem dados.');
+          return;
+        }
+
+        const headerLine = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
+
+        // Valida colunas obrigatórias do formato pivô
+        const requiredCols = ['id_aluno', 'ano_ref', ...MONTH_SLUGS.map(m => `mes_ref_${m}`)];
+        const missingCols = requiredCols.filter(c => !headerLine.includes(c));
+        if (missingCols.length > 0) {
+          setImportError(`Colunas ausentes no CSV: ${missingCols.join(', ')}`);
+          return;
+        }
+
+        const colIndex = (name: string) => headerLine.indexOf(name);
+
+        // Pré-processa todas as linhas em um mapa id_aluno → cols
+        const rowMap = new Map<number, string[]>();
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          const alunoId = Number(cols[colIndex('id_aluno')]);
+          if (alunoId) rowMap.set(alunoId, cols);
+        }
+
+        // Identificar o ano de referência a partir da primeira linha válida para limpar os registros do mesmo ano
+        let targetYear = yearFilter;
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          const yearVal = cols[colIndex('ano_ref')];
+          if (yearVal) {
+            targetYear = yearVal;
+            break;
+          }
+        }
+
+        // Zera/deleta no Supabase todos os pagamentos dos alunos no ano de referência antes de salvar os novos do CSV
+        const { error: deleteError } = await supabase
+          .from('pagamentos')
+          .delete()
+          .like('mesRef', `%/${targetYear}`);
+
+        if (deleteError) {
+          console.error('Error clearing old payments:', deleteError);
+        }
+
+        let updatedCount = 0;
+        const paymentsToUpsert: any[] = [];
+        const studentUpdates: { [alunoId: number]: any[] } = {};
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        students.forEach(student => {
+          const cols = rowMap.get(student.id);
+          if (!cols) return;
+
+          const anoRef = cols[colIndex('ano_ref')];
+          // Limpa todos os pagamentos daquele ano do array local do estudante
+          let pagamentos = student.pagamentos.filter(p => !p.mesRef.endsWith(`/${anoRef}`));
+          let modified = false;
+
+          MONTH_SLUGS.forEach((slug, idx) => {
+            const rawVal = (cols[colIndex(`mes_ref_${slug}`)] ?? '').toUpperCase().trim();
+            const temFatura = rawVal !== '' && rawVal !== 'NÃO' && rawVal !== 'NAO' && rawVal !== '0' && rawVal !== 'FALSE';
+            if (!temFatura) return;
+
+            const mesRef = `${ALL_MONTHS[idx]}/${anoRef}`;
+
+            // Cria novo registro como PAGO com valor fixo diretamente da importação do CSV
+            const newPay = {
+              alunoId: student.id,
+              mesRef,
+              valor: VALOR_MENSALIDADE,
+              status: 'Pago' as any,
+              dataVencimento: `${anoRef}-${String(idx + 1).padStart(2, '0')}-10`,
+              dataPagamento: todayStr
+            };
+            paymentsToUpsert.push(newPay);
+            pagamentos.push(newPay as any);
+            modified = true;
+          });
+
+          if (modified) {
+            updatedCount++;
+            studentUpdates[student.id] = pagamentos;
+          }
+        });
+
+        if (paymentsToUpsert.length > 0) {
+          const { error: upsertError } = await supabase
+            .from('pagamentos')
+            .upsert(paymentsToUpsert);
+
+          if (upsertError) {
+            console.error('Error persisting payments to Supabase:', upsertError);
+            setImportError('Erro ao salvar os pagamentos no banco de dados.');
+            return;
+          }
+        }
+
+        // Buscar alunos atualizados do banco de dados para recarregar com os novos registros (incluindo IDs criados pelo DB se houver)
+        const { data: refreshedData, error: refreshError } = await supabase
+          .from('alunos')
+          .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
+
+        if (!refreshError && refreshedData) {
+          const mapped = refreshedData.map((student: any) => ({
+            ...student,
+            historicoGraduacoes: (student.graduacoes_historico || []).map((g: any) => ({
+              id: g.id,
+              data: g.data_graduacao,
+              faixa: g.faixa,
+              graus: g.graus,
+              avaliador: g.avaliador
+            })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime())
+          }));
+          const sorted = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+          setStudents(sorted as any);
+        } else {
+          // Fallback para estado local caso ocorra um erro ao recarregar
+          setStudents(prev => prev.map(student => {
+            if (studentUpdates[student.id]) {
+              return { ...student, pagamentos: studentUpdates[student.id] };
+            }
+            return student;
+          }));
+        }
+
+        setPaymentSuccessMsg(`Importação concluída: ${updatedCount} aluno(s) atualizado(s).`);
+        setTimeout(() => setPaymentSuccessMsg(null), 5000);
+      } catch (err) {
+        setImportError('Erro ao processar o arquivo CSV. Verifique o formato.');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  // Registra o pagamento com a data selecionada
+  const handleRegisterPaymentWithDate = async (alunoId: number, paymentId: number, dateStr: string) => {
     if (!dateStr) {
       alert("A data de pagamento é obrigatória.");
       return;
     }
-    const selectedDate = new Date(dateStr + "T12:00:00");
-    const maxDate = new Date("2026-05-25T12:00:00");
-    if (selectedDate > maxDate) {
-      alert("Data inválida. O pagamento não pode ser registrado com data futura após 25/05/2026.");
+
+    const { error: updateError } = await supabase
+      .from('pagamentos')
+      .update({
+        valor: VALOR_MENSALIDADE,
+        status: 'Pago',
+        dataPagamento: dateStr
+      })
+      .eq('id', paymentId);
+
+    if (updateError) {
+      console.error('Error updating payment in Supabase:', updateError);
+      alert('Erro ao registrar pagamento no banco de dados.');
       return;
     }
 
     setStudents(prev => prev.map(s => {
-      if (s.id === studentId) {
-        let paymentVal = 100;
+      if (s.id === alunoId) {
         const updatedPagamentos = s.pagamentos.map(p => {
           if (p.id === paymentId) {
-            paymentVal = p.valor;
             return {
               ...p,
+              valor: VALOR_MENSALIDADE,
               status: 'Pago' as PaymentStatus,
               dataPagamento: dateStr
             };
@@ -78,8 +352,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           return p;
         });
 
-        // Trigger success message
-        setPaymentSuccessMsg(`Pagamento de R$ ${paymentVal.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
+        setPaymentSuccessMsg(`Pagamento de R$ ${VALOR_MENSALIDADE.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
         setTimeout(() => setPaymentSuccessMsg(null), 4000);
 
         return {
@@ -90,8 +363,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       return s;
     }));
 
-    // If modal is open for history, update selectedStudent reference to reflect change
-    if (selectedStudent && selectedStudent.id === studentId) {
+    // Se o modal estiver aberto para histórico, atualize a referência selectedStudent para refletir a alteração
+    if (selectedStudent && selectedStudent.id === alunoId) {
       setSelectedStudent(prev => {
         if (!prev) return null;
         return {
@@ -109,14 +382,83 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
 
 
-  // Get current payment record based on the selected month filter
-  const getCurrentPayment = (student: Student) => {
-    const currentPayment = student.pagamentos.find(p => p.mesRef === monthFilter)
-      || student.pagamentos[0];
-    return currentPayment;
+
+  // Obtém o registro de pagamento atual com base no filtro de mês selecionado
+  const getCurrentPayment = (student: Aluno) => {
+    return student.pagamentos.find(p => p.mesRef === monthFilter);
   };
 
-  // Filter and sort students alphabetically based on status (only Ativo), current payment status & search
+
+
+  const handleRegisterPaidDirectly = async (alunoId: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newPayment = {
+      alunoId,
+      mesRef: monthFilter,
+      valor: VALOR_MENSALIDADE,
+      status: 'Pago',
+      dataVencimento: todayStr,
+      dataPagamento: todayStr
+    };
+
+    const { data: insertedPayment, error: insertError } = await supabase
+      .from('pagamentos')
+      .insert(newPayment)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating paid payment in Supabase:', insertError);
+      alert('Erro ao registrar pagamento no banco de dados.');
+      return;
+    }
+
+    if (insertedPayment) {
+      setStudents(prev => prev.map(s => {
+        if (s.id === alunoId) {
+          return {
+            ...s,
+            pagamentos: [...s.pagamentos, insertedPayment]
+          };
+        }
+        return s;
+      }));
+    }
+    
+    setPaymentSuccessMsg(`Pagamento registrado com sucesso para o mês ${monthFilter}.`);
+    setTimeout(() => setPaymentSuccessMsg(null), 3000);
+  };
+
+  const handleRemovePayment = async (alunoId: number, paymentId: number) => {
+    const confirmRemove = window.confirm("Deseja realmente retirar/remover este pagamento?");
+    if (!confirmRemove) return;
+
+    const { error: deleteError } = await supabase
+      .from('pagamentos')
+      .delete()
+      .eq('id', paymentId);
+
+    if (deleteError) {
+      console.error('Error removing payment from Supabase:', deleteError);
+      alert('Erro ao remover pagamento do banco de dados.');
+      return;
+    }
+
+    setStudents(prev => prev.map(s => {
+      if (s.id === alunoId) {
+        return {
+          ...s,
+          pagamentos: s.pagamentos.filter(p => p.id !== paymentId)
+        };
+      }
+      return s;
+    }));
+
+    setPaymentSuccessMsg("Pagamento removido com sucesso.");
+    setTimeout(() => setPaymentSuccessMsg(null), 3000);
+  };
+
+  // Filtra e ordena os alunos alfabeticamente com base no status (apenas Ativo), status de pagamento atual e busca
   const filteredStudents = students
     .filter(student => student.status === 'Ativo')
     .filter(student => {
@@ -125,7 +467,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-  // Pagination calculations
+  // Cálculos de paginação
   const totalItems = filteredStudents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -139,8 +481,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // Open history modal
-  const handleOpenHistory = (student: Student) => {
+  // Abre o modal de histórico
+  const handleOpenHistory = (student: Aluno) => {
     setSelectedStudent(student);
     setShowHistoryModal(true);
   };
@@ -172,48 +514,102 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-          Controle Financeiro e Mensalidades
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos e inativos.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
+            <span className="text-slate-400">💵</span> Controle Financeiro e Mensalidades
+          </h1>
+          <p className="text-slate-450 text-xs mt-1">
+            Acompanhe faturas, mensalidades e registre pagamentos dos alunos ativos.
+          </p>
+        </div>
+
+        {/* Botões Exportar / Importar */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleExportCSV}
+            className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
+            title={`Exportar registros de ${monthFilter} para CSV`}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Exportar CSV
+          </button>
+
+          {/* Input oculto para importação */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImportCSV}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
+            title="Importar pagamentos de um arquivo CSV"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Importar CSV
+          </button>
+        </div>
       </div>
 
       {/* Resumos Financeiros */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Selected Month Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-emerald-500 p-5">
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido em {monthFilter}</span>
-            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
-            <span className="text-[10px] text-slate-500 mt-1 block">Mensalidades quitadas no ciclo de {monthFilter}</span>
+        <div className="card-premium flex flex-col justify-between border-l-2 border-l-emerald-500/80 bg-obsidian-900/40 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Total Recebido em {monthFilter}</span>
+              <span className="text-3xl font-black text-slate-100 mt-2 block tracking-tight">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
+            </div>
+            <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-emerald-400 hidden sm:block">
+              <CreditCard className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hidden sm:block">
-            <CreditCard className="w-5 h-5" />
+          <div className="mt-4 pt-3.5 border-t border-obsidian-850/80 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-450">
+            <span>Adulto: <strong className="text-slate-200">R$ {totalRecebidoMesAdulto.toFixed(2).replace('.', ',')}</strong></span>
+            <span>Kids: <strong className="text-slate-200">R$ {totalRecebidoMesKids.toFixed(2).replace('.', ',')}</strong></span>
           </div>
         </div>
 
-        {/* Consolidated Total Summary */}
-        <div className="card-premium bg-gradient-to-br from-obsidian-800 to-obsidian-850 flex items-center justify-between border-l-4 border-l-gold-500 p-5">
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Recebido Consolidado (Geral)</span>
-            <span className="text-2xl font-black text-slate-100 mt-1 block">R$ {totalGeralRecebido.toFixed(2).replace('.', ',')}</span>
-            <span className="text-[10px] text-slate-500 mt-1 block">Soma total de todas as mensalidades quitadas no sistema</span>
+        {/* Consolidated Year Summary */}
+        <div className="card-premium flex flex-col justify-between border-l-2 border-l-slate-400 bg-obsidian-900/40 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Total Recebido ({yearFilter})</span>
+              <span className="text-3xl font-black text-slate-100 mt-2 block tracking-tight">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
+            </div>
+            <div className="p-3 bg-slate-100/5 border border-slate-200/10 rounded-xl text-slate-350 hidden sm:block">
+              <CreditCard className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-gold-500/10 rounded-xl text-gold-500 hidden sm:block">
-            <CreditCard className="w-5 h-5" />
+          <div className="mt-4 pt-3.5 border-t border-obsidian-850/80 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-450">
+            <span>Adulto: <strong className="text-slate-200">R$ {totalAnoRecebidoAdulto.toFixed(2).replace('.', ',')}</strong></span>
+            <span>Kids: <strong className="text-slate-200">R$ {totalAnoRecebidoKids.toFixed(2).replace('.', ',')}</strong></span>
           </div>
         </div>
       </div>
 
+      {/* Import error banner */}
+      {importError && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-2xl animate-fade-in text-xs font-semibold">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            {importError}
+          </span>
+          <button onClick={() => setImportError(null)} className="text-red-400/70 hover:text-red-300 p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Payment registered banner */}
       {paymentSuccessMsg && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-md shadow-emerald-950/20 animate-fade-in">
-          <span className="text-xs font-semibold flex items-center gap-2">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-2xl animate-fade-in text-xs font-semibold">
+          <span className="flex items-center gap-2">
             <Check className="w-4 h-4" />
             {paymentSuccessMsg}
           </span>
@@ -224,9 +620,9 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
       )}
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
-        <div className="sm:col-span-2 relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
+        <div className="relative">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
           </span>
           <input
@@ -236,9 +632,26 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Buscar por nome do aluno..."
-            className="input-premium w-full pl-9"
+            placeholder="Buscar por nome..."
+            className="input-premium w-full pl-10"
           />
+        </div>
+
+        <div>
+          <select
+            value={yearFilter}
+            onChange={(e) => {
+              const newYear = e.target.value;
+              setYearFilter(newYear);
+              setMonthFilter(getDefaultMonth(newYear));
+              setCurrentPage(1);
+            }}
+            className="input-premium w-full bg-obsidian-950 text-slate-200"
+          >
+            {availableYears.map(y => (
+              <option key={y} value={y}>Ano: {y}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -250,30 +663,31 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             }}
             className="input-premium w-full bg-obsidian-950 text-slate-200"
           >
-            <option value="Maio/2026">Mês Ref: Maio/2026</option>
-            <option value="Abril/2026">Mês Ref: Abril/2026</option>
-            <option value="Março/2026">Mês Ref: Março/2026</option>
+            {availableMonths.map(m => (
+              <option key={m} value={m}>Mês Ref: {m}</option>
+            ))}
           </select>
         </div>
       </div>
 
       {/* Main Billing Table */}
-      <div className="bg-obsidian-800/50 border border-obsidian-800/90 rounded-xl overflow-hidden shadow-xl backdrop-blur-md">
+      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
+              <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
                 <th className="px-6 py-4">Aluno</th>
+                <th className="px-6 py-4 text-center">Turma</th>
                 <th className="px-6 py-4 text-center">Ref. Ciclo</th>
                 <th className="px-6 py-4 text-center">Valor</th>
                 <th className="px-6 py-4 text-center">Vencimento</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
+            <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={7} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Sem faturas encontradas com os filtros selecionados.
                   </td>
                 </tr>
@@ -283,69 +697,76 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                   return (
                     <tr
                       key={student.id}
-                      className="hover:bg-obsidian-700/20 transition-colors group"
+                      className="hover:bg-obsidian-800/15 transition-colors group"
                     >
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-100 group-hover:text-gold-400 transition-colors">
+                        <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
                           {student.nome}
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5">
+                        <div className="text-[10px] text-slate-500 font-semibold mt-1">
                           Faixa {student.faixa} • Status: {student.status}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="text-xs font-semibold text-slate-400">
-                          {bill?.mesRef || 'N/A'}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          student.turma === 'Kids' 
+                            ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10' 
+                            : 'bg-indigo-500/5 text-indigo-400 border border-indigo-500/10'
+                        }`}>
+                          {student.turma}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-semibold text-slate-400 font-mono">
+                          {bill ? bill.mesRef : monthFilter}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         {bill ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="text-xs text-slate-400">R$</span>
-                            <input
-                              type="number"
-                              value={bill.valor}
-                              onChange={(e) => {
-                                const newVal = parseFloat(e.target.value) || 0;
-                                setStudents(prev => prev.map(s => {
-                                  if (s.id === student.id) {
-                                    return {
-                                      ...s,
-                                      pagamentos: s.pagamentos.map(p => 
-                                        p.id === bill.id ? { ...p, valor: newVal } : p
-                                      )
-                                    };
-                                  }
-                                  return s;
-                                }));
-                              }}
-                              className="input-premium w-20 text-center py-1 px-1 font-bold text-slate-200 text-sm h-8 inline-block"
-                            />
+                          <div className="flex items-center justify-center gap-1 font-mono font-bold text-slate-300">
+                            <span className="text-[10px] text-slate-500 font-sans">R$</span>
+                            <span>100,00</span>
                           </div>
                         ) : '-'}
                       </td>
-                      <td className="px-6 py-4 text-center text-xs text-slate-400 font-mono">
+                      <td className="px-6 py-4 text-center text-slate-400 font-mono">
                         {bill ? bill.dataVencimento.split('-').reverse().join('/') : '-'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {bill && bill.status !== 'Pago' ? (
+                          {!bill ? (
                             <button
-                              onClick={() => handleOpenHistory(student)}
-                              className="btn-gold text-[11px] py-1 px-3 shadow-none h-8"
-                              title="Registrar Pagamento"
+                              onClick={() => handleRegisterPaidDirectly(student.id)}
+                              className="text-[9px] uppercase tracking-wider text-emerald-450 hover:text-emerald-400 font-black bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-emerald-500/15 transition-all"
+                              title={`Registrar Pagamento para ${monthFilter}`}
                             >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              Receber
+                              Marcar Pago
+                            </button>
+                          ) : bill.status !== 'Pago' ? (
+                            <button
+                              onClick={() => handleRegisterPaymentWithDate(student.id, bill.id, new Date().toISOString().split('T')[0])}
+                              className="p-1.5 rounded bg-emerald-500/5 hover:bg-emerald-500/15 border border-emerald-500/15 text-emerald-400 hover:text-emerald-350 transition-all h-8 w-8 flex items-center justify-center"
+                              title={`Registrar Pagamento de ${student.nome}`}
+                            >
+                              <Check className="w-4 h-4" />
                             </button>
                           ) : (
-                            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded h-8 flex items-center justify-center gap-1 w-24">
-                              <Check className="w-3 h-3" /> Pago
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-bold bg-emerald-500/5 border border-emerald-500/15 px-3 py-1.5 rounded h-8 flex items-center justify-center gap-1 w-20">
+                                <Check className="w-3 h-3" /> Pago
+                              </span>
+                              <button
+                                onClick={() => handleRemovePayment(student.id, bill.id)}
+                                className="p-1.5 rounded bg-red-500/5 hover:bg-red-500/15 border border-red-500/15 text-red-400 hover:text-red-300 transition-all h-8 w-8 flex items-center justify-center"
+                                title="Retirar Pagamento"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           )}
                           <button
                             onClick={() => handleOpenHistory(student)}
-                            className="p-1.5 rounded bg-obsidian-850 hover:bg-obsidian-700 border border-obsidian-700 text-slate-400 hover:text-gold-500 transition-all h-8 w-8 flex items-center justify-center"
+                            className="p-1.5 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 text-slate-400 hover:text-slate-200 transition-all h-8 w-8 flex items-center justify-center"
                             title="Histórico de Mensalidades"
                           >
                             <History className="w-4 h-4" />
@@ -362,15 +783,15 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-750 bg-obsidian-850/20">
-            <span className="text-xs text-slate-400">
-              Mostrando <span className="text-slate-200">{startIndex + 1}</span> a <span className="text-slate-200">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-200">{totalItems}</span> faturas
+          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              Mostrando <span className="text-slate-300">{startIndex + 1}</span> a <span className="text-slate-300">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-300">{totalItems}</span> faturas
             </span>
             <div className="flex gap-2">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 Anterior
@@ -378,7 +799,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 Próximo
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -390,42 +811,42 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
 
       {/* History Modal */}
       {showHistoryModal && selectedStudent && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-obsidian-900/90 border border-obsidian-850 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 bg-obsidian-850 rounded-t-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-850 bg-obsidian-950 rounded-t-2xl">
               <div>
-                <h2 className="text-md font-bold text-slate-100 flex items-center gap-2">
-                  <History className="w-4 h-4 text-gold-500" />
+                <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                  <History className="w-4 h-4 text-slate-400" />
                   Histórico de Faturas: {selectedStudent.nome}
                 </h2>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
                   Lista completa de faturas registradas no sistema.
                 </p>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-slate-400 hover:text-gold-500 p-1 transition-colors"
+                className="text-slate-400 hover:text-slate-200 p-1 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Filter Tabs/Abas */}
-            <div className="px-6 py-2 border-b border-obsidian-750 bg-obsidian-850/40 flex flex-wrap items-center justify-between gap-3">
+            <div className="px-6 py-2 border-b border-obsidian-850 bg-obsidian-950/40 flex flex-wrap items-center justify-between gap-3">
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setHistoryViewTab('all')}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${historyViewTab === 'all' ? 'bg-gold-500/15 text-gold-450 border border-gold-500/25' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all ${historyViewTab === 'all' ? 'bg-slate-100/5 text-slate-200 border border-slate-200/10' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Todos os pagamentos
                 </button>
                 <button
                   type="button"
                   onClick={() => setHistoryViewTab('by_month')}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${historyViewTab === 'by_month' ? 'bg-gold-500/15 text-gold-450 border border-gold-500/25' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all ${historyViewTab === 'by_month' ? 'bg-slate-100/5 text-slate-200 border border-slate-200/10' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Ver os pagamentos por mês
                 </button>
@@ -445,86 +866,100 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             </div>
 
             {/* Modal History Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="space-y-3">
-                {(() => {
-                  const filteredPays = [...selectedStudent.pagamentos]
-                    .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
-                    .sort((a, b) => b.mesRef.localeCompare(a.mesRef));
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
+              {(() => {
+                const MONTH_ORDER: { [key: string]: number } = {
+                  'Janeiro': 0,
+                  'Fevereiro': 1,
+                  'Março': 2,
+                  'Abril': 3,
+                  'Maio': 4,
+                  'Junho': 5,
+                  'Julho': 6,
+                  'Agosto': 7,
+                  'Setembro': 8,
+                  'Outubro': 9,
+                  'Novembro': 10,
+                  'Dezembro': 11
+                };
 
-                  if (filteredPays.length === 0) {
-                    return (
-                      <div className="text-center py-6 text-slate-500 text-xs">
-                        Nenhum registro de faturamento encontrado.
-                      </div>
-                    );
-                  }
+                const parseMesRef = (ref: string) => {
+                  const [m, y] = ref.split('/');
+                  return {
+                    year: parseInt(y, 10) || 0,
+                    monthIdx: MONTH_ORDER[m] ?? 0
+                  };
+                };
 
-                  return filteredPays.map((pay) => (
-                    <div
-                      key={pay.id}
-                      className="flex flex-col gap-2 p-3 rounded-xl bg-obsidian-900 border border-obsidian-750/80 hover:border-gold-500/10 transition-all"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="font-bold text-xs text-slate-200">
-                          Ciclo {pay.mesRef}
+                const filteredPays = [...selectedStudent.pagamentos]
+                  .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
+                  .sort((a, b) => {
+                    const valA = parseMesRef(a.mesRef);
+                    const valB = parseMesRef(b.mesRef);
+                    if (valA.year !== valB.year) {
+                      return valA.year - valB.year;
+                    }
+                    return valA.monthIdx - valB.monthIdx;
+                  });
+
+                if (filteredPays.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-slate-550 text-xs font-semibold uppercase tracking-wider">
+                      Nenhum registro de faturamento encontrado.
+                    </div>
+                  );
+                }
+
+                return filteredPays.map((pay) => (
+                  <div
+                    key={pay.id}
+                    className={`flex flex-col gap-2 p-3.5 rounded-xl border transition-all ${
+                      pay.status === 'Pago'
+                        ? 'bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30'
+                        : pay.status === 'Atrasado'
+                        ? 'bg-red-500/5 border-red-500/15 hover:border-red-500/30'
+                        : 'bg-obsidian-950 border-obsidian-900 hover:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="font-bold text-xs text-slate-200 font-mono">
+                        {pay.mesRef}
+                      </span>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold font-mono text-slate-300">
+                          R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}
                         </span>
-
-                        <div className="flex items-center gap-4">
-                          <span className="text-xs font-black text-slate-100">
-                            R$ {pay.valor.toFixed(2).replace('.', ',')}
-                          </span>
-                          <div className="min-w-24 flex justify-end">
-                            {pay.status === 'Pago' ? (
-                              renderStatusBadge(pay.status)
-                            ) : (
-                              <span className="text-xs text-amber-500 font-semibold uppercase tracking-wider">Pendente</span>
-                            )}
-                          </div>
+                        <div className="min-w-24 flex justify-end">
+                          {renderStatusBadge(pay.status as any)}
                         </div>
                       </div>
+                    </div>
 
-                      {pay.status !== 'Pago' && (
-                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-obsidian-800">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Data de Pagamento:</span>
-                          <input
-                            type="date"
-                            id={`date-pay-${pay.id}`}
-                            max="2026-05-25"
-                            defaultValue="2026-05-25"
-                            className="input-premium py-0.5 px-2 text-xs h-7 w-32 bg-obsidian-950 font-mono text-slate-200"
-                          />
-                          <button
-                            onClick={() => {
-                              const inputEl = document.getElementById(`date-pay-${pay.id}`) as HTMLInputElement;
-                              const selectedDate = inputEl?.value || '';
-                              if (!selectedDate) {
-                                alert('Por favor, selecione uma data de pagamento.');
-                                return;
-                              }
-                              if (new Date(selectedDate + "T12:00:00") > new Date("2026-05-25T12:00:00")) {
-                                alert('A data de pagamento não pode ser posterior a 25/05/2026.');
-                                return;
-                              }
-                              handleRegisterPaymentWithDate(selectedStudent.id, pay.id, selectedDate);
-                            }}
-                            className="btn-gold text-[10px] py-1 px-2.5 h-7 shadow-none"
-                          >
-                            Confirmar Recebimento
-                          </button>
-                        </div>
+                    {/* Linha de detalhe de data */}
+                    <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pt-2 border-t border-obsidian-900/60">
+                      {pay.status === 'Pago' && pay.dataPagamento ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          Pago em {pay.dataPagamento.split('-').reverse().join('/')}
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 text-amber-500" />
+                          Vence em {pay.dataVencimento ? pay.dataVencimento.split('-').reverse().join('/') : '—'}
+                        </>
                       )}
                     </div>
-                  ));
-                })()}
-              </div>
+                  </div>
+                ));
+              })()}
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-obsidian-750 bg-obsidian-850 rounded-b-2xl flex justify-end">
+            <div className="px-6 py-4 border-t border-obsidian-850 bg-obsidian-950 rounded-b-2xl flex justify-end">
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="btn-obsidian text-xs px-4 py-2"
+                className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
               >
                 Fechar
               </button>
@@ -533,7 +968,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           </div>
         </div>
       )}
-
     </div>
   );
 };

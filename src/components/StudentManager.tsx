@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import type { Student, Belt, Degree, Gender } from '../types';
+import type { Aluno, Belt, Degree, Gender, LoggedUser } from '../types';
+import { BELT_RANKS, getBeltsByAge, getBjjAge } from '../types';
+import { supabase } from '../lib/supabase';
 import {
   Search,
   Edit,
@@ -14,41 +16,92 @@ import {
   Heart,
   Upload,
   FileSpreadsheet,
-  Download
+  Download,
+  Eye,
+  Square,
+  CheckSquare
 } from 'lucide-react';
 
+const parseCSVDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  // Formato YYYY-MM-DD
+  const ymdMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+  }
+  // Formato DD-MM-YYYY ou DD/MM/YYYY
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+  }
+  return '';
+};
+
+const splitCSVLine = (line: string, delimiter: string): string[] => {
+  if (delimiter === '\t') {
+    return line.split('\t').map(p => p.trim().replace(/^["']|["']$/g, ''));
+  }
+  
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  
+  return result.map(p => p.trim().replace(/^["']|["']$/g, ''));
+};
+
 interface StudentManagerProps {
-  students: Student[];
-  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  students: Aluno[];
+  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
+  loggedUser: LoggedUser | null;
 }
 
-export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents }) => {
-  // Search & Filter state
+export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents, loggedUser }) => {
+  const isTeacher = loggedUser?.role === 'teacher';
+  // Seleção múltipla
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  
+  // Estado de Busca e Filtro
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBelt, setSelectedBelt] = useState<string>('Todos');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedTurma, setSelectedTurma] = useState<string>('Todos');
+  const [sortBy, setSortBy] = useState<string>('nome-asc');
 
-  // Pagination state
+  // Estado de paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
-  // Modals state
+  // Estado dos modais
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Aluno | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Aluno | null>(null);
 
-  // Import fields state
+  // Estado dos campos de importação
   const [importText, setImportText] = useState('');
   const [parsedImportRows, setParsedImportRows] = useState<any[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
-  // Export dropdown state
+  // Estado do menu de exportação
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
-  // Form fields state
+  // Estado dos campos do formulário
   const [formNome, setFormNome] = useState('');
   const [formCpf, setFormCpf] = useState('');
   const [formDataNascimento, setFormDataNascimento] = useState('');
@@ -59,14 +112,16 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   const [formBairro, setFormBairro] = useState('');
   const [formFaixa, setFormFaixa] = useState<Belt>('Branca');
   const [formGraus, setFormGraus] = useState<Degree>(0);
+  const [formRole, setFormRole] = useState<'admin' | 'student' | 'teacher'>('student');
   const [formDataUltimaGraduacao, setFormDataUltimaGraduacao] = useState('');
   const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState('');
   const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
-  const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo' | 'Graduado'>('Ativo');
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>('Adulto');
   const [formFotoPerfil, setFormFotoPerfil] = useState('');
+  const [formHistoricoGraduacoes, setFormHistoricoGraduacoes] = useState<any[]>([]);
 
-  // Input formatting helpers
+  // Helpers de formatação de entrada
   const formatCPF = (value: string) => {
     return value
       .replace(/\D/g, '') // Remove non-digits
@@ -90,7 +145,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       .substring(0, 15);
   };
 
-  // Open form modal for creating
+  // Abre o modal de formulário para criação
   const handleOpenCreate = () => {
     setEditingStudent(null);
     setFormNome('');
@@ -103,17 +158,19 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormBairro('');
     setFormFaixa('Branca');
     setFormGraus(0);
+    setFormRole('student');
     setFormDataUltimaGraduacao('');
     setFormContatoEmergenciaNome('');
     setFormContatoEmergenciaTel('');
     setFormStatus('Ativo');
     setFormTurma('Adulto');
     setFormFotoPerfil('');
+    setFormHistoricoGraduacoes([]);
     setShowFormModal(true);
   };
 
-  // Open form modal for editing
-  const handleOpenEdit = (student: Student) => {
+  // Abre o modal de formulário para edição
+  const handleOpenEdit = (student: Aluno) => {
     setEditingStudent(student);
     setFormNome(student.nome);
     setFormCpf(student.cpf || '');
@@ -125,22 +182,123 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     setFormBairro(student.bairro || '');
     setFormFaixa(student.faixa || 'Branca');
     setFormGraus(student.graus || 0);
-    setFormDataUltimaGraduacao(student.dataUltimaGraduacao || '');
+    setFormRole(student.role || 'student');
+    // Converte para formato YYYY-MM para uso no input type="month"
+    const ug = student.dataUltimaGraduacao || '';
+    let monthVal = '';
+    if (ug) {
+      if (ug.includes('/')) {
+        // DD/MM/YYYY -> YYYY-MM
+        const p = ug.split('/');
+        if (p.length === 3) monthVal = `${p[2]}-${p[1].padStart(2, '0')}`;
+      } else if (ug.includes('-')) {
+        // YYYY-MM-DD ou YYYY-MM
+        monthVal = ug.substring(0, 7);
+      }
+    }
+    setFormDataUltimaGraduacao(monthVal);
     setFormContatoEmergenciaNome(student.contatoEmergenciaNome || '');
     setFormContatoEmergenciaTel(formatPhone(student.contatoEmergenciaTel || ''));
     setFormStatus(student.status || 'Ativo');
     setFormTurma(student.turma || 'Adulto');
     setFormFotoPerfil(student.fotoPerfil || '');
+    setFormHistoricoGraduacoes(student.historicoGraduacoes || []);
     setShowFormModal(true);
   };
 
-  // Save student (Create or Update)
-  const handleSaveStudent = (e: React.FormEvent) => {
+  // Salva o aluno (Criar ou Atualizar)
+  const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNome || !formDataNascimento || !formBairro) return;
 
+    // Validar regras de faixa por idade
+    const age = getBjjAge(formDataNascimento);
+    const allowed = getBeltsByAge(formDataNascimento);
+    if (!allowed.includes(formFaixa)) {
+      alert(`A faixa "${formFaixa}" não é permitida para a idade de ${age} anos.`);
+      return;
+    }
+
+    // formDataUltimaGraduacao está no formato YYYY-MM (input type="month")
+    // Converte para YYYY-MM-01 para armazenar no banco
+    const dbUltimaGrad = formDataUltimaGraduacao
+      ? `${formDataUltimaGraduacao}-01`
+      : new Date().toISOString().split('T')[0];
+
     if (editingStudent) {
-      // Update
+      // Validar rebaixamento de faixa ou graus
+      const oldFaixa = editingStudent.faixa_atual || editingStudent.faixa;
+      const oldGraus = editingStudent.graus_atuais ?? editingStudent.graus;
+
+      if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
+        alert(`Não é permitido rebaixar a faixa do aluno de ${oldFaixa} para ${formFaixa}.`);
+        return;
+      }
+      if (formFaixa === oldFaixa && formGraus < oldGraus) {
+        alert('Não é permitido diminuir a quantidade de graus do aluno.');
+        return;
+      }
+      // Atualiza o aluno no supabase
+      const { error: updateError } = await supabase
+        .from('alunos')
+        .update({
+          nome: formNome,
+          cpf: formCpf,
+          dataNascimento: formDataNascimento,
+          telefone: formTelefone,
+          email: formEmail,
+          genero: formGenero,
+          dataMatricula: formDataMatricula,
+          bairro: formBairro,
+          faixa: formFaixa,
+          graus: formGraus,
+          role: formRole,
+          dataUltimaGraduacao: dbUltimaGrad,
+          contatoEmergenciaNome: formContatoEmergenciaNome,
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          status: formStatus,
+          turma: formTurma,
+          fotoPerfil: formFotoPerfil
+        })
+        .eq('id', editingStudent.id);
+
+      if (updateError) {
+        console.error('Error updating student:', updateError);
+        alert('Erro ao atualizar aluno no banco de dados.');
+        return;
+      }
+
+      let updatedHistory = formHistoricoGraduacoes || [];
+      if (editingStudent.faixa !== formFaixa || editingStudent.graus !== formGraus) {
+        // Insere novo registro de graduação no supabase
+        const { data: newGradDataDb, error: gradError } = await supabase
+          .from('graduacoes_historico')
+          .insert({
+            aluno_id: editingStudent.id,
+            faixa: formFaixa,
+            graus: formGraus,
+            data_graduacao: dbUltimaGrad,
+            avaliador: loggedUser?.nome || 'Professor'
+          })
+          .select()
+          .single();
+
+        if (gradError) {
+          console.error('Error inserting graduation record:', gradError);
+        } else if (newGradDataDb) {
+          updatedHistory = [
+            ...updatedHistory,
+            {
+              id: newGradDataDb.id,
+              faixa: newGradDataDb.faixa,
+              graus: newGradDataDb.graus,
+              data: newGradDataDb.data_graduacao,
+              avaliador: newGradDataDb.avaliador
+            }
+          ];
+        }
+      }
+
       setStudents(prev => prev.map(s => {
         if (s.id === editingStudent.id) {
           return {
@@ -155,70 +313,248 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             bairro: formBairro,
             faixa: formFaixa,
             graus: formGraus,
-            dataUltimaGraduacao: formDataUltimaGraduacao,
+            role: formRole,
+            dataUltimaGraduacao: dbUltimaGrad,
             contatoEmergenciaNome: formContatoEmergenciaNome,
             contatoEmergenciaTel: formContatoEmergenciaTel,
             status: formStatus,
             turma: formTurma,
-            fotoPerfil: formFotoPerfil
+            fotoPerfil: formFotoPerfil,
+            historicoGraduacoes: updatedHistory
           };
         }
         return s;
       }));
     } else {
-      // Create
-      const newStudent: Student = {
-        id: `std_${Date.now()}`,
-        nome: formNome,
-        cpf: formCpf || `000.000.000-${Math.floor(Math.random() * 90 + 10)}`,
-        dataNascimento: formDataNascimento,
-        telefone: formTelefone,
-        email: formEmail || `${formNome.toLowerCase().replace(/\s+/g, '.')}@sfbjj.com.br`,
-        genero: formGenero,
-        dataMatricula: formDataMatricula,
-        bairro: formBairro,
-        faixa: formFaixa,
-        graus: formGraus,
-        dataUltimaGraduacao: formDataUltimaGraduacao,
-        contatoEmergenciaNome: formContatoEmergenciaNome,
-        contatoEmergenciaTel: formContatoEmergenciaTel,
-        status: formStatus,
-        turma: formTurma,
-        fotoPerfil: formFotoPerfil,
-        totalTreinos: 0,
-        pagamentos: [
-          {
-            id: `pay_${Date.now()}`,
-            mesRef: 'Maio/2026',
-            valor: 100,
-            status: 'Pendente',
-            dataVencimento: '2026-05-30',
-            dataPagamento: null
-          }
-        ]
-      };
-      setStudents(prev => [newStudent, ...prev]);
+      // Cria aluno no supabase
+      const { data: newStudentData, error: insertError } = await supabase
+        .from('alunos')
+        .insert({
+          nome: formNome,
+          cpf: formCpf,
+          dataNascimento: formDataNascimento,
+          telefone: formTelefone,
+          email: formEmail,
+          genero: formGenero,
+          dataMatricula: formDataMatricula,
+          bairro: formBairro,
+          faixa: formFaixa,
+          graus: formGraus,
+          role: formRole,
+          dataUltimaGraduacao: dbUltimaGrad,
+          contatoEmergenciaNome: formContatoEmergenciaNome,
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          status: formStatus,
+          turma: formTurma,
+          fotoPerfil: formFotoPerfil
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting student:', insertError);
+        alert('Erro ao cadastrar aluno no banco de dados.');
+        return;
+      }
+
+      let initialHistory: any[] = [];
+      if (newStudentData) {
+        // Insere registro inicial de graduação no supabase
+        const { data: newGradDataDb, error: gradError } = await supabase
+          .from('graduacoes_historico')
+          .insert({
+            aluno_id: newStudentData.id,
+            faixa: formFaixa,
+            graus: formGraus,
+            data_graduacao: dbUltimaGrad,
+            avaliador: loggedUser?.nome || 'Professor'
+          })
+          .select()
+          .single();
+
+        if (gradError) {
+          console.error('Error inserting initial graduation record:', gradError);
+        } else if (newGradDataDb) {
+          initialHistory = [{
+            id: newGradDataDb.id,
+            faixa: newGradDataDb.faixa,
+            graus: newGradDataDb.graus,
+            data: newGradDataDb.data_graduacao,
+            avaliador: newGradDataDb.avaliador
+          }];
+        }
+
+        const newStudent: Aluno = {
+          id: newStudentData.id,
+          nome: formNome,
+          cpf: formCpf,
+          dataNascimento: formDataNascimento,
+          telefone: formTelefone,
+          email: formEmail,
+          genero: formGenero,
+          dataMatricula: formDataMatricula,
+          bairro: formBairro,
+          faixa: formFaixa,
+          graus: formGraus,
+          role: formRole,
+          dataUltimaGraduacao: dbUltimaGrad,
+          contatoEmergenciaNome: formContatoEmergenciaNome,
+          contatoEmergenciaTel: formContatoEmergenciaTel,
+          status: formStatus,
+          turma: formTurma,
+          fotoPerfil: formFotoPerfil,
+          historicoGraduacoes: initialHistory,
+          pagamentos: []
+        };
+
+        setStudents(prev => [newStudent, ...prev]);
+      }
     }
 
     setShowFormModal(false);
     setEditingStudent(null);
   };
 
-  // Open delete confirmation modal
-  const handleOpenDelete = (student: Student) => {
+  // Abre modal de confirmação de exclusão
+  const handleOpenDelete = (student: Aluno) => {
     setStudentToDelete(student);
     setShowDeleteModal(true);
   };
 
-  // Confirm delete student
-  const handleConfirmDelete = () => {
+  // Confirma a exclusão do aluno
+  const handleConfirmDelete = async () => {
     if (!studentToDelete) return;
+
+    // Exclui pagamentos primeiro devido à chave estrangeira
+    const { error: deletePaymentsError } = await supabase
+      .from('pagamentos')
+      .delete()
+      .eq('alunoId', studentToDelete.id);
+
+    if (deletePaymentsError) {
+      console.error('Error deleting student payments:', deletePaymentsError);
+    }
+
+    // Exclui histórico de graduação primeiro devido à chave estrangeira
+    const { error: deleteHistoryError } = await supabase
+      .from('graduacoes_historico')
+      .delete()
+      .eq('aluno_id', studentToDelete.id);
+
+    if (deleteHistoryError) {
+      console.error('Error deleting student graduation history:', deleteHistoryError);
+    }
+
+    // Exclui aluno do supabase
+    const { error: deleteStudentError } = await supabase
+      .from('alunos')
+      .delete()
+      .eq('id', studentToDelete.id);
+
+    if (deleteStudentError) {
+      console.error('Error deleting student:', deleteStudentError);
+      alert('Erro ao excluir aluno do banco de dados.');
+      return;
+    }
+
     setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
     setShowDeleteModal(false);
     setStudentToDelete(null);
   };
 
-  // Export to CSV function
+  // Seleção múltipla para ações em lote
+  const handleToggleSelectStudent = (id: number) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+
+
+  // Alteração de status em lote
+  const handleBatchStatusChange = async (newStatus: 'Ativo' | 'Inativo') => {
+    if (selectedStudentIds.length === 0) return;
+    
+    const confirmMessage = `Deseja realmente alterar o status de ${selectedStudentIds.length} aluno(s) para "${newStatus}"?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    // Atualiza no supabase
+    const { error } = await supabase
+      .from('alunos')
+      .update({ status: newStatus })
+      .in('id', selectedStudentIds);
+
+    if (error) {
+      console.error('Error updating batch status:', error);
+      alert('Erro ao atualizar status dos alunos no banco de dados.');
+      return;
+    }
+
+    // Atualiza localmente
+    setStudents(prev =>
+      prev.map(s => (selectedStudentIds.includes(s.id) ? { ...s, status: newStatus } : s))
+    );
+
+    setSelectedStudentIds([]);
+    alert('Status atualizado com sucesso!');
+  };
+
+  // Exclusão em lote
+  const handleBatchDelete = async () => {
+    if (selectedStudentIds.length === 0) return;
+
+    const confirmMessage = `ATENÇÃO: Deseja realmente excluir permanentemente ${selectedStudentIds.length} aluno(s) selecionado(s)? Esta ação não pode ser desfeita e removerá históricos e pagamentos associados.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    // 1. Exclui pagamentos de todos os selecionados
+    const { error: payError } = await supabase
+      .from('pagamentos')
+      .delete()
+      .in('alunoId', selectedStudentIds);
+
+    if (payError) {
+      console.error('Error deleting batch payments:', payError);
+    }
+
+    // 2. Exclui histórico de graduações antiga
+    const { error: histError } = await supabase
+      .from('graduacoes_historico')
+      .delete()
+      .in('aluno_id', selectedStudentIds);
+
+    if (histError) {
+      console.error('Error deleting batch graduation history:', histError);
+    }
+
+    // 3. Exclui da nova tabela graduacoes
+    const { error: gradLoteError } = await supabase
+      .from('graduacoes')
+      .delete()
+      .in('aluno_id', selectedStudentIds);
+
+    if (gradLoteError) {
+      console.error('Error deleting batch graduacoes:', gradLoteError);
+    }
+
+    // 4. Exclui alunos
+    const { error: deleteError } = await supabase
+      .from('alunos')
+      .delete()
+      .in('id', selectedStudentIds);
+
+    if (deleteError) {
+      console.error('Error deleting batch students:', deleteError);
+      alert('Erro ao excluir alunos do banco de dados.');
+      return;
+    }
+
+    // Atualiza localmente
+    setStudents(prev => prev.filter(s => !selectedStudentIds.includes(s.id)));
+    setSelectedStudentIds([]);
+    alert('Alunos excluídos com sucesso!');
+  };
+
+  // Função para exportar para CSV
   const handleExportCSV = () => {
     const BOM = "\uFEFF";
     const headers = [
@@ -234,8 +570,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       "Turma",
       "Status",
       "Data de Matrícula",
-      "Última Graduação",
-      "Total de Treinos"
+      "Última Graduação"
     ];
 
     const rows = filteredStudents.map(s => [
@@ -251,8 +586,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       s.turma || "Adulto",
       s.status || "Ativo",
       s.dataMatricula || "",
-      s.dataUltimaGraduacao || "",
-      s.totalTreinos ?? 0
+      s.dataUltimaGraduacao || ""
     ]);
 
     const csvContent = BOM + [
@@ -270,7 +604,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     document.body.removeChild(link);
   };
 
-  // Export to XLS (HTML-based spreadsheet compatible with Excel)
+  // Exportar para XLS (planilha baseada em HTML compatível com Excel)
   const handleExportXLS = () => {
     const headers = [
       "Nome",
@@ -285,8 +619,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       "Turma",
       "Status",
       "Data de Matrícula",
-      "Última Graduação",
-      "Total de Treinos"
+      "Última Graduação"
     ];
 
     const rows = filteredStudents.map(s => [
@@ -302,8 +635,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       s.turma || "Adulto",
       s.status || "Ativo",
       s.dataMatricula || "",
-      s.dataUltimaGraduacao || "",
-      s.totalTreinos ?? 0
+      s.dataUltimaGraduacao || ""
     ]);
 
     let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
@@ -325,7 +657,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     document.body.removeChild(link);
   };
 
-  // Filter and sort students alphabetically
+  // Filtra e ordena alunos
   const filteredStudents = students
     .filter(student => {
       const matchesSearch =
@@ -338,13 +670,42 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       return matchesSearch && matchesBelt && matchesStatus && matchesTurma;
     })
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    .sort((a, b) => {
+      if (sortBy === 'nome-asc') {
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      } else if (sortBy === 'nome-desc') {
+        return b.nome.localeCompare(a.nome, 'pt-BR');
+      } else if (sortBy === 'dataMatricula-desc') {
+        return new Date(b.dataMatricula || 0).getTime() - new Date(a.dataMatricula || 0).getTime();
+      } else if (sortBy === 'dataMatricula-asc') {
+        return new Date(a.dataMatricula || 0).getTime() - new Date(b.dataMatricula || 0).getTime();
+      } else if (sortBy === 'dataUltimaGraduacao-desc') {
+        return new Date(b.dataUltimaGraduacao || 0).getTime() - new Date(a.dataUltimaGraduacao || 0).getTime();
+      }
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
 
-  // Calculate pagination
+  // Calcula a paginação
   const totalItems = filteredStudents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleToggleSelectAllPage = () => {
+    const pageIds = paginatedStudents.map(s => s.id);
+    const allSelected = pageIds.every(id => selectedStudentIds.includes(id));
+
+    if (allSelected) {
+      setSelectedStudentIds(prev => prev.filter(id => !pageIds.includes(id)));
+    } else {
+      setSelectedStudentIds(prev => [
+        ...prev,
+        ...pageIds.filter(id => !prev.includes(id))
+      ]);
+    }
+  };
+
+  const isAllPageSelected = paginatedStudents.length > 0 && paginatedStudents.every(s => selectedStudentIds.includes(s.id));
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -354,54 +715,75 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // Helper to render beautiful visual BJJ belt
   const renderBeltBadge = (faixa: Belt, graus: Degree) => {
     let beltClass = '';
     let barColor = 'bg-black'; // Black sleeve bar standard
+    let stripeStyle: React.CSSProperties | undefined;
 
-    switch (faixa) {
-      case 'Branca':
-        beltClass = 'bg-white text-slate-900 border border-slate-300';
-        barColor = 'bg-neutral-900';
-        break;
-      case 'Cinza':
-        beltClass = 'bg-slate-400 text-slate-950 border border-slate-500';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Amarela':
-        beltClass = 'bg-yellow-400 text-slate-950 border border-yellow-500';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Laranja':
-        beltClass = 'bg-orange-500 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Verde':
-        beltClass = 'bg-emerald-600 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Azul':
-        beltClass = 'bg-blue-750 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Roxa':
-        beltClass = 'bg-purple-700 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Marrom':
-        beltClass = 'bg-amber-900 text-white';
-        barColor = 'bg-neutral-950';
-        break;
-      case 'Preta':
-        beltClass = 'bg-neutral-950 border border-gold-500/75 text-gold-450';
-        barColor = 'bg-red-600'; // Red sleeve bar for black belts
-        break;
+    const lowerFaixa = faixa.toLowerCase();
+
+    if (lowerFaixa.includes('cinza')) {
+      beltClass = 'bg-slate-400 text-slate-950 border border-slate-500';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('amarela')) {
+      beltClass = 'bg-yellow-400 text-slate-950 border border-yellow-500';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('laranja')) {
+      beltClass = 'bg-orange-500 text-white';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa.includes('verde')) {
+      beltClass = 'bg-emerald-600 text-white';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'azul') {
+      beltClass = 'bg-blue-600 text-white border border-blue-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'roxa') {
+      beltClass = 'bg-purple-700 text-white border border-purple-800';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'marrom') {
+      beltClass = 'bg-amber-900 text-white border border-amber-950';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'preta') {
+      beltClass = 'bg-neutral-950 border border-gold-500/75 text-gold-450';
+      barColor = 'bg-red-650';
+    } else if (lowerFaixa === 'vermelha e preta') {
+      stripeStyle = {
+        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #171717 15px, #171717 30px)'
+      };
+      beltClass = 'text-white border border-red-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'vermelha e branca') {
+      stripeStyle = {
+        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #f8fafc 15px, #f8fafc 30px)'
+      };
+      beltClass = 'text-neutral-950 border border-red-700';
+      barColor = 'bg-neutral-950';
+    } else if (lowerFaixa === 'vermelha') {
+      beltClass = 'bg-red-750 text-white border border-red-850';
+      barColor = 'bg-neutral-950';
+    } else {
+      beltClass = 'bg-white text-slate-900 border border-slate-300';
+      barColor = 'bg-neutral-900';
     }
 
+    const hasWhiteStripe = (lowerFaixa.includes('e branca') && !lowerFaixa.includes('vermelha'));
+    const hasBlackStripe = (lowerFaixa.includes('e preta') && !lowerFaixa.includes('vermelha'));
+
     return (
-      <div className={`w-28 h-6 rounded flex items-center relative overflow-hidden font-extrabold text-[10px] tracking-wider shadow-sm select-none ${beltClass}`}>
+      <div 
+        className={`w-28 h-6 rounded flex items-center relative overflow-hidden font-extrabold text-[10px] tracking-wider shadow-sm select-none ${beltClass}`}
+        style={stripeStyle}
+      >
         {/* Belt Name */}
-        <span className="pl-2 uppercase z-10">{faixa}</span>
+        <span className={`pl-2 uppercase z-10 ${lowerFaixa === 'vermelha e branca' ? 'text-black bg-white/60 px-1 rounded-sm' : ''}`}>{faixa}</span>
+
+        {/* Horizontal stripe for child mixed belts */}
+        {hasWhiteStripe && (
+          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-white border-y border-neutral-300/30 z-0 pointer-events-none" />
+        )}
+        {hasBlackStripe && (
+          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-neutral-950 border-y border-neutral-800/30 z-0 pointer-events-none" />
+        )}
 
         {/* Sleeve section for stripes (degrees) */}
         <div className={`absolute right-0 top-0 bottom-0 w-8 ${barColor} flex items-center justify-around px-0.5 border-l border-obsidian-950/45`}>
@@ -409,7 +791,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             <div
               key={idx}
               className={`w-0.5 h-3 rounded-sm transition-all ${idx < graus
-                ? 'bg-amber-300 shadow shadow-gold-500/60'
+                ? 'bg-white shadow-[0_0_3px_rgba(255,255,255,0.7)]'
                 : 'bg-neutral-800/40'
                 }`}
               title={`${graus} Grau(s)`}
@@ -422,12 +804,28 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    // If it's already DD/MM/YYYY
+    // Se já estiver em DD/MM/YYYY
     if (dateStr.includes('/')) return dateStr;
-    // If YYYY-MM-DD
+    // Se for YYYY-MM-DD
     const parts = dateStr.split('-');
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  // Formata data para exibir apenas mês/ano (MM/AAAA)
+  const formatMonthYear = (dateStr: string) => {
+    if (!dateStr) return '-';
+    // Se vier como YYYY-MM ou YYYY-MM-DD
+    const parts = dateStr.split('-');
+    if (parts.length >= 2) {
+      return `${parts[1]}/${parts[0]}`;
+    }
+    // Se vier como DD/MM/AAAA, retorna MM/AAAA
+    if (dateStr.includes('/')) {
+      const p = dateStr.split('/');
+      if (p.length >= 2) return `${p[1]}/${p[p.length - 1]}`;
     }
     return dateStr;
   };
@@ -442,7 +840,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
     if (lines.length === 0) return;
 
-    // Detect delimiter
+    // Detecta o delimitador
     const firstLine = lines[0];
     let delimiter = '\t';
     if (firstLine.includes('\t')) {
@@ -453,22 +851,30 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       delimiter = ',';
     }
 
-    // Parse headers
+    // Analisa os cabeçalhos
     const rawHeaders = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
 
-    // Map headers to Student fields
+    // Mapeia cabeçalhos para os campos de Aluno
     const mappings: { [key: string]: number } = {};
     const clean = (h: string) => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 
     rawHeaders.forEach((header, idx) => {
       const hClean = clean(header);
-      if (hClean.includes('nome') || hClean.includes('name') || hClean.includes('membro') || hClean.includes('aluno')) {
+      if (hClean.includes('emergencianome') || hClean.includes('emergenciacontatonome') || hClean.includes('nomedeemergencia') || hClean.includes('responsavel')) {
+        mappings['contatoEmergenciaNome'] = idx;
+      } else if (hClean.includes('emergenciatel') || hClean.includes('emergenciaphone') || hClean.includes('telefoneemergencia') || hClean.includes('telephonedeemergencia')) {
+        mappings['contatoEmergenciaTel'] = idx;
+      } else if (hClean.includes('datamatricula') || hClean.includes('matriculadata') || (hClean.includes('matricula') && !hClean.includes('responsavel'))) {
+        mappings['dataMatricula'] = idx;
+      } else if (hClean.includes('ultimagraduacao') || hClean.includes('graduacaoultima') || hClean.includes('datagraduacao') || (hClean.includes('graduacao') && hClean.includes('ultima'))) {
+        mappings['dataUltimaGraduacao'] = idx;
+      } else if (hClean.includes('nascimento') || hClean.includes('nasc') || hClean.includes('birth') || hClean.includes('idade')) {
+        mappings['dataNascimento'] = idx;
+      } else if (hClean.includes('nome') || hClean.includes('name') || hClean.includes('membro') || hClean.includes('aluno')) {
         mappings['nome'] = idx;
       } else if (hClean.includes('cpf')) {
         mappings['cpf'] = idx;
-      } else if (hClean.includes('nascimento') || hClean.includes('nasc') || hClean.includes('birth') || (hClean.includes('data') && hClean.includes('nasc')) || hClean.includes('idade')) {
-        mappings['dataNascimento'] = idx;
-      } else if (hClean.includes('telefone') || hClean.includes('tel') || hClean.includes('cel') || hClean.includes('fone') || hClean.includes('contato')) {
+      } else if (hClean.includes('telefone') || hClean.includes('tel') || hClean.includes('cel') || hClean.includes('fone')) {
         mappings['telefone'] = idx;
       } else if (hClean.includes('email') || hClean.includes('mail')) {
         mappings['email'] = idx;
@@ -476,28 +882,22 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         mappings['genero'] = idx;
       } else if (hClean.includes('bairro') || hClean.includes('endereco') || hClean.includes('local')) {
         mappings['bairro'] = idx;
-      } else if (hClean.includes('faixa') || hClean.includes('belt') || hClean.includes('graduacao')) {
+      } else if (hClean.includes('faixa') || hClean.includes('belt')) {
         mappings['faixa'] = idx;
       } else if (hClean.includes('grau') || hClean.includes('stripe')) {
         mappings['graus'] = idx;
       } else if (hClean.includes('turma') || hClean.includes('categoria') || hClean.includes('class') || hClean.includes('grupo')) {
         mappings['turma'] = idx;
-      } else if (hClean.includes('emergencianome') || hClean.includes('emergenciacontato') || hClean.includes('responsavel')) {
-        mappings['contatoEmergenciaNome'] = idx;
-      } else if (hClean.includes('emergenciatel') || hClean.includes('emergenciatelefone')) {
-        mappings['contatoEmergenciaTel'] = idx;
-      } else if (hClean.includes('ultima') || (hClean.includes('data') && hClean.includes('grad'))) {
-        mappings['dataUltimaGraduacao'] = idx;
-      } else if (hClean.includes('matricula')) {
-        mappings['dataMatricula'] = idx;
+      } else if (hClean.includes('status')) {
+        mappings['status'] = idx;
       }
     });
 
-    // Parse data rows
+    // Analisa as linhas de dados
     const rows: any[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
-      // If the row has fewer elements than headers, fill with empty strings
+      const parts = splitCSVLine(lines[i], delimiter);
+      // Se a linha tiver menos elementos que os cabeçalhos, preencha com strings vazias
       while (parts.length < rawHeaders.length) {
         parts.push('');
       }
@@ -510,7 +910,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       const rawNome = getValue('nome');
       if (!rawNome) continue; // Skip empty rows
 
-      // Process gender
+      // Processa gênero
       const rawGen = getValue('genero').toLowerCase();
       let gender: Gender = 'Masculino';
       if (rawGen.startsWith('f') || rawGen.includes('fem')) {
@@ -519,27 +919,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         gender = 'Outro';
       }
 
-      // Process birth date
-      let rawBirth = getValue('dataNascimento');
-      let dataNasc = '';
-      if (rawBirth) {
-        // Handle DD/MM/YYYY or D/M/YYYY
-        if (rawBirth.includes('/')) {
-          const birthParts = rawBirth.split('/');
-          if (birthParts.length === 3) {
-            dataNasc = `${birthParts[2]}-${birthParts[1].padStart(2, '0')}-${birthParts[0].padStart(2, '0')}`;
-          }
-        } else if (rawBirth.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          dataNasc = rawBirth;
-        }
-      }
+      // Processa data de nascimento
+      const dataNasc = parseCSVDate(getValue('dataNascimento')) || '2000-01-01';
 
-      // If dataNasc is invalid or empty, set a default
-      if (!dataNasc) {
-        dataNasc = '2000-01-01'; // Fallback
-      }
-
-      // Process belt
+      // Processa faixa
       const rawFaixa = getValue('faixa').toLowerCase();
       let faixa: Belt = 'Branca';
       const belts: Belt[] = ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
@@ -548,35 +931,36 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         faixa = foundBelt;
       }
 
-      // Process degrees
+      // Processa graus
       const rawGraus = parseInt(getValue('graus'), 10);
       const graus: Degree = (rawGraus >= 0 && rawGraus <= 4) ? (rawGraus as Degree) : 0;
 
-      // Process class (turma)
+      // Processa turma
       const rawTurma = getValue('turma').toLowerCase();
       let turma: 'Kids' | 'Adulto' = 'Adulto';
       if (rawTurma.includes('kid') || rawTurma.includes('inf') || rawTurma.includes('cri')) {
         turma = 'Kids';
+      } else if (rawTurma.includes('adult') || rawTurma.includes('adul')) {
+        turma = 'Adulto';
       } else {
-        // Check age based on birth year
+        // Verifica a idade com base no ano de nascimento
         const year = parseInt(dataNasc.split('-')[0], 10);
         if (year >= 2010) {
           turma = 'Kids';
         }
       }
 
-      // Process registration date
-      let rawMatr = getValue('dataMatricula');
-      let dataMatr = new Date().toISOString().split('T')[0];
-      if (rawMatr) {
-        if (rawMatr.includes('/')) {
-          const matrParts = rawMatr.split('/');
-          if (matrParts.length === 3) {
-            dataMatr = `${matrParts[2]}-${matrParts[1].padStart(2, '0')}-${matrParts[0].padStart(2, '0')}`;
-          }
-        } else if (rawMatr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          dataMatr = rawMatr;
-        }
+      // Processa data de matrícula
+      const dataMatr = parseCSVDate(getValue('dataMatricula')) || new Date().toISOString().split('T')[0];
+
+      // Processa data da última graduação
+      const dataUltimaGrad = parseCSVDate(getValue('dataUltimaGraduacao')) || dataMatr;
+
+      // Processa status
+      const rawStatus = getValue('status').toLowerCase();
+      let status: 'Ativo' | 'Inativo' = 'Ativo';
+      if (rawStatus.includes('inativ') || rawStatus === 'inativo') {
+        status = 'Inativo';
       }
 
       rows.push({
@@ -584,28 +968,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         cpf: getValue('cpf') || `000.000.000-${Math.floor(Math.random() * 90 + 10)}`,
         dataNascimento: dataNasc,
         telefone: getValue('telefone'),
-        email: getValue('email') || `${rawNome.toLowerCase().replace(/\s+/g, '.')}@sfbjj.com.br`,
+        email: getValue('email') || `${rawNome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '.')}@sfbjj.com.br`,
         genero: gender,
         dataMatricula: dataMatr,
         bairro: getValue('bairro') || 'Asa Sul',
         faixa: faixa,
         graus: graus,
-        dataUltimaGraduacao: getValue('dataUltimaGraduacao') || '',
+        role: 'student',
+        dataUltimaGraduacao: dataUltimaGrad,
         contatoEmergenciaNome: getValue('contatoEmergenciaNome') || '',
         contatoEmergenciaTel: getValue('contatoEmergenciaTel') || '',
         turma: turma,
-        status: 'Ativo',
-        totalTreinos: 0,
-        pagamentos: [
-          {
-            id: `pay_${Date.now()}_${i}`,
-            mesRef: 'Maio/2026',
-            valor: 100,
-            status: 'Pendente',
-            dataVencimento: '2026-05-30',
-            dataPagamento: null
-          }
-        ]
+        status: status,
+        fotoPerfil: '',
+        historicoGraduacoes: [],
+        pagamentos: []
       });
     }
 
@@ -625,22 +1002,96 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
     reader.readAsText(file);
   };
 
-  const handleImportConfirm = () => {
+  const handleImportConfirm = async () => {
     if (parsedImportRows.length === 0) {
       setImportError('Nenhum dado válido para importar.');
       return;
     }
 
-    // Generate unique IDs for imported students
-    const studentsWithIds = parsedImportRows.map((student, index) => ({
-      ...student,
-      id: `std_imp_${Date.now()}_${index}`
-    }));
+    setIsImporting(true);
+    setImportError(null);
 
-    setStudents(prev => [...studentsWithIds, ...prev]);
-    setShowImportModal(false);
-    setImportText('');
-    setParsedImportRows([]);
+    try {
+      // 1. Prepare data to insert into `alunos` table
+      const alunosToInsert = parsedImportRows.map(student => ({
+        nome: student.nome,
+        cpf: student.cpf,
+        dataNascimento: student.dataNascimento,
+        telefone: student.telefone,
+        email: student.email,
+        genero: student.genero,
+        dataMatricula: student.dataMatricula,
+        bairro: student.bairro,
+        faixa: student.faixa,
+        graus: student.graus,
+        role: student.role || 'student',
+        dataUltimaGraduacao: student.dataUltimaGraduacao,
+        contatoEmergenciaNome: student.contatoEmergenciaNome,
+        contatoEmergenciaTel: student.contatoEmergenciaTel,
+        status: student.status,
+        turma: student.turma,
+        fotoPerfil: ''
+      }));
+
+      const { data: insertedAlunos, error: insertError } = await supabase
+        .from('alunos')
+        .insert(alunosToInsert)
+        .select();
+
+      if (insertError) {
+        console.error('Error importing students to Supabase:', insertError);
+        throw new Error('Erro ao inserir alunos no banco de dados: ' + insertError.message);
+      }
+
+      if (insertedAlunos && insertedAlunos.length > 0) {
+        // 2. Prepare graduation history records
+        const graducoesToInsert = insertedAlunos.map(aluno => ({
+          aluno_id: aluno.id,
+          faixa: aluno.faixa,
+          graus: aluno.graus,
+          data_graduacao: aluno.dataUltimaGraduacao || aluno.dataMatricula,
+          avaliador: loggedUser?.nome || 'Professor'
+        }));
+
+        const { data: insertedGrads, error: gradsError } = await supabase
+          .from('graduacoes_historico')
+          .insert(graducoesToInsert)
+          .select();
+
+        if (gradsError) {
+          console.error('Error inserting graduation records for imported students:', gradsError);
+        }
+
+        // 3. Update local state
+        const newStudentsWithHistory = insertedAlunos.map(aluno => {
+          const alunoGrads = (insertedGrads || []).filter(g => g.aluno_id === aluno.id);
+          return {
+            ...aluno,
+            historicoGraduacoes: alunoGrads.map(g => ({
+              id: g.id,
+              data: g.data_graduacao,
+              faixa: g.faixa,
+              graus: g.graus,
+              avaliador: g.avaliador
+            })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+            pagamentos: []
+          };
+        });
+
+        setStudents(prev => {
+          const merged = [...newStudentsWithHistory, ...prev];
+          return merged.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        });
+      }
+
+      setShowImportModal(false);
+      setImportText('');
+      setParsedImportRows([]);
+    } catch (err: any) {
+      setImportError(err.message || 'Erro inesperado durante a importação.');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -656,13 +1107,15 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto relative">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
-          >
-            <Upload className="w-4 h-4" />
-            Importar Alunos
-          </button>
+          {!isTeacher && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="btn-obsidian flex items-center gap-2 border border-obsidian-700 hover:border-gold-500/50 hover:text-gold-450 transition-all"
+            >
+              <Upload className="w-4 h-4" />
+              Importar Alunos
+            </button>
+          )}
 
           {/* Export Dropdown */}
           <div className="relative">
@@ -702,97 +1155,201 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             )}
           </div>
 
-          <button
-            onClick={handleOpenCreate}
-            className="btn-gold flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            Cadastrar Membro
-          </button>
+          {!isTeacher && (
+            <button
+              onClick={handleOpenCreate}
+              className="btn-gold flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Cadastrar Membro
+            </button>
+          )}
         </div>
       </div>
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-obsidian-850 p-4 rounded-xl border border-obsidian-800/80">
-        {/* Search */}
-        <div className="sm:col-span-2 relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
-            <Search className="w-4 h-4" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Buscar por nome ou bairro..."
-            className="input-premium w-full pl-9"
-          />
+      <div className="space-y-4 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+          {/* Search */}
+          <div className="sm:col-span-2 relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por nome ou bairro..."
+              className="input-premium w-full pl-10"
+            />
+          </div>
+
+          {/* Belt Filter */}
+          <div>
+            <select
+              value={selectedBelt}
+              onChange={(e) => {
+                setSelectedBelt(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="Todos">Todas as Faixas</option>
+              <option value="Branca">Branca</option>
+              <option value="Cinza">Cinza</option>
+              <option value="Amarela">Amarela</option>
+              <option value="Laranja">Laranja</option>
+              <option value="Verde">Verde</option>
+              <option value="Azul">Azul</option>
+              <option value="Roxa">Roxa</option>
+              <option value="Marrom">Marrom</option>
+              <option value="Preta">Preta</option>
+            </select>
+          </div>
+
+          {/* Turma Filter */}
+          <div>
+            <select
+              value={selectedTurma}
+              onChange={(e) => {
+                setSelectedTurma(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="Todos">Todas as Turmas</option>
+              <option value="Adulto">Adultos</option>
+              <option value="Kids">Kids</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="Todos">Status: Todos</option>
+              <option value="Ativo">Ativos</option>
+              <option value="Inativo">Inativos</option>
+            </select>
+          </div>
+
+          {/* Sorting Selection */}
+          <div>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input-premium w-full bg-obsidian-950 text-slate-200"
+            >
+              <option value="dataMatricula-desc">Matrícula (Recente)</option>
+              <option value="dataMatricula-asc">Matrícula (Antiga)</option>
+              <option value="nome-asc">Nome (A-Z)</option>
+              <option value="nome-desc">Nome (Z-A)</option>
+              <option value="dataUltimaGraduacao-desc">Última Graduação</option>
+            </select>
+          </div>
         </div>
 
-        {/* Belt Filter */}
-        <div>
-          <select
-            value={selectedBelt}
-            onChange={(e) => {
-              setSelectedBelt(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200">
-            <option value="Todos">Todas as Faixas</option>
-            <option value="Branca">Branca</option>
-            <option value="Cinza">Cinza</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Laranja">Laranja</option>
-            <option value="Verde">Verde</option>
-            <option value="Azul">Azul</option>
-            <option value="Roxa">Roxa</option>
-            <option value="Marrom">Marrom</option>
-            <option value="Preta">Preta</option>
-          </select>
-        </div>
+        {/* Sub-bar de Ações em Lote e Quantidade por Página */}
+        <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t border-obsidian-850/50 gap-3">
+          {/* Mostrador de Itens por Página */}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Mostrar:</span>
+            <select
+              value={itemsPerPage === 999999 ? 'Todos' : itemsPerPage}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'Todos') {
+                  setItemsPerPage(999999);
+                } else {
+                  setItemsPerPage(Number(val));
+                }
+                setCurrentPage(1);
+              }}
+              className="bg-obsidian-950 border border-obsidian-800 rounded px-2 py-1 text-slate-200 text-xs focus:border-gold-500/50 outline-none"
+            >
+              <option value={1}>1 membro</option>
+              <option value={10}>10 membros</option>
+              <option value={20}>20 membros</option>
+              <option value={30}>30 membros</option>
+              <option value={40}>40 membros</option>
+              <option value={50}>50 membros</option>
+              <option value="Todos">Todos</option>
+            </select>
+          </div>
 
-        {/* Turma Filter */}
-        <div>
-          <select
-            value={selectedTurma}
-            onChange={(e) => {
-              setSelectedTurma(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Todas as Turmas</option>
-            <option value="Adulto">Adultos</option>
-            <option value="Kids">Kids</option>
-          </select>
-        </div>
-
-        {/* Status Filter */}
-        <div>
-          <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Status: Todos</option>
-            <option value="Ativo">Ativos</option>
-            <option value="Inativo">Inativos</option>
-          </select>
+          {/* Ações em Lote */}
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {selectedStudentIds.length > 0 ? (
+              <>
+                <span className="text-[10px] text-gold-450 font-bold uppercase tracking-wider">
+                  {selectedStudentIds.length} selecionado(s):
+                </span>
+                <button
+                  onClick={() => setSelectedStudentIds([])}
+                  className="px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider text-slate-400 hover:text-slate-200 bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-750 transition-colors rounded"
+                >
+                  Limpar
+                </button>
+                {!isTeacher && (
+                  <>
+                    <button
+                      onClick={() => handleBatchStatusChange('Ativo')}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[9px] uppercase tracking-wider py-1 px-2.5 rounded transition-colors"
+                    >
+                      Ativar
+                    </button>
+                    <button
+                      onClick={() => handleBatchStatusChange('Inativo')}
+                      className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-[9px] uppercase tracking-wider py-1 px-2.5 rounded transition-colors"
+                    >
+                      Inativar
+                    </button>
+                    <button
+                      onClick={handleBatchDelete}
+                      className="bg-red-600/90 hover:bg-red-600 text-white font-bold text-[9px] uppercase tracking-wider py-1 px-2.5 rounded border border-red-500/20 transition-colors"
+                    >
+                      Excluir
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <span className="text-[10px] text-slate-500 italic">Selecione alunos usando as caixas de seleção na tabela para ações em lote</span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Desktop List / Table */}
-      <div className="bg-obsidian-800/50 border border-obsidian-800/90 rounded-xl overflow-hidden shadow-xl backdrop-blur-md">
+      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-obsidian-750 text-xs font-bold uppercase tracking-wider text-slate-400 bg-obsidian-850/40">
-                <th className="px-4 py-4 text-center w-16">Status</th>
+              <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
+                <th className="px-6 py-4 w-12 text-center">
+                  <button
+                    onClick={handleToggleSelectAllPage}
+                    className="text-slate-450 hover:text-slate-200 transition-colors"
+                  >
+                    {isAllPageSelected ? (
+                      <CheckSquare className="w-4 h-4 text-gold-500" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-6 py-4">Membro</th>
                 <th className="px-6 py-4">Nascimento / Idade</th>
                 <th className="px-6 py-4">Faixa Atual</th>
@@ -802,10 +1359,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-750 text-sm text-slate-300">
+            <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={8} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Nenhum aluno encontrado correspondente aos filtros.
                   </td>
                 </tr>
@@ -813,36 +1370,55 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 paginatedStudents.map((student) => (
                   <tr
                     key={student.id}
-                    className="hover:bg-obsidian-700/20 transition-colors group"
+                    className="hover:bg-obsidian-800/15 transition-colors group cursor-pointer"
+                    onClick={() => handleToggleSelectStudent(student.id)}
                   >
-                    {/* Status */}
-                    <td className="px-4 py-4 text-center">
-                      <span
-                        className={`inline-block w-3.5 h-3.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
-                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
-                            : 'bg-white border border-slate-300 shadow-[0_0_8px_rgba(255,255,255,0.4)]'
-                          }`}
-                        title={student.status}
-                      />
+                    {/* Checkbox de Seleção */}
+                    <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleToggleSelectStudent(student.id)}
+                        className="text-slate-400 hover:text-slate-200 transition-colors"
+                      >
+                        {selectedStudentIds.includes(student.id) ? (
+                          <CheckSquare className="w-4 h-4 text-gold-500" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
                     </td>
-
                     {/* Membro */}
                     <td className="px-6 py-4">
-                      <div className="font-bold text-slate-100 group-hover:text-gold-450 transition-colors">
-                        {student.nome}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        Matrícula: {formatDate(student.dataMatricula)}
+                       <div className="flex items-center gap-3">
+                        {/* Foto de Perfil */}
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-obsidian-750/80 bg-obsidian-950 flex items-center justify-center text-xl shadow-inner select-none shrink-0">
+                          {student.fotoPerfil ? (
+                            student.fotoPerfil.length <= 2 ? (
+                              <span>{student.fotoPerfil}</span>
+                            ) : (
+                              <img src={student.fotoPerfil} alt={student.nome} className="w-full h-full object-cover" />
+                            )
+                          ) : (
+                            <span className="text-slate-500 text-sm">🥋</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
+                            {student.nome}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-semibold mt-1">
+                            Matrícula: {formatDate(student.dataMatricula)}
+                          </div>
+                        </div>
                       </div>
                     </td>
 
                     {/* Nascimento / Idade */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                        <Calendar className="w-3.5 h-3.5 text-gold-500/80" />
+                      <div className="flex items-center gap-1.5 text-slate-350">
+                        <Calendar className="w-3.5 h-3.5 text-slate-450" />
                         {formatDate(student.dataNascimento)}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
+                      <div className="text-[10px] text-slate-500 font-semibold mt-1">
                         {(() => {
                           if (!student.dataNascimento) return '-';
                           const birthDate = new Date(student.dataNascimento);
@@ -864,44 +1440,56 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                     {/* Turma */}
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${student.turma === 'Kids'
-                        ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${student.turma === 'Kids'
+                        ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10'
+                        : 'bg-indigo-500/5 text-indigo-400 border border-indigo-500/10'
                         }`}>
                         {student.turma || 'Adulto'}
                       </span>
                     </td>
 
                     {/* Última Graduação */}
-                    <td className="px-6 py-4 text-xs font-medium text-slate-300">
-                      {formatDate(student.dataUltimaGraduacao)}
+                    <td className="px-6 py-4 text-slate-300 font-semibold font-mono">
+                      {formatMonthYear(student.dataUltimaGraduacao || '')}
                     </td>
 
                     {/* Contato */}
                     <td className="px-6 py-4 min-w-[160px] whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-xs text-slate-200 whitespace-nowrap">
-                        <Phone className="w-3.5 h-3.5 text-gold-500/80 shrink-0" />
+                      <div className="flex items-center gap-1 text-slate-300 whitespace-nowrap">
+                        <Phone className="w-3.5 h-3.5 text-slate-450 shrink-0" />
                         <span className="font-mono">{student.telefone ? formatPhone(student.telefone) : '-'}</span>
                       </div>
                     </td>
 
                     {/* Ações */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(student)}
-                          className="p-1.5 rounded bg-obsidian-850 hover:bg-obsidian-750 border border-obsidian-700 text-slate-300 hover:text-gold-500 transition-all"
-                          title="Editar cadastro"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenDelete(student)}
-                          className="p-1.5 rounded bg-obsidian-850 hover:bg-red-500/10 border border-obsidian-700 hover:border-red-500/30 text-slate-300 hover:text-red-500 transition-all"
-                          title="Excluir Aluno"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(student)}
+                            className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                            title={isTeacher ? "Visualizar cadastro" : "Editar cadastro"}
+                          >
+                            {isTeacher ? <Eye className="w-3.5 h-3.5" /> : <Edit className="w-3.5 h-3.5" />}
+                          </button>
+                          {!isTeacher && (
+                            <button
+                              onClick={() => handleOpenDelete(student)}
+                              className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"
+                              title="Excluir Aluno"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        {/* Status Dot (em último lugar) */}
+                        <span
+                          className={`inline-block w-2.5 h-2.5 rounded-full transition-all duration-300 ${student.status === 'Ativo'
+                              ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                              : 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
+                            }`}
+                          title={student.status}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -913,15 +1501,15 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
         {/* Pagination Section */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-750 bg-obsidian-850/20">
-            <span className="text-xs text-slate-400">
-              Mostrando <span className="text-slate-200">{startIndex + 1}</span> a <span className="text-slate-200">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-200">{totalItems}</span> membros
+          <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              Mostrando <span className="text-slate-300">{startIndex + 1}</span> a <span className="text-slate-300">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de <span className="text-slate-300">{totalItems}</span> membros
             </span>
             <div className="flex gap-2">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 Anterior
@@ -929,7 +1517,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className="btn-obsidian py-1.5 px-2.5 text-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
               >
                 Próximo
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -941,14 +1529,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
       {/* CRUD Form Modal */}
       {showFormModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-obsidian-850 border border-obsidian-700/80 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-up">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-obsidian-850 border border-obsidian-700/80 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-scale-up">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 sticky top-0 bg-obsidian-850 z-10">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 shrink-0 bg-obsidian-850 z-10 rounded-t-2xl">
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-gold-500" />
-                {editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
+                {isTeacher ? 'Visualizar Cadastro de Membro' : editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
               </h2>
               <button
                 onClick={() => setShowFormModal(false)}
@@ -959,7 +1547,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
             </div>
 
             {/* Modal Form Content */}
-            <form onSubmit={handleSaveStudent} className="p-6 space-y-5">
+            <form onSubmit={handleSaveStudent} className="flex flex-col overflow-hidden">
+              <div className="p-6 space-y-5 overflow-y-auto flex-1">
 
               {/* Seção 1: Dados Pessoais */}
               <div className="space-y-4">
@@ -976,6 +1565,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     placeholder="Nome e Sobrenome"
                     className="input-premium"
                     required
+                    disabled={isTeacher}
                   />
                 </div>
 
@@ -985,9 +1575,17 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     <input
                       type="date"
                       value={formDataNascimento}
-                      onChange={(e) => setFormDataNascimento(e.target.value)}
+                      onChange={(e) => {
+                        const newDate = e.target.value;
+                        setFormDataNascimento(newDate);
+                        const allowed = getBeltsByAge(newDate);
+                        if (!allowed.includes(formFaixa)) {
+                          setFormFaixa(allowed[0]);
+                        }
+                      }}
                       className="input-premium"
                       required
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -999,6 +1597,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       placeholder="Ex: Asa Sul, Guará"
                       className="input-premium"
                       required
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1013,6 +1612,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       placeholder="(61) 99999-9999"
                       className="input-premium font-mono"
                       required
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1023,6 +1623,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormEmail(e.target.value)}
                       placeholder="email@dominio.com"
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1036,6 +1637,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormCpf(formatCPF(e.target.value))}
                       placeholder="000.000.000-00"
                       className="input-premium font-mono"
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1044,6 +1646,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formGenero}
                       onChange={(e) => setFormGenero(e.target.value as Gender)}
                       className="input-premium bg-obsidian-950 text-slate-200"
+                      disabled={isTeacher}
                     >
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
@@ -1055,8 +1658,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     <select
                       value={formTurma}
                       onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
-                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold text-slate-200"
+                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold"
                       required
+                      disabled={isTeacher}
                     >
                       <option value="Adulto">Adulto</option>
                       <option value="Kids">Kids</option>
@@ -1082,38 +1686,40 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     )}
                   </div>
                   {/* Options */}
-                  <div className="flex-1 space-y-3 w-full">
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
-                      <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
-                      <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
-                    </div>
+                  {!isTeacher && (
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
+                        <button type="button" onClick={() => setFormFotoPerfil('👦')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👦' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👦</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👨')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👨' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👨</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
+                        <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
+                      </div>
 
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs text-slate-500">Ou envie sua foto:</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
-                                setFormFotoPerfil(event.target.result as string);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">Ou envie sua foto:</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setFormFotoPerfil(event.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1131,16 +1737,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formFaixa}
                       onChange={(e) => setFormFaixa(e.target.value as Belt)}
                       className="input-premium bg-obsidian-950 text-slate-200"
+                      disabled={isTeacher}
                     >
-                      <option value="Branca">Branca</option>
-                      <option value="Cinza">Cinza</option>
-                      <option value="Amarela">Amarela</option>
-                      <option value="Laranja">Laranja</option>
-                      <option value="Verde">Verde</option>
-                      <option value="Azul">Azul</option>
-                      <option value="Roxa">Roxa</option>
-                      <option value="Marrom">Marrom</option>
-                      <option value="Preta">Preta</option>
+                      {getBeltsByAge(formDataNascimento).map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1149,6 +1750,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formGraus}
                       onChange={(e) => setFormGraus(Number(e.target.value) as Degree)}
                       className="input-premium bg-obsidian-950 text-slate-200"
+                      disabled={isTeacher}
                     >
                       <option value={0}>0 Grau</option>
                       <option value={1}>1 Grau</option>
@@ -1159,24 +1761,28 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tipo de Usuário</label>
+                    <select
+                      value={formRole}
+                      onChange={(e) => setFormRole(e.target.value as 'admin' | 'student' | 'teacher')}
+                      className="input-premium w-full bg-obsidian-950 disabled:opacity-50"
+                      disabled={isTeacher}
+                    >
+                      <option value="student">Aluno</option>
+                      <option value="teacher">Professor</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Última Graduação</label>
                     <input
-                      type="text"
+                      type="month"
                       value={formDataUltimaGraduacao}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const formatted = val
-                          .replace(/\D/g, '')
-                          .replace(/(\d{2})(\d)/, '$1/$2')
-                          .replace(/(\d{2})(\d)/, '$1/$2')
-                          .replace(/(\d{4})(\d)/, '$1')
-                          .substring(0, 10);
-                        setFormDataUltimaGraduacao(formatted);
-                      }}
-                      placeholder="DD/MM/AAAA"
+                      onChange={(e) => setFormDataUltimaGraduacao(e.target.value)}
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1186,8 +1792,48 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       value={formDataMatricula}
                       onChange={(e) => setFormDataMatricula(e.target.value)}
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Histórico de Graduações */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between border-b border-obsidian-750 pb-1.5">
+                  <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest flex items-center gap-1.5">
+                    📜 Histórico de Graduações
+                  </h3>
+                </div>
+                <div className="border border-obsidian-750 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-obsidian-900 text-[10px] uppercase text-slate-400 border-b border-obsidian-750 font-bold">
+                      <tr>
+                        <th className="px-4 py-2.5">Data</th>
+                        <th className="px-4 py-2.5">Faixa & Grau</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-obsidian-750/50 bg-obsidian-900/40">
+                      {formHistoricoGraduacoes && formHistoricoGraduacoes.length > 0 ? (
+                        formHistoricoGraduacoes.slice().reverse().map((grad, idx) => (
+                          <tr key={idx} className="hover:bg-obsidian-800/30 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap font-mono">
+                              {formatMonthYear(grad.data)}
+                            </td>
+                            <td className="px-4 py-3">
+                              {renderBeltBadge(grad.faixa, grad.graus)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={2} className="px-4 py-6 text-center text-slate-500 italic">
+                            Nenhum histórico de graduação registrado.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -1206,6 +1852,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormContatoEmergenciaNome(e.target.value)}
                       placeholder="Nome do responsável / contato"
                       className="input-premium"
+                      disabled={isTeacher}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1216,6 +1863,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       onChange={(e) => setFormContatoEmergenciaTel(formatPhone(e.target.value))}
                       placeholder="(61) 99999-9999"
                       className="input-premium font-mono"
+                      disabled={isTeacher}
                     />
                   </div>
                 </div>
@@ -1224,12 +1872,13 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               {/* Status field */}
               <div className="flex items-center gap-3 pt-3">
                 <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Status Acadêmico:</span>
-                <label className="relative inline-flex items-center cursor-pointer select-none">
+                <label className={`relative inline-flex items-center select-none ${isTeacher ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     checked={formStatus === 'Ativo'}
                     onChange={(e) => setFormStatus(e.target.checked ? 'Ativo' : 'Inativo')}
                     className="sr-only peer"
+                    disabled={isTeacher}
                   />
                   <div className="w-11 h-6 bg-obsidian-950 border border-obsidian-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-gold-500 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500/10 peer-checked:border-gold-500"></div>
                   <span className={`ml-3 text-sm font-semibold transition-colors ${formStatus === 'Ativo' ? 'text-emerald-400' : 'text-slate-500'}`}>
@@ -1238,21 +1887,25 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                 </label>
               </div>
 
+              </div>
+
               {/* Footer controls */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-obsidian-750">
+              <div className="flex justify-end gap-3 p-6 border-t border-obsidian-750 shrink-0 bg-obsidian-850 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setShowFormModal(false)}
                   className="btn-obsidian"
                 >
-                  Cancelar
+                  {isTeacher ? 'Fechar' : 'Cancelar'}
                 </button>
-                <button
-                  type="submit"
-                  className="btn-gold px-6"
-                >
-                  {editingStudent ? 'Salvar Alterações' : 'Confirmar Cadastro'}
-                </button>
+                {!isTeacher && (
+                  <button
+                    type="submit"
+                    className="btn-gold px-6"
+                  >
+                    {editingStudent ? 'Salvar Alterações' : 'Confirmar Cadastro'}
+                  </button>
+                )}
               </div>
 
             </form>
@@ -1306,7 +1959,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   setImportText('');
                   setParsedImportRows([]);
                 }}
-                className="text-slate-400 hover:text-gold-500 p-1 transition-colors"
+                disabled={isImporting}
+                className="text-slate-400 hover:text-gold-500 p-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1332,10 +1986,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     onChange={handleFileUpload}
                     className="hidden"
                     id="csv-file-upload-input"
+                    disabled={isImporting}
                   />
                   <label
                     htmlFor="csv-file-upload-input"
-                    className="flex flex-col items-center justify-center border border-dashed border-obsidian-700 hover:border-gold-500/50 rounded-xl p-8 cursor-pointer bg-obsidian-900/40 hover:bg-obsidian-900/80 transition-all text-slate-400 hover:text-slate-200 h-40"
+                    className={`flex flex-col items-center justify-center border border-dashed border-obsidian-700 hover:border-gold-500/50 rounded-xl p-8 cursor-pointer bg-obsidian-900/40 hover:bg-obsidian-900/80 transition-all text-slate-400 hover:text-slate-200 h-40 ${isImporting ? 'opacity-45 pointer-events-none' : ''}`}
                   >
                     <Upload className="w-8 h-8 mb-2 text-gold-500" />
                     <span className="text-sm font-semibold">Carregar Arquivo .CSV</span>
@@ -1352,7 +2007,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       parseData(e.target.value);
                     }}
                     placeholder="Cole aqui os dados copiados da planilha (com cabeçalho)...&#10;Ex:&#10;Nome&#9;Nascimento&#9;Faixa&#9;Bairro&#9;Turma&#10;Lucas dos Anjos&#9;18/03/1987&#9;Preta&#9;Guará&#9;Adulto"
-                    className="input-premium w-full h-40 font-mono text-[10px] leading-normal"
+                    className="input-premium w-full h-40 font-mono text-[10px] leading-normal disabled:opacity-40"
+                    disabled={isImporting}
                   />
                 </div>
               </div>
@@ -1423,23 +2079,35 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   setImportText('');
                   setParsedImportRows([]);
                 }}
-                className="btn-obsidian"
+                disabled={isImporting}
+                className="btn-obsidian disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleImportConfirm}
-                disabled={parsedImportRows.length === 0}
-                className="btn-gold px-6 disabled:opacity-50 disabled:pointer-events-none"
+                disabled={parsedImportRows.length === 0 || isImporting}
+                className="btn-gold px-6 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
               >
-                Importar {parsedImportRows.length > 0 ? `${parsedImportRows.length} Alunos` : 'Membros'}
+                {isImporting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-obsidian-950" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Salvando no Banco...</span>
+                  </>
+                ) : (
+                  <span>Importar {parsedImportRows.length > 0 ? `${parsedImportRows.length} Alunos` : 'Membros'}</span>
+                )}
               </button>
             </div>
 
           </div>
         </div>
       )}
+
     </div>
   );
 };
