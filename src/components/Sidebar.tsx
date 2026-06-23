@@ -42,27 +42,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
   if (loggedUser.role === 'admin') {
     menuItems = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'profile', label: 'Meu Perfil', icon: User },
       { id: 'students', label: 'Gestão de Alunos', icon: Users },
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Professores', icon: Shield },
       { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-      { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
+      { id: 'graduation-system', label: 'Regras de Graduação', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   } else if (loggedUser.role === 'teacher') {
     menuItems = [
+      { id: 'profile', label: 'Meu Perfil', icon: User },
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
       { id: 'students', label: 'Consultar Alunos', icon: Users },
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
-      { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
+      { id: 'graduation-system', label: 'Regras de Graduação', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   } else {
     menuItems = [
       { id: 'profile', label: 'Meu Perfil', icon: User },
       { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-      { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
+      { id: 'graduation-system', label: 'Regras de Graduação', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   }
@@ -118,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
               <img 
                 src={logoSFBJJ} 
                 alt="Logo SFBJJ" 
-                className="w-20 h-20 rounded-none object-cover"
+                className="w-28 h-28 rounded-none object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}

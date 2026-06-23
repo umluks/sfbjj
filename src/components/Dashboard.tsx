@@ -182,28 +182,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setAnnouncements(prev => prev.filter(ann => ann.id !== id));
   };
 
-const getAnnouncementTimestamp = (dateStr: string): number => {
-  if (!dateStr) return 0;
-  // Caso esteja no formato YYYY-MM-DD
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3 && parts[0].length === 4) {
-      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime();
+  const getAnnouncementTimestamp = (dateStr: string): number => {
+    if (!dateStr) return 0;
+    // Caso esteja no formato YYYY-MM-DD
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime();
+      }
     }
-  }
-  // Caso esteja no formato DD/MM/YYYY
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3 && parts[2].length === 4) {
-      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+    // Caso esteja no formato DD/MM/YYYY
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3 && parts[2].length === 4) {
+        return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+      }
     }
-  }
-  
-  const parsed = Date.parse(dateStr);
-  return isNaN(parsed) ? 0 : parsed;
-};
 
-// Ordena os anúncios por data (oldest first)
+    const parsed = Date.parse(dateStr);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Ordena os anúncios por data (oldest first)
   const sortedAnnouncements = [...announcements].sort((a, b) => {
     const timeA = getAnnouncementTimestamp(a.data);
     const timeB = getAnnouncementTimestamp(b.data);
@@ -229,10 +229,10 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
 
       {/* Main Grid: Coluna Central (Dados) + Coluna Direita (Atividades/Avisos) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        
+
         {/* COLUNA CENTRAL DE DADOS (2/3 de largura) */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* Métricas e Estatísticas Rápidas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Active Students */}
@@ -280,15 +280,15 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
                 Métricas de Progressão & Treinos do Dia
               </h3>
               <span className="text-[8px] bg-zinc-100/10 text-zinc-300 px-2 py-0.5 border border-zinc-200/10 uppercase tracking-wider font-bold">
-                Elite BJJ
+                SFBJJ
               </span>
             </div>
-            
+
             <div className="space-y-4">
               <p className="text-xs text-zinc-400 leading-relaxed">
                 Estrutura de graduação baseada na consistência e refinamento técnico da flor-de-lis. Acompanhe a evolução de faixas e o cumprimento das regras do tatame.
               </p>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div className="bg-obsidian-950 p-4 border border-obsidian-800">
                   <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Instruções Técnicas</h4>
@@ -310,7 +310,7 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
 
         {/* COLUNA DE ATIVIDADES E AVISOS (1/3 de largura) - PAINEL DIREITO */}
         <div className="space-y-6 lg:border-l lg:border-obsidian-850 lg:pl-6">
-          
+
           {/* Quadro de Comunicados */}
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-obsidian-800 pb-3">
@@ -511,11 +511,10 @@ const getAnnouncementTimestamp = (dateStr: string): number => {
                             </span>
                           </div>
                         </div>
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 border ${
-                          isToday 
-                            ? 'text-zinc-950 bg-zinc-100 border-zinc-200 animate-pulse' 
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 border ${isToday
+                            ? 'text-zinc-950 bg-zinc-100 border-zinc-200 animate-pulse'
                             : 'text-zinc-400 bg-zinc-100/5 border-zinc-200/10'
-                        }`}>
+                          }`}>
                           Dia {day}
                         </span>
                       </div>

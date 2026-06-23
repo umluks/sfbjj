@@ -48,23 +48,30 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
     setTimeout(async () => {
       const username = cpfInput.trim().toLowerCase();
       const cleanedCpfInput = username.replace(/\D/g, '');
-      const adminPassword = localStorage.getItem('sfbjj_admin_password') || '#sfbjj2026';
-
       // 1. Verifica Login Admin
-      if (username === 'admin' || cleanedCpfInput === '01334314101') {
-        if (password === adminPassword) {
-          const adminStudent = students.find(s => s.cpf.replace(/\D/g, '') === '01334314101');
-          const adminName = adminStudent ? adminStudent.nome : 'Lucas Santiago Gonçalves dos Anjos';
-          onLoginSuccess({
-            role: 'admin',
-            nome: adminName
-          });
-          setLoading(false);
-          return;
-        } else {
-          setError('Senha incorreta para o administrador.');
-          setLoading(false);
-          return;
+      if (username === 'admin' || username === 'admin@sfbjj.com' || cleanedCpfInput === '01334314101') {
+        const query = supabase
+          .from('professores')
+          .select('*')
+          .eq('role', 'admin');
+
+        const { data: adminData } = await (username === 'admin'
+          ? query.eq('email', 'admin@sfbjj.com').single()
+          : query.or(`email.eq.${username},cpf.eq.${cpfInput}`).single());
+
+        if (adminData) {
+          if (adminData.senha === password) {
+            onLoginSuccess({
+              role: 'admin',
+              nome: adminData.nome
+            });
+            setLoading(false);
+            return;
+          } else {
+            setError('Senha incorreta para o administrador.');
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -75,7 +82,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
           .select('*')
           .eq('email', username)
           .single();
-          
+
         if (profData && profData.senha === password) {
           onLoginSuccess({
             role: 'teacher',

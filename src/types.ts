@@ -107,8 +107,7 @@ export interface Aluno {
   bairro: string;
   faixa: Belt;
   graus: Degree;
-  faixa_atual?: Belt;
-  graus_atuais?: Degree;
+
   dataUltimaGraduacao: string; // Data da última graduação
   contatoEmergenciaNome: string;
   contatoEmergenciaTel: string;
@@ -132,14 +131,6 @@ export interface Graduacao {
   data_graduacao: string; // YYYY-MM-DD
   professor_id: number | null;
   created_at?: string;
-}
-
-
-export interface Presenca {
-  id: number;
-  data: string; // YYYY-MM-DD
-  aulaId: number; // ID da Aula da Grade
-  alunosPresentes: number[]; // List de IDs dos Alunos presentes
 }
 
 export interface Professor {

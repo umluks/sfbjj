@@ -59,7 +59,7 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
   // Aplica filtros e busca
   const filteredStudents = useMemo(() => {
     return activeStudents.filter((student) => {
-      const currentBelt = student.faixa_atual || student.faixa;
+      const currentBelt = student.faixa;
       const matchesSearch = student.nome
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
@@ -84,8 +84,8 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
     }
     // Configuração inicial padrão baseada no estado atual do aluno
     return {
-      faixa: student.faixa_atual || student.faixa,
-      graus: student.graus_atuais ?? student.graus,
+      faixa: student.faixa,
+      graus: student.graus,
       data: new Date().toISOString().split('T')[0]
     };
   };
@@ -100,8 +100,8 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
     if (!student) return;
 
     const currentConf = individualConfigs[studentId] || {
-      faixa: student.faixa_atual || student.faixa,
-      graus: student.graus_atuais ?? student.graus,
+      faixa: student.faixa,
+      graus: student.graus,
       data: new Date().toISOString().split('T')[0]
     };
 
@@ -439,8 +439,8 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
   // CONFIRMAÇÃO INDIVIDUAL DE GRADUAÇÃO
   const handleConfirmSingleGraduation = async (student: Aluno) => {
     const config = getStudentConfig(student);
-    const faixaAntiga = student.faixa_atual || student.faixa;
-    const grausAntigos = student.graus_atuais ?? student.graus;
+    const faixaAntiga = student.faixa;
+    const grausAntigos = student.graus;
 
     // 1. Validar regras de faixa por idade
     const age = getBjjAge(student.dataNascimento);
@@ -500,8 +500,6 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
         .update({
           faixa: config.faixa,
           graus: config.graus,
-          faixa_atual: config.faixa,
-          graus_atuais: config.graus,
           dataUltimaGraduacao: config.data,
           status: 'Ativo'
         })
@@ -519,8 +517,6 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
               ...s,
               faixa: config.faixa,
               graus: config.graus,
-              faixa_atual: config.faixa,
-              graus_atuais: config.graus,
               dataUltimaGraduacao: config.data,
               status: 'Ativo',
               historicoGraduacoes: [
@@ -827,8 +823,8 @@ export const BatchGraduation: React.FC<BatchGraduationProps> = ({
               ) : (
                 paginatedStudents.map((student) => {
                   const isSelected = selectedStudentIds.includes(student.id);
-                  const currentBelt = student.faixa_atual || student.faixa;
-                  const currentDegrees = student.graus_atuais ?? student.graus;
+                  const currentBelt = student.faixa;
+                  const currentDegrees = student.graus;
                   const config = getStudentConfig(student);
                   const isProcessing = studentProcessing[student.id] || false;
                   const successMsg = studentSuccess[student.id];

@@ -12,19 +12,18 @@ import { LandingPage } from './components/LandingPage';
 import { BatchGraduation } from './components/BatchGraduation';
 import { GraduationSystem } from './components/GraduationSystem';
 import type { Aluno, Aviso, LoggedUser } from './types';
-import { INITIAL_ANNOUNCEMENTS } from './mockData';
 import { supabase } from './lib/supabase';
 
 function App() {
   const [loggedUser, setLoggedUser] = useState<LoggedUser | null>(() => {
-    const saved = localStorage.getItem('sfbjj_logged_user');
+    const saved = sessionStorage.getItem('sfbjj_logged_user');
     return saved ? JSON.parse(saved) : null;
   });
 
   const [showLogin, setShowLogin] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<string>(() => {
-    const saved = localStorage.getItem('sfbjj_logged_user');
+    const saved = sessionStorage.getItem('sfbjj_logged_user');
     if (saved) {
       const user = JSON.parse(saved) as LoggedUser;
       if (user.role === 'admin') return 'dashboard';
@@ -60,10 +59,7 @@ function App() {
     fetchStudents();
   }, []);
 
-  const [announcements, setAnnouncements] = useState<Aviso[]>(() => {
-    const saved = localStorage.getItem('sfbjj_announcements');
-    return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
-  });
+  const [announcements, setAnnouncements] = useState<Aviso[]>([]);
 
   useEffect(() => {
     async function fetchAnnouncements() {
@@ -74,26 +70,20 @@ function App() {
     }
     fetchAnnouncements();
   }, []);
-  // Sincroniza as alterações de estado com o localStorage
-  useEffect(() => {
-    localStorage.setItem('sfbjj_students_v3', JSON.stringify(students));
-  }, [students]);
 
   // Ajusta a aba de roteamento se as permissões de função não corresponderem
   useEffect(() => {
     if (loggedUser) {
       if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
         setCurrentTab('schedule');
-      } else if (loggedUser.role === 'admin' && currentTab === 'profile') {
-        setCurrentTab('dashboard');
       }
     }
   }, [loggedUser, currentTab]);
 
   const handleLoginSuccess = (user: LoggedUser) => {
-    localStorage.setItem('sfbjj_logged_user', JSON.stringify(user));
+    sessionStorage.setItem('sfbjj_logged_user', JSON.stringify(user));
     setLoggedUser(user);
     if (user.role === 'admin') {
       setCurrentTab('dashboard');
@@ -105,13 +95,9 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('sfbjj_logged_user');
+    sessionStorage.removeItem('sfbjj_logged_user');
     setLoggedUser(null);
   };
-
-  useEffect(() => {
-    localStorage.setItem('sfbjj_announcements', JSON.stringify(announcements));
-  }, [announcements]);
 
 
 

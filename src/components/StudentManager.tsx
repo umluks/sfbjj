@@ -227,8 +227,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
     if (editingStudent) {
       // Validar rebaixamento de faixa ou graus
-      const oldFaixa = editingStudent.faixa_atual || editingStudent.faixa;
-      const oldGraus = editingStudent.graus_atuais ?? editingStudent.graus;
+      const oldFaixa = editingStudent.faixa;
+      const oldGraus = editingStudent.graus;
 
       if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
         alert(`Não é permitido rebaixar a faixa do aluno de ${oldFaixa} para ${formFaixa}.`);

@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   Megaphone,
-  X
+  X,
+  Shield,
+  Users,
+  Activity,
+  Info,
+  Sparkles,
+  Flame
 } from 'lucide-react';
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
 import bjjKidsClass from '../assets/bjj_kids_class.png';
@@ -11,21 +17,59 @@ import bjjTeamGroup from '../assets/bjj_team_group.png';
 import type { Aviso } from '../types';
 import { Contact } from './Contact';
 import { GraduationSystem } from './GraduationSystem';
+import { supabase } from '../lib/supabase';
 
 interface LandingPageProps {
   announcements?: Aviso[];
   onAccessLogin: () => void;
 }
 
+const getDiasSemanaString = (diasSemana: number[]): string => {
+  const nomesDias: Record<number, string> = {
+    1: 'Segunda',
+    2: 'Terça',
+    3: 'Quarta',
+    4: 'Quinta',
+    5: 'Sexta',
+    6: 'Sábado',
+    7: 'Domingo'
+  };
+  if (!diasSemana || diasSemana.length === 0) return '';
+  const dias = diasSemana.map(d => nomesDias[d]).filter(Boolean);
+  if (dias.length === 1) return dias[0];
+  if (dias.length === 2) return `${dias[0]} & ${dias[1]}`;
+  return dias.join(', ');
+};
+
 export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], onAccessLogin }) => {
   const [showGraduationModal, setShowGraduationModal] = useState(false);
+  const [schedule, setSchedule] = useState<any[]>([]);
 
-  // Horários customizados para exibição
-  const quickSchedule = [
-    { hora: '18:30 - 19:30', categoria: 'Infantil', dias: 'Segunda & Quarta', professor: 'Lucas dos Anjos' },
-    { hora: '19:30 - 21:00', categoria: 'Adulto', dias: 'Segunda & Quarta', professor: 'Lucas dos Anjos' },
-    { hora: '19:00 - 21:00', categoria: 'Open Match', dias: 'Sexta-feira', professor: 'Lucas dos Anjos' },
-  ];
+  useEffect(() => {
+    async function fetchSchedule() {
+      const { data, error } = await supabase.from('aulas').select('*');
+      if (!error && data) {
+        const mapped = data.map((d: any) => {
+          let dias = d.diasSemana;
+          if (typeof dias === 'string') {
+            try {
+              dias = JSON.parse(dias);
+            } catch {
+              dias = [];
+            }
+          }
+          return {
+            hora: d.hora,
+            categoria: d.categoria,
+            dias: getDiasSemanaString(dias),
+            professor: d.professor
+          };
+        });
+        setSchedule(mapped);
+      }
+    }
+    fetchSchedule();
+  }, []);
 
   return (
     <div className="bg-obsidian-950 text-slate-100 min-h-screen font-sans selection:bg-slate-200/25 selection:text-white overflow-x-hidden">
@@ -38,7 +82,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               <img
                 src={logoSFBJJ}
                 alt="Sagrada Família BJJ"
-                className="w-11 h-11 rounded-full object-cover"
+                className="w-14 h-14 rounded-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
@@ -59,12 +103,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             {announcements && announcements.length > 0 && (
               <a href="#avisos" className="hover:text-slate-100 transition-colors duration-300">Avisos</a>
             )}
+            <a href="#regras" className="hover:text-slate-100 transition-colors duration-300">Regras do Tatame</a>
             <a href="#horarios" className="hover:text-slate-100 transition-colors duration-300">Horários & Localização</a>
             <button
               onClick={() => setShowGraduationModal(true)}
-              className="hover:text-slate-100 transition-colors duration-300 uppercase"
+              className="hover:text-slate-100 transition-colors duration-300 uppercase animate-pulse-subtle"
             >
-              Graduação IBJJF
+              Regras de Graduação
             </button>
             <a href="#contato" className="hover:text-slate-100 transition-colors duration-300">Contato</a>
             <button
@@ -103,7 +148,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               <img
                 src={logoSFBJJ}
                 alt="Logo Sagrada Família BJJ"
-                className="w-24 h-24 rounded-full object-cover"
+                className="w-32 h-32 rounded-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
@@ -133,7 +178,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               onClick={() => setShowGraduationModal(true)}
               className="w-full sm:w-auto btn-obsidian px-10 py-4 text-sm font-bold tracking-wider uppercase border border-obsidian-800"
             >
-              Sistema de Graduação
+              Regras de Graduação
             </button>
           </div>
         </div>
@@ -242,6 +287,88 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
         </div>
       </section>
 
+      {/* SEÇÃO REGRAS DO TATAME */}
+      <section id="regras" className="py-24 px-4 max-w-7xl mx-auto border-b border-obsidian-850 scroll-mt-20 bg-gradient-to-b from-transparent to-obsidian-900/10">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-xs uppercase font-black tracking-widest text-slate-400 flex items-center justify-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-gold-500" /> Diretrizes e Conduta
+          </h2>
+          <p className="text-3xl sm:text-4xl font-extrabold text-slate-100 mt-2">
+            Regras de Convivência e Tatame
+          </p>
+          <p className="text-slate-450 mt-4 text-xs sm:text-sm leading-relaxed">
+            Para garantir um ambiente seguro, respeitoso e propício para o aprendizado técnico, todos os atletas da Sagrada Família BJJ devem seguir nosso código de tatame.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Card 1: Higiene e Kimono */}
+          <div className="p-6 rounded-2xl bg-obsidian-900/50 border border-obsidian-850 flex flex-col justify-between hover:border-gold-500/20 hover:bg-obsidian-900/80 transition-all duration-300 shadow-xl group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-center text-gold-400 mb-6 group-hover:bg-gold-500/10 transition-colors">
+                <Shield className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-200 mb-3 group-hover:text-slate-100 transition-colors">Higiene & Uniforme</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Kimonos devem estar limpos e secos a cada treino. Para aulas de Submission (No-Gi), é obrigatório o uso de rashguard oficial e bermuda sem zíperes ou botões. Mantenha unhas limpas e devidamente aparadas para evitar cortes acidentais nos companheiros de treino.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: Contaminação Externa */}
+          <div className="p-6 rounded-2xl bg-obsidian-900/50 border border-obsidian-850 flex flex-col justify-between hover:border-gold-500/20 hover:bg-obsidian-900/80 transition-all duration-300 shadow-xl group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-center text-gold-400 mb-6 group-hover:bg-gold-500/10 transition-colors">
+                <Flame className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-200 mb-3 group-hover:text-slate-100 transition-colors">Prevenção e Sapateiras</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Nenhum aluno deve pisar descalço fora da área de tatame para evitar contaminação bacteriana (como micose ou infecções de pele). Chinelos ou calçados devem ser usados nas áreas comuns e deixados organizados nas sapateiras externas antes do treino.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Respeito e Hierarquia */}
+          <div className="p-6 rounded-2xl bg-obsidian-900/50 border border-obsidian-850 flex flex-col justify-between hover:border-gold-500/20 hover:bg-obsidian-900/80 transition-all duration-300 shadow-xl group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-center text-gold-400 mb-6 group-hover:bg-gold-500/10 transition-colors">
+                <Users className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-200 mb-3 group-hover:text-slate-100 transition-colors">Etiqueta & Respeito</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Cumprimente respeitosamente todos os professores, graduados e companheiros de treino ao entrar e sair da área do dojo. Mantenha uma postura de escuta atenta durante as explicações técnicas e acolha de forma voluntária os novos praticantes integrando-os nas turmas.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Frequência e Constância */}
+          <div className="p-6 rounded-2xl bg-obsidian-900/50 border border-obsidian-850 flex flex-col justify-between hover:border-gold-500/20 hover:bg-obsidian-900/80 transition-all duration-300 shadow-xl group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-center text-gold-400 mb-6 group-hover:bg-gold-500/10 transition-colors">
+                <Activity className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-200 mb-3 group-hover:text-slate-100 transition-colors">Frequência Mínima</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                A constância é a chave para a evolução técnica no Jiu-Jitsu. Recomendamos a presença mínima em pelo menos 2 sessões semanais de treinos. Caso o atleta fique ausente sem justificativa por mais de 10 dias úteis, o protocolo de retenção da secretaria será ativado para entender a ausência.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 5: Capacidade do Tatame */}
+          <div className="p-6 rounded-2xl bg-obsidian-900/50 border border-obsidian-850 flex flex-col justify-between hover:border-gold-500/20 hover:bg-obsidian-900/80 transition-all duration-300 shadow-xl group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-center text-gold-400 mb-6 group-hover:bg-gold-500/10 transition-colors">
+                <Info className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-200 mb-3 group-hover:text-slate-100 transition-colors">Capacidade e Agendamento</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                A capacidade máxima de segurança para sparrings (rolas) simultâneos no nosso espaço físico é de 24 atletas. Para evitar superlotação e zelar pela integridade física dos membros, é obrigatório realizar a reserva prévia de sua vaga no horário das aulas pelo aplicativo.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* HORÁRIOS E LOCALIZAÇÃO */}
       <section id="horarios" className="py-24 px-4 max-w-7xl mx-auto scroll-mt-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
@@ -261,7 +388,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
         </div>
 
         <div className="space-y-3">
-          {quickSchedule.map((item, index) => (
+          {schedule.map((item, index) => (
             <div
               key={index}
               className="p-4 rounded-xl bg-obsidian-900 border border-obsidian-800 flex items-center justify-between gap-4 hover:border-gold-500/10 transition-colors"
@@ -285,6 +412,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               </div>
             </div>
           ))}
+          {schedule.length === 0 && (
+            <p className="text-xs text-slate-500 uppercase tracking-wider py-4 font-bold">Nenhum horário cadastrado no momento.</p>
+          )}
         </div>
 
         <div className="p-4 rounded-xl bg-obsidian-900/50 border border-obsidian-850 text-xs text-slate-400 leading-relaxed">
@@ -365,7 +495,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
           <img
             src={logoSFBJJ}
             alt="Logo Sagrada Família BJJ"
-            className="w-10 h-10 rounded-full border border-obsidian-750 object-cover"
+            className="w-14 h-14 rounded-full border border-obsidian-750 object-cover"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
@@ -411,8 +541,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
           {announcements && announcements.length > 0 && (
             <li><a href="#avisos" className="hover:text-slate-200 transition-colors">Avisos</a></li>
           )}
+          <li><a href="#regras" className="hover:text-slate-200 transition-colors">Regras do Tatame</a></li>
           <li><a href="#horarios" className="hover:text-slate-200 transition-colors">Horários Semanal</a></li>
-          <li><button onClick={() => setShowGraduationModal(true)} className="hover:text-slate-250 transition-colors text-left uppercase">Graduação IBJJF</button></li>
+          <li><button onClick={() => setShowGraduationModal(true)} className="hover:text-slate-250 transition-colors text-left uppercase">Regras de Graduação</button></li>
           <li><a href="#contato" className="hover:text-slate-200 transition-colors">Contato</a></li>
           <li><button onClick={onAccessLogin} className="hover:text-slate-200 transition-colors text-left">Acessar Painel</button></li>
         </ul>
