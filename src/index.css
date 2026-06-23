@@ -5,6 +5,10 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-obsidian-900 text-slate-100 font-sans antialiased overflow-x-hidden;
     color-scheme: dark;
@@ -36,6 +40,14 @@
 
   .card-premium {
     @apply bg-obsidian-850/80 border border-obsidian-800 rounded-none p-6 shadow-2xl backdrop-blur-lg transition-all duration-300 hover:border-zinc-500/20 hover:shadow-gold-glow;
+  }
+
+  .bg-glass {
+    @apply bg-obsidian-900/50 backdrop-blur-md border border-obsidian-850;
+  }
+
+  .bg-glass-premium {
+    @apply bg-obsidian-850/45 backdrop-blur-xl border border-obsidian-800/60 shadow-2xl;
   }
 
   .input-premium {
@@ -81,17 +93,48 @@
 }
 
 @keyframes float {
-
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(0);
   }
-
   50% {
-    transform: translateY(-4px);
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.05;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: scale(1.15);
   }
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 10s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

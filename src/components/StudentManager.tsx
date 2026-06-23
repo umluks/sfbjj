@@ -209,10 +209,30 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
   // Salva o aluno (Criar ou Atualizar)
   const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formNome || !formDataNascimento || !formBairro) return;
+    if (!formNome || !formDataNascimento) return;
+
+    // Validar CPF obrigatório
+    const cleanedCpf = formCpf.replace(/\D/g, '');
+    if (!cleanedCpf) {
+      alert('O CPF é obrigatório.');
+      return;
+    }
+    if (cleanedCpf.length !== 11) {
+      alert('O CPF deve conter exatamente 11 dígitos.');
+      return;
+    }
+
+    const age = getBjjAge(formDataNascimento);
+
+    // Validar Contato de Emergência para menores de idade
+    if (age < 18) {
+      if (!formContatoEmergenciaNome.trim() || !formContatoEmergenciaTel.trim()) {
+        alert('Para menores de idade, o Contato de Emergência (Nome e Telefone) é obrigatório.');
+        return;
+      }
+    }
 
     // Validar regras de faixa por idade
-    const age = getBjjAge(formDataNascimento);
     const allowed = getBeltsByAge(formDataNascimento);
     if (!allowed.includes(formFaixa)) {
       alert(`A faixa "${formFaixa}" não é permitida para a idade de ${age} anos.`);
@@ -1582,6 +1602,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                         if (!allowed.includes(formFaixa)) {
                           setFormFaixa(allowed[0]);
                         }
+                        if (newDate) {
+                          const age = getBjjAge(newDate);
+                          if (age >= 4 && age <= 12) {
+                            setFormTurma('Kids');
+                          } else if (age >= 13) {
+                            setFormTurma('Adulto');
+                          }
+                        }
                       }}
                       className="input-premium"
                       required
@@ -1589,14 +1617,13 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Bairro *</label>
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Bairro</label>
                     <input
                       type="text"
                       value={formBairro}
                       onChange={(e) => setFormBairro(e.target.value)}
                       placeholder="Ex: Asa Sul, Guará"
                       className="input-premium"
-                      required
                       disabled={isTeacher}
                     />
                   </div>
@@ -1630,7 +1657,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">CPF</label>
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">CPF *</label>
                     <input
                       type="text"
                       value={formCpf}
@@ -1654,13 +1681,13 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Turma *</label>
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Turma (Automática)</label>
                     <select
                       value={formTurma}
                       onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
-                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold"
+                      className="input-premium bg-obsidian-950 text-slate-200 font-semibold opacity-75 cursor-not-allowed"
                       required
-                      disabled={isTeacher}
+                      disabled={true}
                     >
                       <option value="Adulto">Adulto</option>
                       <option value="Kids">Kids</option>
@@ -1840,12 +1867,14 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               {/* Seção 3: Emergência */}
               <div className="space-y-4 pt-2">
                 <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest border-b border-obsidian-750 pb-1.5 flex items-center gap-1.5">
-                  <Heart className="w-3.5 h-3.5 text-red-500" /> Contato de Emergência
+                  <Heart className="w-3.5 h-3.5 text-red-500" /> Contato de Emergência {getBjjAge(formDataNascimento) < 18 && <span className="text-xs text-red-400 normal-case font-normal">(Obrigatório para menores)</span>}
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Nome de Emergência</label>
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                      Nome de Emergência {getBjjAge(formDataNascimento) < 18 && <span className="text-red-500 font-bold">*</span>}
+                    </label>
                     <input
                       type="text"
                       value={formContatoEmergenciaNome}
@@ -1856,7 +1885,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Telefone de Emergência</label>
+                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                      Telefone de Emergência {getBjjAge(formDataNascimento) < 18 && <span className="text-red-500 font-bold">*</span>}
+                    </label>
                     <input
                       type="text"
                       value={formContatoEmergenciaTel}

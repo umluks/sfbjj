@@ -249,8 +249,30 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
 
     if (!student) return;
 
-    // Validar faixa por idade
+    // Validar CPF obrigatório
+    const cleanedCpf = formCpf.replace(/\D/g, '');
+    if (!cleanedCpf) {
+      setInfoError('O CPF é obrigatório.');
+      setTimeout(() => setInfoError(null), 4000);
+      return;
+    }
+    if (cleanedCpf.length !== 11) {
+      setInfoError('O CPF deve conter exatamente 11 dígitos.');
+      setTimeout(() => setInfoError(null), 4000);
+      return;
+    }
+
+    // Validar Contato de Emergência para menores de idade
     const age = getBjjAge(formDataNascimento);
+    if (age < 18) {
+      if (!formContatoEmergenciaNome.trim() || !formContatoEmergenciaTel.trim()) {
+        setInfoError('Para menores de idade, o Contato de Emergência (Nome e Telefone) é obrigatório.');
+        setTimeout(() => setInfoError(null), 4000);
+        return;
+      }
+    }
+
+    // Validar faixa por idade
     const allowed = getBeltsByAge(formDataNascimento);
     if (!allowed.includes(formFaixa)) {
       setInfoError(`A faixa "${formFaixa}" não é permitida para a idade de ${age} anos.`);
@@ -787,6 +809,14 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           if (!allowed.includes(formFaixa)) {
                             setFormFaixa(allowed[0]);
                           }
+                          if (newDate) {
+                            const age = getBjjAge(newDate);
+                            if (age >= 4 && age <= 12) {
+                              setFormTurma('Kids');
+                            } else if (age >= 13) {
+                              setFormTurma('Adulto');
+                            }
+                          }
                         }}
                         className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         required
@@ -826,10 +856,14 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 {/* Emergency Contact Header */}
                 {isStudent && (
                   <div className="border-t border-obsidian-750 pt-4 mt-2">
-                    <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Contato de Emergência</h3>
+                    <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">
+                      Contato de Emergência {getBjjAge(formDataNascimento) < 18 && <span className="text-xs text-red-400 normal-case font-normal">(Obrigatório para menores)</span>}
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nome do Contato</label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                          Nome do Contato {getBjjAge(formDataNascimento) < 18 && <span className="text-red-500 font-bold">*</span>}
+                        </label>
                         <input
                           type="text"
                           value={formContatoEmergenciaNome}
@@ -839,7 +873,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone do Contato</label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                          Telefone do Contato {getBjjAge(formDataNascimento) < 18 && <span className="text-red-500 font-bold">*</span>}
+                        </label>
                         <input
                           type="text"
                           value={formContatoEmergenciaTel}
@@ -913,7 +949,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF</label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF *</label>
                         <input
                           type="text"
                           value={formCpf}
@@ -972,11 +1008,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Principal</label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Principal (Automática)</label>
                         <select
                           value={formTurma}
                           onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
                           className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={true}
                         >
                           <option value="Adulto">Adulto</option>
                           <option value="Kids">Kids</option>

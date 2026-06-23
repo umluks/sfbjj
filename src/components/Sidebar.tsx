@@ -47,24 +47,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Professores', icon: Shield },
       { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
-      { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-      { id: 'graduation-system', label: 'Regras de Graduação', icon: BookOpen },
+      { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
+      { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   } else if (loggedUser.role === 'teacher') {
     menuItems = [
       { id: 'profile', label: 'Meu Perfil', icon: User },
-      { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
+      { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
       { id: 'students', label: 'Consultar Alunos', icon: Users },
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
-      { id: 'graduation-system', label: 'Regras de Graduação', icon: BookOpen },
+      { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   } else {
     menuItems = [
       { id: 'profile', label: 'Meu Perfil', icon: User },
-      { id: 'schedule', label: 'Grade de Horários', icon: Calendar },
-      { id: 'graduation-system', label: 'Regras de Graduação', icon: BookOpen },
+      { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
+      { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
   }
@@ -113,10 +113,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Brand/Logo Section */}
-        <div className="flex flex-col items-center justify-center text-center p-8 border-b border-obsidian-900">
+        <button
+          onClick={() => handleTabChange(loggedUser.role === 'admin' ? 'dashboard' : 'profile')}
+          className="flex flex-col items-center justify-center text-center p-8 border-b border-obsidian-900 w-full focus:outline-none group"
+        >
           <div className="relative mb-4">
-            <div className="absolute -inset-2 bg-gradient-to-r from-zinc-200/5 to-zinc-400/5 blur-md opacity-25" />
-            <div className="relative p-0.5 bg-obsidian-900 border border-obsidian-800 rounded-none shadow-lg">
+            <div className="absolute -inset-2 bg-gradient-to-r from-zinc-200/5 to-zinc-400/5 blur-md opacity-25 group-hover:opacity-40 transition-opacity duration-300" />
+            <div className="relative p-0.5 bg-obsidian-900 border border-obsidian-800 rounded-none shadow-lg group-hover:scale-105 transition-transform duration-300">
               <img 
                 src={logoSFBJJ} 
                 alt="Logo SFBJJ" 
@@ -128,14 +131,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-black tracking-widest text-[13px] text-zinc-100 uppercase leading-none">
+            <span className="font-black tracking-widest text-[13px] text-zinc-100 uppercase leading-none group-hover:text-white transition-colors duration-300">
               Sagrada Família
             </span>
-            <span className="text-zinc-500 font-bold tracking-widest text-[8px] uppercase mt-2.5">
+            <span className="text-zinc-500 font-bold tracking-widest text-[8px] uppercase mt-2.5 group-hover:text-zinc-400 transition-colors duration-300">
               Brasília - Jiu-Jitsu
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Navigation Items */}
         <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">

@@ -132,10 +132,16 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
       {/* Main Container */}
       <div className="w-full max-w-md z-10">
         {/* Brand Logo & Title */}
-        <div className="flex flex-col items-center mb-10 text-center">
-          <div className="relative mb-4 group">
+        <button
+          onClick={() => {
+            onBackToLanding();
+            window.scrollTo({ top: 0 });
+          }}
+          className="flex flex-col items-center mb-10 text-center w-full focus:outline-none group"
+        >
+          <div className="relative mb-4">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-slate-200/20 to-slate-400/20 rounded-full blur opacity-45 group-hover:opacity-75 transition duration-500" />
-            <div className="relative p-1.5 bg-obsidian-900 border border-obsidian-850 rounded-full flex items-center justify-center shadow-xl">
+            <div className="relative p-1.5 bg-obsidian-900 border border-obsidian-850 rounded-full flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300">
               <img
                 src={logoSFBJJ}
                 alt="Sagrada Família BJJ Logo"
@@ -149,13 +155,13 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
               <Flame className="w-10 h-10 text-slate-300 fallback-icon hidden" />
             </div>
           </div>
-          <h1 className="text-xl font-black tracking-wider text-slate-100 uppercase leading-none">
+          <h1 className="text-xl font-black tracking-wider text-slate-100 uppercase leading-none group-hover:text-white transition-colors">
             Sagrada Família <span className="text-gold-550 font-black">BJJ</span>
           </h1>
-          <p className="text-[10px] text-slate-550 font-bold tracking-widest uppercase mt-2">
+          <p className="text-[10px] text-slate-550 font-bold tracking-widest uppercase mt-2 group-hover:text-slate-400 transition-colors">
             Portal do Aluno & Gestão
           </p>
-        </div>
+        </button>
 
         {/* Glassmorphic Login Card */}
         <div className="bg-obsidian-800/40 border border-obsidian-750/60 rounded-2xl p-8 shadow-2xl backdrop-blur-lg relative overflow-hidden">
