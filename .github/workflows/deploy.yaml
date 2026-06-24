@@ -46,15 +46,53 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      INSTANCE_KEY: ${{secrets.INSTANCE_KEY}}
-      PUBLIC_IP: ${{secrets.PUBLIC_IP}}
+      INSTANCE_KEY: ${{ secrets.INSTANCE_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
 
     steps:
-     - name: Deploy EC2 SSH
-       run: |
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Inicializar Terraform
+        run: |
+          # Caso queira passar o nome do bucket via segredo no GitHub Actions, descomente a linha abaixo e comente o 'terraform init' simples:
+          # terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          terraform init
+        working-directory: ./terraform
+
+      - name: Aplicar Infraestrutura Terraform
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Obter IP Público da EC2
+        id: get_ip
+        run: |
+          PUBLIC_IP_OUTPUT=$(terraform output -raw ec2_public_ip)
+          echo "PUBLIC_IP=$PUBLIC_IP_OUTPUT" >> $GITHUB_ENV
+        working-directory: ./terraform
+
+      - name: Deploy EC2 SSH
+        run: |
           echo "$INSTANCE_KEY" > chave-site.pem
           chmod 400 chave-site.pem
           ssh -i chave-site.pem -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP << EOF
+            # Aguarda o Docker estar pronto, caso a instância tenha acabado de ser criada
+            for i in {1..30}; do
+              if docker ps &>/dev/null; then
+                echo "Docker está rodando!"
+                break
+              fi
+              echo "Aguardando inicialização do Docker..."
+              sleep 5
+            done
+
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
             echo "parando container antigo site"
             docker stop sfbjj || true
