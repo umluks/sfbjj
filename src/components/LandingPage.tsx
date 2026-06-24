@@ -17,6 +17,9 @@ import type { Aviso } from '../types';
 import { Contact } from './Contact';
 import { GraduationSystem } from './GraduationSystem';
 import { supabase } from '../lib/supabase';
+import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallPrompt } from './PWAInstallPrompt';
+
 
 interface LandingPageProps {
   announcements?: Aviso[];
@@ -45,6 +48,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Hook do PWA
+  const { isInstallable, isInstalled, showIOSPrompt, handleInstallClick, closeIOSPrompt } = usePWAInstall();
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const showInstallButton = isInstallable || (isIOS && !isInstalled);
+
 
   useEffect(() => {
     async function fetchSchedule() {
@@ -120,6 +129,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             </button>
             <a href="#horarios" className="hover:text-slate-100 transition-colors duration-300">Horários & Localização</a>
             <a href="#contato" className="hover:text-slate-100 transition-colors duration-300">Contato</a>
+            
+            {/* Botão de Instalação PWA */}
+            {showInstallButton && (
+              <button
+                onClick={handleInstallClick}
+                className="text-zinc-200 hover:text-white transition-colors duration-300 uppercase border border-zinc-700/50 px-3 py-1.5 bg-zinc-900/50 hover:bg-zinc-800/60"
+                aria-label="Instalar aplicativo PWA"
+              >
+                Instalar App
+              </button>
+            )}
+
             <button
               onClick={onAccessLogin}
               className="btn-gold text-[10px] tracking-widest uppercase font-black px-4 py-2"
@@ -188,6 +209,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               >
                 Contato
               </a>
+
+              {/* Botão PWA no Menu Mobile */}
+              {showInstallButton && (
+                <button
+                  onClick={() => {
+                    handleInstallClick();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full text-center text-[10px] tracking-widest uppercase font-black py-3 border border-zinc-700/60 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-200"
+                  aria-label="Instalar aplicativo PWA"
+                >
+                  Instalar Aplicativo
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   onAccessLogin();
@@ -262,6 +298,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             >
               Acessar Painel (Login)
             </button>
+            
+            {showInstallButton && (
+              <button
+                onClick={handleInstallClick}
+                className="w-full sm:w-auto btn-obsidian px-10 py-4 text-sm font-bold tracking-wider uppercase border border-zinc-500/40 text-zinc-200 hover:border-zinc-200 active:scale-[0.98] bg-zinc-950/40"
+                aria-label="Instalar aplicativo PWA"
+              >
+                Instalar Aplicativo
+              </button>
+            )}
+
             <button
               onClick={() => setShowGraduationModal(true)}
               className="w-full sm:w-auto btn-obsidian px-10 py-4 text-sm font-bold tracking-wider uppercase border border-obsidian-800 active:scale-[0.98]"
@@ -678,6 +725,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
           </div>
         </div>
       )}
+
+      {/* Modal PWA para iOS */}
+      <PWAInstallPrompt isOpen={showIOSPrompt} onClose={closeIOSPrompt} />
 
     </div>
   );

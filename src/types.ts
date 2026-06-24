@@ -75,7 +75,7 @@ export type Degree = 0 | 1 | 2 | 3 | 4;
 
 export type PaymentStatus = 'Pago' | 'Pendente' | 'Atrasado';
 
-export type Gender = 'Masculino' | 'Feminino' | 'Outro';
+export type Gender = 'Masculino' | 'Feminino';
 
 export interface GraduacaoHistorico {
   id: number;
@@ -166,9 +166,59 @@ export interface Aviso {
   fixado: boolean;
 }
 
+export interface Administrador {
+  id: number;
+  nome: string;
+  email: string;
+  senha?: string;
+  foto_perfil?: string;
+  created_at?: string;
+}
+
 export interface LoggedUser {
   role: 'admin' | 'student' | 'teacher';
   alunoId?: number;
   professorId?: number;
+  adminId?: number;
   nome: string;
 }
+
+export const BAIRROS_DF = [
+  'Água Quente',
+  'Águas Claras',
+  'Arapoanga',
+  'Arniqueira',
+  'Asa Norte',
+  'Asa Sul',
+  'Brazlândia',
+  'Candangolândia',
+  'Ceilândia',
+  'Cruzeiro',
+  'Fercal',
+  'Gama',
+  'Guará',
+  'Itapoã',
+  'Jardim Botânico',
+  'Lago Norte',
+  'Lago Sul',
+  'Núcleo Bandeirante',
+  'Paranoá',
+  'Park Way',
+  'Planaltina',
+  'Plano Piloto',
+  'Recanto das Emas',
+  'Riacho Fundo I',
+  'Riacho Fundo II',
+  'Samambaia',
+  'Santa Maria',
+  'São Sebastião',
+  'SCIA (Estrutural)',
+  'SIA',
+  'Sobradinho I',
+  'Sobradinho II',
+  'Sol Nascente/Pôr do Sol',
+  'Sudoeste / Octogonal',
+  'Taguatinga',
+  'Varjão',
+  'Vicente Pires'
+];

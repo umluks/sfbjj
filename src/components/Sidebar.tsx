@@ -12,10 +12,14 @@ import {
   Mail,
   Shield,
   Award,
-  BookOpen
+  BookOpen,
+  Download
 } from 'lucide-react';
 import type { LoggedUser } from '../types';
 import logoSFBJJ from '../assets/logo-sfbjj.jpg';
+import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallPrompt } from './PWAInstallPrompt';
+
 
 interface SidebarProps {
   currentTab: string;
@@ -36,6 +40,12 @@ const getShortName = (fullName: string) => {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, loggedUser, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Hook do PWA
+  const { isInstallable, isInstalled, showIOSPrompt, handleInstallClick, closeIOSPrompt } = usePWAInstall();
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const showInstallButton = isInstallable || (isIOS && !isInstalled);
+
 
   // Itens de menu de navegação baseados em função (role)
   let menuItems: any[] = [];
@@ -182,6 +192,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
               </p>
             </div>
           </div>
+          
+          {/* Botão de Instalação PWA */}
+          {showInstallButton && (
+            <button
+              onClick={handleInstallClick}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-none text-zinc-200 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/60 transition-all duration-200 font-bold text-[9px] uppercase tracking-widest border border-zinc-800/40"
+              aria-label="Instalar aplicativo PWA"
+            >
+              <Download className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Instalar Aplicativo</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               onLogout();
@@ -204,6 +227,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
           </span>
         </div>
       </aside >
+      
+      {/* Modal PWA para iOS */}
+      <PWAInstallPrompt isOpen={showIOSPrompt} onClose={closeIOSPrompt} />
     </>
   );
 };

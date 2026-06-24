@@ -35,6 +35,21 @@ function App() {
 
   // Estado Unificado
   const [students, setStudents] = useState<Aluno[]>([]);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
 
   useEffect(() => {
     async function fetchStudents() {
@@ -166,32 +181,62 @@ function App() {
   if (!loggedUser) {
     if (showLogin) {
       return (
-        <Login 
-          students={students} 
-          onLoginSuccess={handleLoginSuccess} 
-          onBackToLanding={() => setShowLogin(false)} 
-        />
+        <div className="min-h-screen flex flex-col bg-obsidian-950">
+          {isOffline && (
+            <div className="bg-red-950/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase sticky top-0 z-[9999] flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+              Você está no Modo Offline. O login requer conexão com a internet.
+            </div>
+          )}
+          <div className="flex-1 flex flex-col justify-center">
+            <Login 
+              students={students} 
+              onLoginSuccess={handleLoginSuccess} 
+              onBackToLanding={() => setShowLogin(false)} 
+            />
+          </div>
+        </div>
       );
     }
-    return <LandingPage announcements={announcements} onAccessLogin={() => setShowLogin(true)} />;
+    return (
+      <div className="min-h-screen flex flex-col bg-obsidian-950">
+        {isOffline && (
+          <div className="bg-red-950/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase fixed top-0 w-full z-[9999] flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            Você está no Modo Offline. Algumas informações podem estar desatualizadas.
+          </div>
+        )}
+        <div className={isOffline ? 'pt-8' : ''}>
+          <LandingPage announcements={announcements} onAccessLogin={() => setShowLogin(true)} />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-obsidian-950 text-slate-100 font-sans">
-      {/* Sidebar Navigation */}
-      <Sidebar 
-        currentTab={currentTab} 
-        setCurrentTab={setCurrentTab} 
-        loggedUser={loggedUser}
-        onLogout={handleLogout}
-      />
-
-      {/* Main Workspace Container */}
-      <main className="flex-1 overflow-y-auto h-screen relative bg-obsidian-950">
-        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 md:p-8">
-          {renderContent()}
+    <div className="flex flex-col min-h-screen bg-obsidian-950 text-slate-100 font-sans">
+      {isOffline && (
+        <div className="bg-red-950/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase z-[9999] flex items-center justify-center gap-2 w-full">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+          Você está no Modo Offline. Alterações não serão salvas no servidor.
         </div>
-      </main>
+      )}
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* Sidebar Navigation */}
+        <Sidebar 
+          currentTab={currentTab} 
+          setCurrentTab={setCurrentTab} 
+          loggedUser={loggedUser}
+          onLogout={handleLogout}
+        />
+
+        {/* Main Workspace Container */}
+        <main className="flex-1 overflow-y-auto h-screen relative bg-obsidian-950">
+          <div className="max-w-[1600px] mx-auto p-4 sm:p-6 md:p-8">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

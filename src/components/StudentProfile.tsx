@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { Aluno, Belt, Degree, Gender, LoggedUser, GraduacaoHistorico } from '../types';
-import { BELT_RANKS, getBeltsByAge, getBjjAge } from '../types';
+import type { Aluno, Belt, Degree, Gender, LoggedUser, GraduacaoHistorico, Administrador } from '../types';
+import { BELT_RANKS, getBeltsByAge, getBjjAge, BAIRROS_DF } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   User, 
@@ -36,7 +36,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const student = students.find(s => s.id === alunoId);
 
   // Estados dos Dados Pessoais do banco
-  const [adminData, setAdminData] = useState<any>(null);
+  const [adminData, setAdminData] = useState<Administrador | null>(null);
   const [teacherData, setTeacherData] = useState<any>(null);
 
   // Active Tab: 'profile' or 'password' or 'graduacoes'
@@ -50,7 +50,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const [formEmail, setFormEmail] = useState(isEditingAdmin ? '' : (student?.email || ''));
   const [formGenero, setFormGenero] = useState<Gender>(isEditingAdmin ? 'Masculino' : (student?.genero || 'Masculino'));
   const [formBairro, setFormBairro] = useState(isEditingAdmin ? '' : (student?.bairro || ''));
-  const [formDataMatricula, setFormDataMatricula] = useState(isEditingAdmin ? '' : (student?.dataMatricula || ''));
+  const formDataMatricula = isEditingAdmin ? '' : (student?.dataMatricula || '');
   const [formFaixa, setFormFaixa] = useState<Belt>(isEditingAdmin ? 'Branca' : (student?.faixa || 'Branca'));
   const [formGraus, setFormGraus] = useState<Degree>(isEditingAdmin ? 0 : (student?.graus || 0));
   const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>(isEditingAdmin ? 'Adulto' : (student?.turma || 'Adulto'));
@@ -76,11 +76,11 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   // Efeitos para carregar dados de Admin e Professor do Supabase
   useEffect(() => {
     async function fetchAdminData() {
-      if (isEditingAdmin) {
+      if (isEditingAdmin && loggedUser?.adminId) {
         const { data, error } = await supabase
-          .from('professores')
+          .from('administradores')
           .select('*')
-          .eq('role', 'admin')
+          .eq('id', loggedUser.adminId)
           .single();
         if (!error && data) {
           setAdminData(data);
@@ -172,14 +172,14 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    if (isEditingAdmin) {
+    if (isEditingAdmin && adminData) {
       const { error: updateError } = await supabase
-        .from('professores')
+        .from('administradores')
         .update({
           nome: formNome,
           foto_perfil: formFotoPerfil
         })
-        .eq('role', 'admin');
+        .eq('id', adminData.id);
 
       if (updateError) {
         console.error('Error updating admin info:', updateError);
@@ -187,9 +187,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
         return;
       }
 
-      if (adminData) {
-        setAdminData({ ...adminData, nome: formNome, foto_perfil: formFotoPerfil });
-      }
+      setAdminData({ ...adminData, nome: formNome, foto_perfil: formFotoPerfil });
 
       // Update logged user state
       if (setLoggedUser) {
@@ -388,11 +386,11 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    if (isEditingAdmin) {
+    if (isEditingAdmin && adminData) {
       const { error: updateError } = await supabase
-        .from('professores')
+        .from('administradores')
         .update({ senha: newPassword })
-        .eq('role', 'admin');
+        .eq('id', adminData.id);
         
       if (updateError) {
         console.error('Error updating admin password:', updateError);
@@ -400,9 +398,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
         return;
       }
       
-      if (adminData) {
-        setAdminData({ ...adminData, senha: newPassword });
-      }
+      setAdminData({ ...adminData, senha: newPassword });
       setPassSuccess('Senha do administrador atualizada com sucesso!');
     } else if (isEditingTeacher && loggedUser?.professorId) {
       const { error: updateError } = await supabase
@@ -833,7 +829,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       >
                         <option value="Masculino">Masculino</option>
                         <option value="Feminino">Feminino</option>
-                        <option value="Outro">Outro</option>
                       </select>
                     </div>
                   </div>
@@ -843,13 +838,19 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 {isStudent && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Bairro</label>
-                    <input
-                      type="text"
+                    <select
                       value={formBairro}
                       onChange={(e) => setFormBairro(e.target.value)}
-                      className="input-premium w-full"
-                      placeholder="Ex: Asa Sul, Guará..."
-                    />
+                      className="input-premium w-full bg-obsidian-950 text-slate-200"
+                    >
+                      <option value="">Selecione o bairro...</option>
+                      {formBairro && !BAIRROS_DF.includes(formBairro) && (
+                        <option value={formBairro}>{formBairro}</option>
+                      )}
+                      {BAIRROS_DF.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
@@ -947,7 +948,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   <div className="border-t border-obsidian-750 pt-4 mt-2">
                     <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Informações Acadêmicas</h3>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF *</label>
                         <input
@@ -956,16 +957,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           onChange={(e) => setFormCpf(e.target.value)}
                           className="input-premium w-full font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="000.000.000-00"
-                          disabled={isStudent}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data de Matrícula</label>
-                        <input
-                          type="date"
-                          value={formDataMatricula}
-                          onChange={(e) => setFormDataMatricula(e.target.value)}
-                          className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isStudent}
                         />
                       </div>

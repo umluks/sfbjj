@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Aluno, Belt, Degree, Gender, LoggedUser } from '../types';
-import { BELT_RANKS, getBeltsByAge, getBjjAge } from '../types';
+import { BELT_RANKS, getBeltsByAge, getBjjAge, BAIRROS_DF } from '../types';
 import { supabase } from '../lib/supabase';
 import {
   Search,
@@ -695,10 +695,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
         return a.nome.localeCompare(b.nome, 'pt-BR');
       } else if (sortBy === 'nome-desc') {
         return b.nome.localeCompare(a.nome, 'pt-BR');
-      } else if (sortBy === 'dataMatricula-desc') {
-        return new Date(b.dataMatricula || 0).getTime() - new Date(a.dataMatricula || 0).getTime();
-      } else if (sortBy === 'dataMatricula-asc') {
-        return new Date(a.dataMatricula || 0).getTime() - new Date(b.dataMatricula || 0).getTime();
       } else if (sortBy === 'dataUltimaGraduacao-desc') {
         return new Date(b.dataUltimaGraduacao || 0).getTime() - new Date(a.dataUltimaGraduacao || 0).getTime();
       }
@@ -935,8 +931,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
       let gender: Gender = 'Masculino';
       if (rawGen.startsWith('f') || rawGen.includes('fem')) {
         gender = 'Feminino';
-      } else if (rawGen.startsWith('o') || rawGen.includes('out')) {
-        gender = 'Outro';
       }
 
       // Processa data de nascimento
@@ -1272,8 +1266,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
               }}
               className="input-premium w-full bg-obsidian-950 text-slate-200"
             >
-              <option value="dataMatricula-desc">Matrícula (Recente)</option>
-              <option value="dataMatricula-asc">Matrícula (Antiga)</option>
               <option value="nome-asc">Nome (A-Z)</option>
               <option value="nome-desc">Nome (Z-A)</option>
               <option value="dataUltimaGraduacao-desc">Última Graduação</option>
@@ -1424,9 +1416,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                         <div>
                           <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
                             {student.nome}
-                          </div>
-                          <div className="text-[10px] text-slate-500 font-semibold mt-1">
-                            Matrícula: {formatDate(student.dataMatricula)}
                           </div>
                         </div>
                       </div>
@@ -1618,14 +1607,20 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Bairro</label>
-                    <input
-                      type="text"
+                    <select
                       value={formBairro}
                       onChange={(e) => setFormBairro(e.target.value)}
-                      placeholder="Ex: Asa Sul, Guará"
-                      className="input-premium"
+                      className="input-premium bg-obsidian-950 text-slate-200"
                       disabled={isTeacher}
-                    />
+                    >
+                      <option value="">Selecione o bairro...</option>
+                      {formBairro && !BAIRROS_DF.includes(formBairro) && (
+                        <option value={formBairro}>{formBairro}</option>
+                      )}
+                      {BAIRROS_DF.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -1677,7 +1672,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                     >
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
-                      <option value="Outro">Outro</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1788,7 +1782,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tipo de Usuário</label>
                     <select
@@ -1812,17 +1806,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({ students, setStu
                       disabled={isTeacher}
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Data de Matrícula</label>
-                    <input
-                      type="date"
-                      value={formDataMatricula}
-                      onChange={(e) => setFormDataMatricula(e.target.value)}
-                      className="input-premium"
-                      disabled={isTeacher}
-                    />
                   </div>
-                </div>
               </div>
 
               {/* Histórico de Graduações */}

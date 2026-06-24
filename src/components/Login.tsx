@@ -49,20 +49,18 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
       const username = cpfInput.trim().toLowerCase();
       const cleanedCpfInput = username.replace(/\D/g, '');
       // 1. Verifica Login Admin
-      if (username === 'admin' || username === 'admin@sfbjj.com' || cleanedCpfInput === '01334314101') {
-        const query = supabase
-          .from('professores')
+      if (username === 'admin@sfbjj.com') {
+        const { data: adminData } = await supabase
+          .from('administradores')
           .select('*')
-          .eq('role', 'admin');
-
-        const { data: adminData } = await (username === 'admin'
-          ? query.eq('email', 'admin@sfbjj.com').single()
-          : query.or(`email.eq.${username},cpf.eq.${cpfInput}`).single());
+          .eq('email', 'admin@sfbjj.com')
+          .single();
 
         if (adminData) {
           if (adminData.senha === password) {
             onLoginSuccess({
               role: 'admin',
+              adminId: adminData.id,
               nome: adminData.nome
             });
             setLoading(false);
@@ -179,14 +177,15 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* CPF / Username field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                CPF, Email ou Admin
+              <label htmlFor="login-username" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                CPF ou E-mail
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
                   <User className="w-4 h-4" />
                 </span>
                 <input
+                  id="login-username"
                   type="text"
                   value={cpfInput}
                   onChange={handleCpfChange}
@@ -200,7 +199,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
 
             {/* Password field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              <label htmlFor="login-password" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 Senha
               </label>
               <div className="relative">
@@ -208,6 +207,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
                   <Lock className="w-4 h-4" />
                 </span>
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -219,6 +219,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 hover:text-slate-350 transition-colors"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                 </button>
