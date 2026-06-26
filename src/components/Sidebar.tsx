@@ -16,7 +16,7 @@ import {
   Download
 } from 'lucide-react';
 import type { LoggedUser } from '../types';
-import logoSFBJJ from '../assets/logo-sfbjj.jpg';
+import logoSFBJJ from '../assets/logo-sfbjj.png';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { PWAInstallPrompt } from './PWAInstallPrompt';
 

@@ -9,6 +9,8 @@ RUN npm ci
 
 # Copia o restante dos arquivos da aplicação e faz o build
 COPY . .
+ARG VITE_APP_VERSION=1.0.0
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
 RUN npm run build
 
 # --- Estágio de Produção ---

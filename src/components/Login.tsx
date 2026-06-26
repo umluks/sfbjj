@@ -3,7 +3,7 @@ import { Lock, User, Eye, EyeOff, AlertCircle, Flame } from 'lucide-react';
 import type { Aluno, LoggedUser } from '../types';
 import { supabase } from '../lib/supabase';
 
-import logoSFBJJ from '../assets/logo-sfbjj.jpg';
+import logoSFBJJ from '../assets/logo-sfbjj.png';
 
 interface LoginProps {
   students: Aluno[];

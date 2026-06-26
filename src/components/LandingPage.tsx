@@ -12,7 +12,8 @@ import {
   Award,
   BookOpen
 } from 'lucide-react';
-import logoSFBJJ from '../assets/logo-sfbjj.jpg';
+import logoSFBJJ from '../assets/logo-sfbjj.png';
+import logoLucas from '../assets/logo-lucas.png';
 import type { Aviso } from '../types';
 import { Contact } from './Contact';
 import { GraduationSystem } from './GraduationSystem';
@@ -129,7 +130,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             </button>
             <a href="#horarios" className="hover:text-slate-100 transition-colors duration-300">Horários & Localização</a>
             <a href="#contato" className="hover:text-slate-100 transition-colors duration-300">Contato</a>
-            
+
             {/* Botão de Instalação PWA */}
             {showInstallButton && (
               <button
@@ -298,7 +299,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             >
               Acessar Painel (Login)
             </button>
-            
+
             {showInstallButton && (
               <button
                 onClick={handleInstallClick}
@@ -377,11 +378,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {announcements.map((aviso) => (
-              <div 
-                key={aviso.id} 
-                className={`card-premium p-6 flex flex-col justify-between border-l-4 relative overflow-hidden bg-obsidian-900/40 hover:bg-obsidian-800/60 transition-all duration-300 ${
-                  aviso.fixado ? 'border-l-zinc-350 shadow-gold-glow' : 'border-l-slate-700'
-                }`}
+              <div
+                key={aviso.id}
+                className={`card-premium p-6 flex flex-col justify-between border-l-4 relative overflow-hidden bg-obsidian-900/40 hover:bg-obsidian-800/60 transition-all duration-300 ${aviso.fixado ? 'border-l-zinc-350 shadow-gold-glow' : 'border-l-slate-700'
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -643,7 +643,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
 
             {/* Social Icons */}
             <div className="flex items-center gap-4 pt-2">
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-obsidian-900 border border-obsidian-800 text-slate-400 hover:text-slate-200 transition-colors" aria-label="Instagram">
+              <a href="https://instagram.com/sfbjj_oficial" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-obsidian-900 border border-obsidian-800 text-slate-400 hover:text-slate-200 transition-colors" aria-label="Instagram">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -687,12 +687,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             <h5 className="font-extrabold text-xs text-slate-200 uppercase tracking-widest mb-4">
               Plataforma
             </h5>
-            <p className="text-xs text-slate-450 leading-relaxed">
-              Exclusivo para membros e gestão interna da Sagrada Família BJJ. Desenvolvido por Lucas dos Anjos.
-            </p>
-            <p className="text-[10px] text-slate-500 mt-2 font-mono">
-              v3.1.2-stable
-            </p>
+            <div className="flex items-start gap-3">
+              <img
+                src={logoLucas}
+                alt="Logo Lucas dos Anjos Jiu-Jitsu"
+                className="w-10 h-10 rounded-full border border-obsidian-750 object-cover flex-shrink-0 mt-0.5"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div className="space-y-2">
+                <p className="text-xs text-slate-450 leading-relaxed">
+                  Exclusivo para membros e gestão interna da Sagrada Família BJJ. Desenvolvido por Lucas dos Anjos.
+                </p>
+                <p className="text-[10px] text-slate-500 font-mono">
+                  {import.meta.env.VITE_APP_VERSION || '1.0.0'}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
