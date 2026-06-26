@@ -19,22 +19,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar código
+      - name: Obter código fonte do repositório (Git Checkout)
         uses: actions/checkout@v4
 
-      - name: Configurar Node
+      - name: Configurar ambiente do Node.js v22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Instalar dependências
+      - name: Instalar dependências do projeto (npm ci)
         run: npm ci
 
-      - name: Gerar build
+      - name: Compilar a aplicação para produção (Vite Build)
         run: npm run build
 
-      - name: Publicar na HostGator (FTP)
+      - name: Publicar arquivos compilados na HostGator via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
