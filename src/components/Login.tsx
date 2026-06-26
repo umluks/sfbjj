@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { Lock, User, Eye, EyeOff, AlertCircle, Flame } from 'lucide-react';
-import type { Aluno, LoggedUser } from '../types';
+import type { LoggedUser } from '../types';
 import { supabase } from '../lib/supabase';
 
 import logoSFBJJ from '../assets/logo-sfbjj.png';
 
 interface LoginProps {
-  students: Aluno[];
   onLoginSuccess: (user: LoggedUser) => void;
   onBackToLanding: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackToLanding }) => {
+export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBackToLanding }) => {
   const [cpfInput, setCpfInput] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -48,82 +47,112 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
     setTimeout(async () => {
       const username = cpfInput.trim().toLowerCase();
       const cleanedCpfInput = username.replace(/\D/g, '');
-      // 1. Verifica Login Admin
-      if (username === 'admin@sfbjj.com') {
-        const { data: adminData } = await supabase
-          .from('administradores')
-          .select('*')
-          .eq('email', 'admin@sfbjj.com')
-          .single();
 
-        if (adminData) {
-          if (adminData.senha === password) {
-            onLoginSuccess({
-              role: 'admin',
-              adminId: adminData.id,
-              nome: adminData.nome
-            });
-            setLoading(false);
-            return;
-          } else {
-            setError('Senha incorreta para o administrador.');
-            setLoading(false);
-            return;
-          }
-        }
-      }
+      try {
+        // 1. Verifica Login Admin
+        if (username === 'admin@sfbjj.com') {
+          const { data: adminData } = await supabase
+            .from('administradores')
+            .select('*')
+            .eq('email', 'admin@sfbjj.com')
+            .single();
 
-      // 2. Verifica Login Professor (se parecer um e-mail)
-      if (username.includes('@')) {
-        const { data: profData } = await supabase
-          .from('professores')
-          .select('*')
-          .eq('email', username)
-          .single();
-
-        if (profData && profData.senha === password) {
-          onLoginSuccess({
-            role: 'teacher',
-            professorId: profData.id,
-            nome: profData.nome
-          });
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 3. Verifica Login Aluno
-      if (cleanedCpfInput.length > 0) {
-        const student = students.find(s => s.cpf.replace(/\D/g, '') === cleanedCpfInput);
-        if (student) {
-          const studentPassword = student.senha || '#sfbjj2026';
-          if (password === studentPassword) {
-            if (student.status === 'Inativo') {
-              setError('Sua matrícula está inativa. Entre em contato com a administração.');
+          if (adminData) {
+            if (adminData.senha === password) {
+              onLoginSuccess({
+                role: 'admin',
+                adminId: adminData.id,
+                nome: adminData.nome
+              });
+              setLoading(false);
+              return;
+            } else {
+              setError('Senha incorreta para o administrador.');
               setLoading(false);
               return;
             }
+          }
+        }
 
-            onLoginSuccess({
-              role: student.role || 'student',
-              alunoId: student.id,
-              nome: student.nome
-            });
+        // 2. Verifica Login Professor (se parecer um e-mail)
+        if (username.includes('@')) {
+          const { data: profData } = await supabase
+            .from('professores')
+            .select('*')
+            .eq('email', username)
+            .single();
+
+          if (profData) {
+            if (profData.senha === password) {
+              onLoginSuccess({
+                role: 'teacher',
+                professorId: profData.id,
+                nome: profData.nome
+              });
+              setLoading(false);
+              return;
+            } else {
+              setError('Senha incorreta para o professor.');
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        // 3. Verifica Login Aluno de forma pontual no Supabase
+        if (cleanedCpfInput.length > 0) {
+          // Busca o aluno filtrando por CPF formatado ou sem formatação
+          const { data: student, error: dbError } = await supabase
+            .from('alunos')
+            .select('*')
+            .or(`cpf.eq."${cpfInput}",cpf.eq."${cleanedCpfInput}"`)
+            .maybeSingle();
+
+          if (dbError) {
+            console.error('Error fetching student login data:', dbError);
+            setError('Erro ao autenticar. Tente novamente.');
             setLoading(false);
             return;
           }
-        }
-      }
 
-      // Fallback de erro padrão
-      setError('Credenciais incorretas.');
-      setLoading(false);
-    }, 600); // Pequeno atraso para um efeito legal de carregamento (UX)
+          if (student) {
+            const studentPassword = student.senha || '#sfbjj2026';
+            if (password === studentPassword) {
+              if (student.status === 'Inativo') {
+                setError('Sua matrícula está inativa. Entre em contato com a administração.');
+                setLoading(false);
+                return;
+              }
+
+              onLoginSuccess({
+                role: student.role || 'student',
+                alunoId: student.id,
+                nome: student.nome
+              });
+              setLoading(false);
+              return;
+            } else {
+              setError('Senha incorreta.');
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        // Se passar por todas as etapas e não achar ou não bater
+        setError('Credenciais incorretas.');
+      } catch (err: any) {
+        console.error('Login error:', err);
+        setError('Falha de conexão com o servidor de autenticação.');
+      } finally {
+        setLoading(false);
+      }
+    }, 600); // Mantém o delay do efeito de carregamento de UX
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-obsidian-950 px-4 py-12 relative overflow-hidden">
-      {/* Dynamic ambient backgrounds */}
+      {/* Backgrounds */}
       <div className="absolute top-[-25%] left-[-15%] w-[600px] h-[600px] rounded-full bg-slate-500/5 blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[-25%] right-[-15%] w-[650px] h-[650px] rounded-full bg-slate-500/5 blur-[160px] pointer-events-none" />
 
@@ -136,6 +165,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
             window.scrollTo({ top: 0 });
           }}
           className="flex flex-col items-center mb-10 text-center w-full focus:outline-none group"
+          type="button"
         >
           <div className="relative mb-4">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-slate-200/20 to-slate-400/20 rounded-full blur opacity-45 group-hover:opacity-75 transition duration-500" />
@@ -175,7 +205,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* CPF / Username field */}
+            {/* Campo CPF / Username */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="login-username" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 CPF ou E-mail
@@ -197,7 +227,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
               </div>
             </div>
 
-            {/* Password field */}
+            {/* Campo Senha */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="login-password" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 Senha
@@ -226,7 +256,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Botão de Envio */}
             <button
               type="submit"
               disabled={loading}
@@ -251,7 +281,7 @@ export const Login: React.FC<LoginProps> = ({ students, onLoginSuccess, onBackTo
           </form>
         </div>
 
-        {/* Footer info */}
+        {/* Rodapé */}
         <p className="text-[9px] text-center text-slate-600 mt-8 tracking-widest uppercase font-bold">
           Sagrada Família BJJ • Área Restrita • © 2026
         </p>

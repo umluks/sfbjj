@@ -1,46 +1,40 @@
 import React, { useState, useRef } from 'react';
 import type { Aluno, PaymentStatus } from '../types';
+import { useStudents } from '../contexts/StudentsContext';
+import { paymentService } from '../services/paymentService';
+import { FinancialSummary } from './financial/FinancialSummary';
+import { PaymentHistoryModal } from './financial/PaymentHistoryModal';
 import { supabase } from '../lib/supabase';
 import {
   Search,
   History,
   Check,
   AlertCircle,
-  Clock,
   X,
-  CreditCard,
   ChevronLeft,
-  ChevronRight,
-  Download,
-  Upload
+  ChevronRight
 } from 'lucide-react';
 
-interface FinancialManagerProps {
-  students: Aluno[];
-  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
-}
-
-export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, setStudents }) => {
+export const FinancialManager: React.FC = () => {
+  const { students, setStudents } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal para histórico de pagamentos
+  // Modais e Estados de histórico
   const [selectedStudent, setSelectedStudent] = useState<Aluno | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [historyViewTab, setHistoryViewTab] = useState<'all' | 'by_month'>('all');
+
   const ALL_MONTHS = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
   const currentYear = new Date().getFullYear().toString();
-  
-  // Extrai anos únicos do histórico de pagamentos dos alunos, mais o ano atual
+
+  // Anos de histórico disponíveis
   const yearsFromRecords = students.flatMap(s => s.pagamentos.map(p => p.mesRef.split('/')[1]));
   const availableYears = Array.from(new Set([currentYear, ...yearsFromRecords.filter(Boolean)])).sort((a, b) => Number(b) - Number(a));
 
   const [yearFilter, setYearFilter] = useState<string>(currentYear);
-
-  // Gera os meses com base no ano selecionado
   const availableMonths = ALL_MONTHS.map(m => `${m}/${yearFilter}`);
 
   const getDefaultMonth = (year: string) => {
@@ -51,81 +45,63 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
   };
 
   const [monthFilter, setMonthFilter] = useState<string>(getDefaultMonth(currentYear));
-
-  // Também precisa da lógica selectedHistoryMonth para o modal de Histórico
   const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>(getDefaultMonth(currentYear));
 
-  // Estado de paginação
+  // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-
-
-
-  const VALOR_MENSALIDADE = 100; // Valor fixo da mensalidade em R$
-
-  // Total recebido no MÊS de referência selecionado (mesRef === monthFilter e status Pago)
-  const totalRecebidoMes = students.reduce((acc, student) => {
-    const paid = student.pagamentos.filter(p =>
-      p.mesRef === monthFilter && p.status === 'Pago'
-    );
-    return acc + paid.length * VALOR_MENSALIDADE;
-  }, 0);
-
-  // Total recebido no MÊS de referência selecionado por turma (Adulto / Kids)
-  const totalRecebidoMesAdulto = students.reduce((acc, student) => {
-    if (student.turma !== 'Adulto') return acc;
-    const paid = student.pagamentos.filter(p =>
-      p.mesRef === monthFilter && p.status === 'Pago'
-    );
-    return acc + paid.length * VALOR_MENSALIDADE;
-  }, 0);
-
-  const totalRecebidoMesKids = students.reduce((acc, student) => {
-    if (student.turma !== 'Kids') return acc;
-    const paid = student.pagamentos.filter(p =>
-      p.mesRef === monthFilter && p.status === 'Pago'
-    );
-    return acc + paid.length * VALOR_MENSALIDADE;
-  }, 0);
-
-  // Total recebido no ANO selecionado (mesRef termina com /yearFilter e status Pago)
-  const totalAnoRecebido = students.reduce((acc, student) => {
-    const paid = student.pagamentos.filter(p =>
-      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
-    );
-    return acc + paid.length * VALOR_MENSALIDADE;
-  }, 0);
-
-  // Total recebido no ANO selecionado por turma (Adulto / Kids)
-  const totalAnoRecebidoAdulto = students.reduce((acc, student) => {
-    if (student.turma !== 'Adulto') return acc;
-    const paid = student.pagamentos.filter(p =>
-      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
-    );
-    return acc + paid.length * VALOR_MENSALIDADE;
-  }, 0);
-
-  const totalAnoRecebidoKids = students.reduce((acc, student) => {
-    if (student.turma !== 'Kids') return acc;
-    const paid = student.pagamentos.filter(p =>
-      p.status === 'Pago' && p.mesRef.endsWith(`/${yearFilter}`)
-    );
-    return acc + paid.length * VALOR_MENSALIDADE;
-  }, 0);
-
   const itemsPerPage = 10;
 
-  // Indicador de animação de pagamento registrado
+  const VALOR_MENSALIDADE = 100;
+
+  // Totalizadores Financeiros
+  const getFaturamento = (refFilter: string, targetYearVal: string, filterByMonth = true) => {
+    return students.reduce((acc, student) => {
+      const paid = student.pagamentos.filter(p => {
+        const isPaid = p.status === 'Pago';
+        if (filterByMonth) {
+          return p.mesRef === refFilter && isPaid;
+        } else {
+          return p.mesRef.endsWith(`/${targetYearVal}`) && isPaid;
+        }
+      });
+      return acc + paid.length * VALOR_MENSALIDADE;
+    }, 0);
+  };
+
+  const getFaturamentoPorTurma = (refFilter: string, targetYearVal: string, filterByMonth: boolean, targetTurma: 'Adulto' | 'Kids') => {
+    return students.reduce((acc, student) => {
+      if (student.turma !== targetTurma) return acc;
+      const paid = student.pagamentos.filter(p => {
+        const isPaid = p.status === 'Pago';
+        if (filterByMonth) {
+          return p.mesRef === refFilter && isPaid;
+        } else {
+          return p.mesRef.endsWith(`/${targetYearVal}`) && isPaid;
+        }
+      });
+      return acc + paid.length * VALOR_MENSALIDADE;
+    }, 0);
+  };
+
+  const totalRecebidoMes = getFaturamento(monthFilter, yearFilter, true);
+  const totalRecebidoMesAdulto = getFaturamentoPorTurma(monthFilter, yearFilter, true, 'Adulto');
+  const totalRecebidoMesKids = getFaturamentoPorTurma(monthFilter, yearFilter, true, 'Kids');
+
+  const totalAnoRecebido = getFaturamento(monthFilter, yearFilter, false);
+  const totalAnoRecebidoAdulto = getFaturamentoPorTurma(monthFilter, yearFilter, false, 'Adulto');
+  const totalAnoRecebidoKids = getFaturamentoPorTurma(monthFilter, yearFilter, false, 'Kids');
+
+  // Alertas e Uploader
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Slugs de meses para colunas do CSV (sem acento para compatibilidade)
   const MONTH_SLUGS = [
     'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho',
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
   ];
 
-  // ─── Exportação CSV (formato anual pivô) ──────────────────────────────────────
+  // Exportação CSV (formato anual pivô)
   const handleExportCSV = () => {
     const header = [
       'id_aluno', 'nome_aluno', 'turma', 'ano_ref',
@@ -133,7 +109,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     ];
 
     const rows: string[][] = filteredStudents.map(student => {
-      // Cada mês: "SIM" se há fatura (= R$100), "NÃO" se não há
       const monthValues = ALL_MONTHS.map(monthName => {
         const mesRef = `${monthName}/${yearFilter}`;
         const hasFatura = student.pagamentos.some(p => p.mesRef === mesRef);
@@ -166,7 +141,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     setTimeout(() => setPaymentSuccessMsg(null), 4000);
   };
 
-  // ─── Importação CSV (formato anual pivô) ──────────────────────────────────────
+  // Importação CSV (formato anual pivô)
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImportError(null);
     const file = e.target.files?.[0];
@@ -177,7 +152,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const text = (event.target?.result as string).replace(/^\uFEFF/, ''); // remove BOM
+        const text = (event.target?.result as string).replace(/^\uFEFF/, '');
         const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
 
         if (lines.length < 2) {
@@ -186,8 +161,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         }
 
         const headerLine = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
-
-        // Valida colunas obrigatórias do formato pivô
         const requiredCols = ['id_aluno', 'ano_ref', ...MONTH_SLUGS.map(m => `mes_ref_${m}`)];
         const missingCols = requiredCols.filter(c => !headerLine.includes(c));
         if (missingCols.length > 0) {
@@ -196,16 +169,14 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         }
 
         const colIndex = (name: string) => headerLine.indexOf(name);
-
-        // Pré-processa todas as linhas em um mapa id_aluno → cols
         const rowMap = new Map<number, string[]>();
+
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
           const alunoId = Number(cols[colIndex('id_aluno')]);
           if (alunoId) rowMap.set(alunoId, cols);
         }
 
-        // Identificar o ano de referência a partir da primeira linha válida para limpar os registros do mesmo ano
         let targetYear = yearFilter;
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
@@ -216,15 +187,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           }
         }
 
-        // Zera/deleta no Supabase todos os pagamentos dos alunos no ano de referência antes de salvar os novos do CSV
-        const { error: deleteError } = await supabase
-          .from('pagamentos')
-          .delete()
-          .like('mesRef', `%/${targetYear}`);
-
-        if (deleteError) {
-          console.error('Error clearing old payments:', deleteError);
-        }
+        // Limpa faturas antigas do mesmo ano de referência no Supabase
+        await paymentService.clearPaymentsByYear(targetYear);
 
         let updatedCount = 0;
         const paymentsToUpsert: any[] = [];
@@ -236,7 +200,6 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           if (!cols) return;
 
           const anoRef = cols[colIndex('ano_ref')];
-          // Limpa todos os pagamentos daquele ano do array local do estudante
           let pagamentos = student.pagamentos.filter(p => !p.mesRef.endsWith(`/${anoRef}`));
           let modified = false;
 
@@ -246,13 +209,11 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             if (!temFatura) return;
 
             const mesRef = `${ALL_MONTHS[idx]}/${anoRef}`;
-
-            // Cria novo registro como PAGO com valor fixo diretamente da importação do CSV
             const newPay = {
               alunoId: student.id,
               mesRef,
               valor: VALOR_MENSALIDADE,
-              status: 'Pago' as any,
+              status: 'Pago',
               dataVencimento: `${anoRef}-${String(idx + 1).padStart(2, '0')}-10`,
               dataPagamento: todayStr
             };
@@ -268,18 +229,10 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         });
 
         if (paymentsToUpsert.length > 0) {
-          const { error: upsertError } = await supabase
-            .from('pagamentos')
-            .upsert(paymentsToUpsert);
-
-          if (upsertError) {
-            console.error('Error persisting payments to Supabase:', upsertError);
-            setImportError('Erro ao salvar os pagamentos no banco de dados.');
-            return;
-          }
+          await paymentService.savePaymentsBatch(paymentsToUpsert);
         }
 
-        // Buscar alunos atualizados do banco de dados para recarregar com os novos registros (incluindo IDs criados pelo DB se houver)
+        // Recarrega todos os alunos e pagamentos pós-atualização
         const { data: refreshedData, error: refreshError } = await supabase
           .from('alunos')
           .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
@@ -298,7 +251,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           const sorted = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
           setStudents(sorted as any);
         } else {
-          // Fallback para estado local caso ocorra um erro ao recarregar
+          // Fallback para estado local em caso de falha de conexão
           setStudents(prev => prev.map(student => {
             if (studentUpdates[student.id]) {
               return { ...student, pagamentos: studentUpdates[student.id] };
@@ -316,201 +269,104 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
     reader.readAsText(file, 'UTF-8');
   };
 
-  // Registra o pagamento com a data selecionada
   const handleRegisterPaymentWithDate = async (alunoId: number, paymentId: number, dateStr: string) => {
-    if (!dateStr) {
-      alert("A data de pagamento é obrigatória.");
-      return;
-    }
+    try {
+      await paymentService.registerPaymentWithDate(paymentId, dateStr, VALOR_MENSALIDADE);
 
-    const { error: updateError } = await supabase
-      .from('pagamentos')
-      .update({
-        valor: VALOR_MENSALIDADE,
-        status: 'Pago',
-        dataPagamento: dateStr
-      })
-      .eq('id', paymentId);
-
-    if (updateError) {
-      console.error('Error updating payment in Supabase:', updateError);
-      alert('Erro ao registrar pagamento no banco de dados.');
-      return;
-    }
-
-    setStudents(prev => prev.map(s => {
-      if (s.id === alunoId) {
-        const updatedPagamentos = s.pagamentos.map(p => {
-          if (p.id === paymentId) {
-            return {
-              ...p,
-              valor: VALOR_MENSALIDADE,
-              status: 'Pago' as PaymentStatus,
-              dataPagamento: dateStr
-            };
-          }
-          return p;
-        });
-
-        setPaymentSuccessMsg(`Pagamento de R$ ${VALOR_MENSALIDADE.toFixed(2).replace('.', ',')} registrado com sucesso para ${s.nome}!`);
-        setTimeout(() => setPaymentSuccessMsg(null), 4000);
-
-        return {
-          ...s,
-          pagamentos: updatedPagamentos
-        };
-      }
-      return s;
-    }));
-
-    // Se o modal estiver aberto para histórico, atualize a referência selectedStudent para refletir a alteração
-    if (selectedStudent && selectedStudent.id === alunoId) {
-      setSelectedStudent(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          pagamentos: prev.pagamentos.map(p => {
-            if (p.id === paymentId) {
-              return { ...p, status: 'Pago', dataPagamento: dateStr };
-            }
-            return p;
-          })
-        };
-      });
-    }
-  };
-
-
-
-
-  // Obtém o registro de pagamento atual com base no filtro de mês selecionado
-  const getCurrentPayment = (student: Aluno) => {
-    return student.pagamentos.find(p => p.mesRef === monthFilter);
-  };
-
-
-
-  const handleRegisterPaidDirectly = async (alunoId: number) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const newPayment = {
-      alunoId,
-      mesRef: monthFilter,
-      valor: VALOR_MENSALIDADE,
-      status: 'Pago',
-      dataVencimento: todayStr,
-      dataPagamento: todayStr
-    };
-
-    const { data: insertedPayment, error: insertError } = await supabase
-      .from('pagamentos')
-      .insert(newPayment)
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Error creating paid payment in Supabase:', insertError);
-      alert('Erro ao registrar pagamento no banco de dados.');
-      return;
-    }
-
-    if (insertedPayment) {
       setStudents(prev => prev.map(s => {
         if (s.id === alunoId) {
-          return {
-            ...s,
-            pagamentos: [...s.pagamentos, insertedPayment]
-          };
+          const updated = s.pagamentos.map(p => {
+            if (p.id === paymentId) {
+              return { ...p, valor: VALOR_MENSALIDADE, status: 'Pago' as PaymentStatus, dataPagamento: dateStr };
+            }
+            return p;
+          });
+          return { ...s, pagamentos: updated };
         }
         return s;
       }));
+
+      setPaymentSuccessMsg(`Pagamento registrado com sucesso!`);
+      setTimeout(() => setPaymentSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao registrar pagamento.');
     }
-    
-    setPaymentSuccessMsg(`Pagamento registrado com sucesso para o mês ${monthFilter}.`);
-    setTimeout(() => setPaymentSuccessMsg(null), 3000);
+  };
+
+  const handleRegisterPaidDirectly = async (alunoId: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    try {
+      const inserted = await paymentService.registerPaidDirectly(alunoId, monthFilter, VALOR_MENSALIDADE, todayStr);
+
+      if (inserted) {
+        setStudents(prev => prev.map(s => {
+          if (s.id === alunoId) {
+            return {
+              ...s,
+              pagamentos: [...s.pagamentos, inserted]
+            };
+          }
+          return s;
+        }));
+      }
+
+      setPaymentSuccessMsg(`Pagamento registrado com sucesso para o mês ${monthFilter}.`);
+      setTimeout(() => setPaymentSuccessMsg(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao registrar pagamento direto.');
+    }
   };
 
   const handleRemovePayment = async (alunoId: number, paymentId: number) => {
     const confirmRemove = window.confirm("Deseja realmente retirar/remover este pagamento?");
     if (!confirmRemove) return;
 
-    const { error: deleteError } = await supabase
-      .from('pagamentos')
-      .delete()
-      .eq('id', paymentId);
+    try {
+      await paymentService.removePayment(paymentId);
 
-    if (deleteError) {
-      console.error('Error removing payment from Supabase:', deleteError);
-      alert('Erro ao remover pagamento do banco de dados.');
-      return;
+      setStudents(prev => prev.map(s => {
+        if (s.id === alunoId) {
+          return {
+            ...s,
+            pagamentos: s.pagamentos.filter(p => p.id !== paymentId)
+          };
+        }
+        return s;
+      }));
+
+      setPaymentSuccessMsg("Pagamento removido com sucesso.");
+      setTimeout(() => setPaymentSuccessMsg(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao remover pagamento.');
     }
-
-    setStudents(prev => prev.map(s => {
-      if (s.id === alunoId) {
-        return {
-          ...s,
-          pagamentos: s.pagamentos.filter(p => p.id !== paymentId)
-        };
-      }
-      return s;
-    }));
-
-    setPaymentSuccessMsg("Pagamento removido com sucesso.");
-    setTimeout(() => setPaymentSuccessMsg(null), 3000);
   };
 
-  // Filtra e ordena os alunos alfabeticamente com base no status (apenas Ativo), status de pagamento atual e busca
+  // Filtragem e paginação
   const filteredStudents = students
     .filter(student => student.status === 'Ativo')
-    .filter(student => {
-      const matchesSearch = student.nome.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
-    })
+    .filter(student => student.nome.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-  // Cálculos de paginação
   const totalItems = filteredStudents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+    setCurrentPage(prev => Math.max(prev - 1, 1));
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
   };
 
-  // Abre o modal de histórico
+  const getCurrentPayment = (student: Aluno) => {
+    return student.pagamentos.find(p => p.mesRef === monthFilter);
+  };
+
   const handleOpenHistory = (student: Aluno) => {
     setSelectedStudent(student);
     setShowHistoryModal(true);
-  };
-
-  const renderStatusBadge = (status: PaymentStatus) => {
-    switch (status) {
-      case 'Pago':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Check className="w-3.5 h-3.5" />
-            Pago
-          </span>
-        );
-      case 'Pendente':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Clock className="w-3.5 h-3.5" />
-            Pendente
-          </span>
-        );
-      case 'Atrasado':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
-            <AlertCircle className="w-3.5 h-3.5" />
-            Atrasado
-          </span>
-        );
-    }
   };
 
   return (
@@ -526,18 +382,16 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           </p>
         </div>
 
-        {/* Botões Exportar / Importar */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={handleExportCSV}
             className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
             title={`Exportar registros de ${monthFilter} para CSV`}
+            type="button"
           >
-            <Download className="w-3.5 h-3.5" />
             Exportar CSV
           </button>
 
-          {/* Input oculto para importação */}
           <input
             ref={fileInputRef}
             type="file"
@@ -549,77 +403,51 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             onClick={() => fileInputRef.current?.click()}
             className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
             title="Importar pagamentos de um arquivo CSV"
+            type="button"
           >
-            <Upload className="w-3.5 h-3.5" />
             Importar CSV
           </button>
         </div>
       </div>
 
-      {/* Resumos Financeiros */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Selected Month Summary */}
-        <div className="card-premium flex flex-col justify-between border-l-2 border-l-emerald-500/80 bg-obsidian-900/40 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Total Recebido em {monthFilter}</span>
-              <span className="text-3xl font-black text-slate-100 mt-2 block tracking-tight">R$ {totalRecebidoMes.toFixed(2).replace('.', ',')}</span>
-            </div>
-            <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-emerald-400 hidden sm:block">
-              <CreditCard className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4 pt-3.5 border-t border-obsidian-850/80 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-450">
-            <span>Adulto: <strong className="text-slate-200">R$ {totalRecebidoMesAdulto.toFixed(2).replace('.', ',')}</strong></span>
-            <span>Kids: <strong className="text-slate-200">R$ {totalRecebidoMesKids.toFixed(2).replace('.', ',')}</strong></span>
-          </div>
-        </div>
+      {/* Cards de Resumo */}
+      <FinancialSummary
+        monthFilter={monthFilter}
+        yearFilter={yearFilter}
+        totalRecebidoMes={totalRecebidoMes}
+        totalRecebidoMesAdulto={totalRecebidoMesAdulto}
+        totalRecebidoMesKids={totalRecebidoMesKids}
+        totalAnoRecebido={totalAnoRecebido}
+        totalAnoRecebidoAdulto={totalAnoRecebidoAdulto}
+        totalAnoRecebidoKids={totalAnoRecebidoKids}
+      />
 
-        {/* Consolidated Year Summary */}
-        <div className="card-premium flex flex-col justify-between border-l-2 border-l-slate-400 bg-obsidian-900/40 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Total Recebido ({yearFilter})</span>
-              <span className="text-3xl font-black text-slate-100 mt-2 block tracking-tight">R$ {totalAnoRecebido.toFixed(2).replace('.', ',')}</span>
-            </div>
-            <div className="p-3 bg-slate-100/5 border border-slate-200/10 rounded-xl text-slate-350 hidden sm:block">
-              <CreditCard className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4 pt-3.5 border-t border-obsidian-850/80 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-450">
-            <span>Adulto: <strong className="text-slate-200">R$ {totalAnoRecebidoAdulto.toFixed(2).replace('.', ',')}</strong></span>
-            <span>Kids: <strong className="text-slate-200">R$ {totalAnoRecebidoKids.toFixed(2).replace('.', ',')}</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* Import error banner */}
+      {/* Banners */}
       {importError && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-2xl animate-fade-in text-xs font-semibold">
           <span className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
             {importError}
           </span>
-          <button onClick={() => setImportError(null)} className="text-red-400/70 hover:text-red-300 p-1">
+          <button onClick={() => setImportError(null)} className="text-red-400/70 hover:text-red-300 p-1" type="button">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Payment registered banner */}
       {paymentSuccessMsg && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between shadow-2xl animate-fade-in text-xs font-semibold">
           <span className="flex items-center gap-2">
             <Check className="w-4 h-4" />
             {paymentSuccessMsg}
           </span>
-          <button onClick={() => setPaymentSuccessMsg(null)} className="text-emerald-400/70 hover:text-emerald-350 p-1">
+          <button onClick={() => setPaymentSuccessMsg(null)} className="text-emerald-400/70 hover:text-emerald-350 p-1" type="button">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Search & Filters */}
+      {/* Filtros e Busca */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
         <div className="relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
@@ -670,7 +498,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         </div>
       </div>
 
-      {/* Main Billing Table */}
+      {/* Tabela de Faturamento */}
       <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -687,7 +515,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
             <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
+                  <td colSpan={6} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
                     Sem faturas encontradas com os filtros selecionados.
                   </td>
                 </tr>
@@ -699,7 +527,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                       key={student.id}
                       className="hover:bg-obsidian-800/15 transition-colors group"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-left">
                         <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
                           {student.nome}
                         </div>
@@ -709,8 +537,8 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          student.turma === 'Kids' 
-                            ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10' 
+                          student.turma === 'Kids'
+                            ? 'bg-sky-500/5 text-sky-400 border border-sky-500/10'
                             : 'bg-indigo-500/5 text-indigo-400 border border-indigo-500/10'
                         }`}>
                           {student.turma}
@@ -739,6 +567,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                               onClick={() => handleRegisterPaidDirectly(student.id)}
                               className="text-[9px] uppercase tracking-wider text-emerald-450 hover:text-emerald-400 font-black bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 rounded h-8 flex items-center justify-center gap-1 w-24 hover:bg-emerald-500/15 transition-all"
                               title={`Registrar Pagamento para ${monthFilter}`}
+                              type="button"
                             >
                               Marcar Pago
                             </button>
@@ -747,6 +576,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                               onClick={() => handleRegisterPaymentWithDate(student.id, bill.id, new Date().toISOString().split('T')[0])}
                               className="p-1.5 rounded bg-emerald-500/5 hover:bg-emerald-500/15 border border-emerald-500/15 text-emerald-400 hover:text-emerald-350 transition-all h-8 w-8 flex items-center justify-center"
                               title={`Registrar Pagamento de ${student.nome}`}
+                              type="button"
                             >
                               <Check className="w-4 h-4" />
                             </button>
@@ -759,6 +589,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                                 onClick={() => handleRemovePayment(student.id, bill.id)}
                                 className="p-1.5 rounded bg-red-500/5 hover:bg-red-500/15 border border-red-500/15 text-red-400 hover:text-red-300 transition-all h-8 w-8 flex items-center justify-center"
                                 title="Retirar Pagamento"
+                                type="button"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -768,6 +599,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                             onClick={() => handleOpenHistory(student)}
                             className="p-1.5 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 text-slate-400 hover:text-slate-200 transition-all h-8 w-8 flex items-center justify-center"
                             title="Histórico de Mensalidades"
+                            type="button"
                           >
                             <History className="w-4 h-4" />
                           </button>
@@ -781,7 +613,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Paginação */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20">
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
@@ -792,6 +624,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
                 className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
+                type="button"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 Anterior
@@ -800,6 +633,7 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
                 className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
+                type="button"
               >
                 Próximo
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -809,165 +643,15 @@ export const FinancialManager: React.FC<FinancialManagerProps> = ({ students, se
         )}
       </div>
 
-      {/* History Modal */}
-      {showHistoryModal && selectedStudent && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-obsidian-900/90 border border-obsidian-850 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up">
-
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-850 bg-obsidian-950 rounded-t-2xl">
-              <div>
-                <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                  <History className="w-4 h-4 text-slate-400" />
-                  Histórico de Faturas: {selectedStudent.nome}
-                </h2>
-                <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
-                  Lista completa de faturas registradas no sistema.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="text-slate-400 hover:text-slate-200 p-1 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Filter Tabs/Abas */}
-            <div className="px-6 py-2 border-b border-obsidian-850 bg-obsidian-950/40 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setHistoryViewTab('all')}
-                  className={`text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all ${historyViewTab === 'all' ? 'bg-slate-100/5 text-slate-200 border border-slate-200/10' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Todos os pagamentos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHistoryViewTab('by_month')}
-                  className={`text-[10px] uppercase font-black tracking-wider px-3 py-1.5 rounded transition-all ${historyViewTab === 'by_month' ? 'bg-slate-100/5 text-slate-200 border border-slate-200/10' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Ver os pagamentos por mês
-                </button>
-              </div>
-
-              {historyViewTab === 'by_month' && (
-                <select
-                  value={selectedHistoryMonth}
-                  onChange={(e) => setSelectedHistoryMonth(e.target.value)}
-                  className="input-premium py-1 px-2 text-xs bg-obsidian-950 text-slate-200 font-semibold w-36"
-                >
-                  {Array.from(new Set(selectedStudent.pagamentos.map(p => p.mesRef))).map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {/* Modal History Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
-              {(() => {
-                const MONTH_ORDER: { [key: string]: number } = {
-                  'Janeiro': 0,
-                  'Fevereiro': 1,
-                  'Março': 2,
-                  'Abril': 3,
-                  'Maio': 4,
-                  'Junho': 5,
-                  'Julho': 6,
-                  'Agosto': 7,
-                  'Setembro': 8,
-                  'Outubro': 9,
-                  'Novembro': 10,
-                  'Dezembro': 11
-                };
-
-                const parseMesRef = (ref: string) => {
-                  const [m, y] = ref.split('/');
-                  return {
-                    year: parseInt(y, 10) || 0,
-                    monthIdx: MONTH_ORDER[m] ?? 0
-                  };
-                };
-
-                const filteredPays = [...selectedStudent.pagamentos]
-                  .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
-                  .sort((a, b) => {
-                    const valA = parseMesRef(a.mesRef);
-                    const valB = parseMesRef(b.mesRef);
-                    if (valA.year !== valB.year) {
-                      return valA.year - valB.year;
-                    }
-                    return valA.monthIdx - valB.monthIdx;
-                  });
-
-                if (filteredPays.length === 0) {
-                  return (
-                    <div className="text-center py-6 text-slate-550 text-xs font-semibold uppercase tracking-wider">
-                      Nenhum registro de faturamento encontrado.
-                    </div>
-                  );
-                }
-
-                return filteredPays.map((pay) => (
-                  <div
-                    key={pay.id}
-                    className={`flex flex-col gap-2 p-3.5 rounded-xl border transition-all ${
-                      pay.status === 'Pago'
-                        ? 'bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30'
-                        : pay.status === 'Atrasado'
-                        ? 'bg-red-500/5 border-red-500/15 hover:border-red-500/30'
-                        : 'bg-obsidian-950 border-obsidian-900 hover:border-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="font-bold text-xs text-slate-200 font-mono">
-                        {pay.mesRef}
-                      </span>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold font-mono text-slate-300">
-                          R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}
-                        </span>
-                        <div className="min-w-24 flex justify-end">
-                          {renderStatusBadge(pay.status as any)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Linha de detalhe de data */}
-                    <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pt-2 border-t border-obsidian-900/60">
-                      {pay.status === 'Pago' && pay.dataPagamento ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-500" />
-                          Pago em {pay.dataPagamento.split('-').reverse().join('/')}
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3 h-3 text-amber-500" />
-                          Vence em {pay.dataVencimento ? pay.dataVencimento.split('-').reverse().join('/') : '—'}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-obsidian-850 bg-obsidian-950 rounded-b-2xl flex justify-end">
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="btn-obsidian text-[10px] uppercase font-black tracking-widest px-4 py-2"
-              >
-                Fechar
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {/* Modal Histórico Mensalidades */}
+      <PaymentHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        student={selectedStudent}
+        selectedHistoryMonth={selectedHistoryMonth}
+        setSelectedHistoryMonth={setSelectedHistoryMonth}
+        VALOR_MENSALIDADE={VALOR_MENSALIDADE}
+      />
     </div>
   );
 };

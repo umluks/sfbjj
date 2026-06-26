@@ -11,10 +11,11 @@ import { Contact } from './components/Contact';
 import { LandingPage } from './components/LandingPage';
 import { BatchGraduation } from './components/BatchGraduation';
 import { GraduationSystem } from './components/GraduationSystem';
-import type { Aluno, Aviso, LoggedUser } from './types';
+import type { Aviso, LoggedUser } from './types';
 import { supabase } from './lib/supabase';
+import { StudentsProvider, useStudents } from './contexts/StudentsContext';
 
-function App() {
+function AppContent() {
   const [loggedUser, setLoggedUser] = useState<LoggedUser | null>(() => {
     const saved = sessionStorage.getItem('sfbjj_logged_user');
     return saved ? JSON.parse(saved) : null;
@@ -33,10 +34,11 @@ function App() {
     return 'dashboard';
   });
 
-  // Estado Unificado
-  const [students, setStudents] = useState<Aluno[]>([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [announcements, setAnnouncements] = useState<Aviso[]>([]);
+  const { loadStudents, clearStudents } = useStudents();
 
+  // Monitora o estado da rede (online/offline)
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -50,32 +52,16 @@ function App() {
     };
   }, []);
 
-
+  // Carrega a listagem global de alunos apenas para perfis autorizados pós-login
   useEffect(() => {
-    async function fetchStudents() {
-      const { data, error } = await supabase.from('alunos').select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
-      if (!error && data) {
-        // Mapeia a resposta do banco de dados para os tipos Aluno
-        const mapped = data.map((student: any) => ({
-          ...student,
-          historicoGraduacoes: (student.graduacoes_historico || []).map((g: any) => ({
-            id: g.id,
-            data: g.data_graduacao,
-            faixa: g.faixa,
-            graus: g.graus,
-            avaliador: g.avaliador
-          })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()) // sort oldest to newest
-        }));
-        // Ordena os alunos alfabeticamente
-        const sorted = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-        setStudents(sorted as any);
-      }
+    if (loggedUser && (loggedUser.role === 'admin' || loggedUser.role === 'teacher')) {
+      loadStudents();
+    } else {
+      clearStudents();
     }
-    fetchStudents();
-  }, []);
+  }, [loggedUser, loadStudents, clearStudents]);
 
-  const [announcements, setAnnouncements] = useState<Aviso[]>([]);
-
+  // Carrega avisos públicos da Landing Page
   useEffect(() => {
     async function fetchAnnouncements() {
       const { data, error } = await supabase.from('avisos').select('*');
@@ -86,7 +72,7 @@ function App() {
     fetchAnnouncements();
   }, []);
 
-  // Ajusta a aba de roteamento se as permissões de função não corresponderem
+  // Roteamento condicional baseado nas permissões de cada role
   useEffect(() => {
     if (loggedUser) {
       if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
@@ -114,15 +100,12 @@ function App() {
     setLoggedUser(null);
   };
 
-
-
-  // Renderiza a visão da aba ativa
+  // Renderização baseada na aba ativa
   const renderContent = () => {
     switch (currentTab) {
       case 'dashboard':
         return (
           <Dashboard 
-            students={students} 
             announcements={announcements} 
             setAnnouncements={setAnnouncements} 
             loggedUser={loggedUser}
@@ -131,28 +114,19 @@ function App() {
       case 'students':
         return (
           <StudentManager 
-            students={students} 
-            setStudents={setStudents} 
             loggedUser={loggedUser}
           />
         );
       case 'batch-graduation':
         return (
           <BatchGraduation 
-            students={students} 
-            setStudents={setStudents} 
             loggedUser={loggedUser}
           />
         );
       case 'teachers':
         return <TeacherManager />;
       case 'financial':
-        return (
-          <FinancialManager 
-            students={students} 
-            setStudents={setStudents} 
-          />
-        );
+        return <FinancialManager />;
       case 'graduation-system':
         return <GraduationSystem />;
       case 'contact':
@@ -163,8 +137,6 @@ function App() {
         return (
           <StudentProfile 
             alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
-            students={students}
-            setStudents={setStudents}
             loggedUser={loggedUser}
             setLoggedUser={setLoggedUser}
           />
@@ -190,7 +162,6 @@ function App() {
           )}
           <div className="flex-1 flex flex-col justify-center">
             <Login 
-              students={students} 
               onLoginSuccess={handleLoginSuccess} 
               onBackToLanding={() => setShowLogin(false)} 
             />
@@ -241,5 +212,12 @@ function App() {
   );
 }
 
+function App() {
+  return (
+    <StudentsProvider>
+      <AppContent />
+    </StudentsProvider>
+  );
+}
 
 export default App;

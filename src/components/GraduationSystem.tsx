@@ -248,7 +248,7 @@ export const GraduationSystem: React.FC = () => {
       barColor: '#E60000',
       minAge: 19,
       minTime: '31 anos de dedicação na preta para atingir o topo',
-      description: 'O verdadeiro início dos estudos do Jiu-Jitsu. Representa maestria técnica, autodisciplina e a responsabilidade de passar a tradição adiante. Possui do 0 ao 6º Grau.',
+      description: 'O verdadeiro início dos estudos do Jiu-Jitsu. Representa maestria técnica, autodisciplina e a responsabilidade de passar a tradição adiante.\n\nPossui do 0 ao 6º Grau, com os seguintes tempos mínimos de permanência:\n• 1º, 2º e 3º Graus: 3 anos de carência em cada grau.\n• 4º, 5º e 6º Graus: 5 anos de carência em cada grau.\n\n(Totalizando 24 anos de atividade como faixa preta antes de poder pleitear a faixa Coral 7º Grau).',
       category: 'adulto',
       stripes: 6
     },
@@ -681,7 +681,7 @@ export const GraduationSystem: React.FC = () => {
 
                     <div className="space-y-2">
                       <span className="text-zinc-500 font-bold uppercase text-[9px] tracking-wider block">Descrição & Foco Técnico</span>
-                      <p className="text-slate-400 leading-relaxed text-justify">
+                      <p className="text-slate-400 leading-relaxed text-justify whitespace-pre-line">
                         {selectedBelt.description}
                       </p>
                     </div>

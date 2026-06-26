@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import type { Aluno, Belt, Degree, Gender, LoggedUser, GraduacaoHistorico, Administrador } from '../types';
-import { BELT_RANKS, getBeltsByAge, getBjjAge, BAIRROS_DF } from '../types';
+import type { Aluno, Belt, Degree, Gender, LoggedUser, Administrador } from '../types';
+import { BAIRROS_DF, BELT_RANKS } from '../types';
+import { useStudents } from '../contexts/StudentsContext';
+import { BeltBadge } from './shared/BeltBadge';
+import { getBeltsByAge, getBjjAge } from '../utils/bjj';
+import { formatPhone, formatMonthYear } from '../utils/formatters';
 import { supabase } from '../lib/supabase';
 import { 
   User, 
@@ -9,31 +13,31 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Award,
-  Plus
+  Award
 } from 'lucide-react';
-
 
 interface StudentProfileProps {
   alunoId?: number;
-  students: Aluno[];
-  setStudents: React.Dispatch<React.SetStateAction<Aluno[]>>;
   loggedUser: LoggedUser | null;
   setLoggedUser?: React.Dispatch<React.SetStateAction<LoggedUser | null>>;
 }
 
 export const StudentProfile: React.FC<StudentProfileProps> = ({ 
   alunoId, 
-  students, 
-  setStudents, 
   loggedUser, 
   setLoggedUser 
 }) => {
+  const { students, setStudents } = useStudents();
+
   const isEditingAdmin = !alunoId && loggedUser?.role === 'admin';
   const isEditingTeacher = !alunoId && loggedUser?.role === 'teacher';
   const isStudent = loggedUser?.role === 'student';
 
-  const student = students.find(s => s.id === alunoId);
+  // Tenta encontrar o aluno na lista global do contexto
+  const contextStudent = students.find(s => s.id === alunoId);
+  const [localStudent, setLocalStudent] = useState<Aluno | null>(null);
+
+  const student = contextStudent || localStudent;
 
   // Estados dos Dados Pessoais do banco
   const [adminData, setAdminData] = useState<Administrador | null>(null);
@@ -42,20 +46,24 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   // Active Tab: 'profile' or 'password' or 'graduacoes'
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'graduacoes'>('profile');
 
-  // Form States (conditional for admin/student/teacher)
-  const [formNome, setFormNome] = useState(isEditingAdmin ? (loggedUser?.nome || 'Administrador') : (student?.nome || ''));
-  const [formCpf, setFormCpf] = useState(isEditingAdmin ? '' : (student?.cpf || ''));
-  const [formDataNascimento, setFormDataNascimento] = useState(isEditingAdmin ? '' : (student?.dataNascimento || ''));
-  const [formTelefone, setFormTelefone] = useState(isEditingAdmin ? '' : (student?.telefone || ''));
-  const [formEmail, setFormEmail] = useState(isEditingAdmin ? '' : (student?.email || ''));
-  const [formGenero, setFormGenero] = useState<Gender>(isEditingAdmin ? 'Masculino' : (student?.genero || 'Masculino'));
-  const [formBairro, setFormBairro] = useState(isEditingAdmin ? '' : (student?.bairro || ''));
-  const formDataMatricula = isEditingAdmin ? '' : (student?.dataMatricula || '');
-  const [formFaixa, setFormFaixa] = useState<Belt>(isEditingAdmin ? 'Branca' : (student?.faixa || 'Branca'));
-  const [formGraus, setFormGraus] = useState<Degree>(isEditingAdmin ? 0 : (student?.graus || 0));
-  const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>(isEditingAdmin ? 'Adulto' : (student?.turma || 'Adulto'));
+  // Form States
+  const [formNome, setFormNome] = useState('');
+  const [formCpf, setFormCpf] = useState('');
+  const [formDataNascimento, setFormDataNascimento] = useState('');
+  const [formTelefone, setFormTelefone] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formGenero, setFormGenero] = useState<Gender>('Masculino');
+  const [formBairro, setFormBairro] = useState('');
+  const [formDataMatricula, setFormDataMatricula] = useState('');
+  const [formFaixa, setFormFaixa] = useState<Belt>('Branca');
+  const [formGraus, setFormGraus] = useState<Degree>(0);
+  const [formTurma, setFormTurma] = useState<'Kids' | 'Adulto'>('Adulto');
+  const [formUltimaGraduacao, setFormUltimaGraduacao] = useState('');
+  const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState('');
+  const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState('');
+  const [formFotoPerfil, setFormFotoPerfil] = useState('');
 
-  // Converte YYYY-MM-DD ou DD/MM/AAAA para YYYY-MM (para input type="month")
+  // Converte YYYY-MM-DD para YYYY-MM para uso no input month
   const toMonthInputValue = (dateStr: string) => {
     if (!dateStr) return '';
     if (dateStr.includes('/')) {
@@ -68,10 +76,62 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     return '';
   };
 
-  const [formUltimaGraduacao, setFormUltimaGraduacao] = useState(isEditingAdmin ? '' : (student ? toMonthInputValue(student.dataUltimaGraduacao || '') : ''));
-  const [formContatoEmergenciaNome, setFormContatoEmergenciaNome] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaNome || ''));
-  const [formContatoEmergenciaTel, setFormContatoEmergenciaTel] = useState(isEditingAdmin ? '' : (student?.contatoEmergenciaTel || ''));
-  const [formFotoPerfil, setFormFotoPerfil] = useState(student?.fotoPerfil || '');
+  // Efeito para buscar o próprio perfil do aluno caso a lista global esteja vazia (mitigação de vazamento de dados)
+  useEffect(() => {
+    async function fetchMyProfile() {
+      if (isStudent && alunoId && !contextStudent) {
+        const { data, error } = await supabase
+          .from('alunos')
+          .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)')
+          .eq('id', alunoId)
+          .single();
+
+        if (!error && data) {
+          const mappedStudent: Aluno = {
+            ...data,
+            historicoGraduacoes: (data.graduacoes_historico || [])
+              .map((g: any) => ({
+                id: g.id,
+                data: g.data_graduacao,
+                faixa: g.faixa,
+                graus: g.graus,
+                avaliador: g.avaliador
+              }))
+              .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime())
+          };
+          setLocalStudent(mappedStudent);
+        }
+      }
+    }
+    fetchMyProfile();
+  }, [isStudent, alunoId, contextStudent]);
+
+  // Sincroniza formulário quando o objeto "student", "adminData" ou "teacherData" for alterado
+  useEffect(() => {
+    if (isEditingAdmin) {
+      setFormNome(loggedUser?.nome || 'Administrador');
+    } else if (isEditingTeacher && teacherData) {
+      setFormNome(teacherData.nome);
+      setFormEmail(teacherData.email || '');
+      setFormTelefone(formatPhone(teacherData.telefone || ''));
+    } else if (student) {
+      setFormNome(student.nome);
+      setFormCpf(student.cpf || '');
+      setFormDataNascimento(student.dataNascimento || '');
+      setFormTelefone(formatPhone(student.telefone || ''));
+      setFormEmail(student.email || '');
+      setFormGenero(student.genero || 'Masculino');
+      setFormBairro(student.bairro || '');
+      setFormDataMatricula(student.dataMatricula || '');
+      setFormFaixa(student.faixa || 'Branca');
+      setFormGraus(student.graus || 0);
+      setFormTurma(student.turma || 'Adulto');
+      setFormUltimaGraduacao(toMonthInputValue(student.dataUltimaGraduacao || ''));
+      setFormContatoEmergenciaNome(student.contatoEmergenciaNome || '');
+      setFormContatoEmergenciaTel(formatPhone(student.contatoEmergenciaTel || ''));
+      setFormFotoPerfil(student.fotoPerfil || '');
+    }
+  }, [student, isEditingAdmin, isEditingTeacher, teacherData, loggedUser]);
 
   // Efeitos para carregar dados de Admin e Professor do Supabase
   useEffect(() => {
@@ -90,7 +150,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       }
     }
     fetchAdminData();
-  }, [isEditingAdmin]);
+  }, [isEditingAdmin, loggedUser]);
 
   useEffect(() => {
     async function fetchTeacherData() {
@@ -102,14 +162,25 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
           .single();
         if (!error && data) {
           setTeacherData(data);
-          setFormNome(data.nome);
-          setFormEmail(data.email);
-          setFormTelefone(data.telefone || '');
         }
       }
     }
     fetchTeacherData();
   }, [isEditingTeacher, loggedUser]);
+
+  // Form States de Senha
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
+  // Status/Alerts
+  const [infoSuccess, setInfoSuccess] = useState<string | null>(null);
+  const [infoError, setInfoError] = useState<string | null>(null);
+  const [passSuccess, setPassSuccess] = useState<string | null>(null);
+  const [passError, setPassError] = useState<string | null>(null);
 
   if (!isEditingAdmin && !isEditingTeacher && !student) {
     return (
@@ -119,49 +190,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     );
   }
 
-  // Helper para formatar data como MM/AAAA (apenas mês/ano)
-  const formatToMonthYear = (dateStr: string) => {
-    if (!dateStr) return '-';
-    const parts = dateStr.split('-');
-    if (parts.length >= 2) {
-      return `${parts[1]}/${parts[0]}`;
-    }
-    if (dateStr.includes('/')) {
-      const p = dateStr.split('/');
-      if (p.length >= 2) return `${p[1]}/${p[p.length - 1]}`;
-    }
-    return dateStr;
-  };
-
-  // Password Change Form State
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPass, setShowCurrentPass] = useState(false);
-  const [showNewPass, setShowNewPass] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false);
-
-  // Status/Alerts State
-  const [infoSuccess, setInfoSuccess] = useState<string | null>(null);
-  const [infoError, setInfoError] = useState<string | null>(null);
-  const [passSuccess, setPassSuccess] = useState<string | null>(null);
-  const [passError, setPassError] = useState<string | null>(null);
-  const [gradError, setGradError] = useState<string | null>(null);
-  
-  // New Graduation State
-  const [showGradModal, setShowGradModal] = useState(false);
-  const [newGradFaixa, setNewGradFaixa] = useState<Belt>('Branca');
-  const [newGradGrau, setNewGradGrau] = useState<Degree>(0);
-  const [newGradData, setNewGradData] = useState(new Date().toISOString().split('T')[0]);
-
-  // Formatting helpers
-  const formatPhone = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .substring(0, 15);
-  };
   const handleSaveInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setInfoSuccess(null);
@@ -189,12 +217,10 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
 
       setAdminData({ ...adminData, nome: formNome, foto_perfil: formFotoPerfil });
 
-      // Update logged user state
       if (setLoggedUser) {
         setLoggedUser(prev => prev ? { ...prev, nome: formNome } : null);
       }
 
-      // Update sessionStorage user name if changed
       const loggedStr = sessionStorage.getItem('sfbjj_logged_user');
       if (loggedStr) {
         const logged = JSON.parse(loggedStr);
@@ -227,12 +253,10 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
         setTeacherData({ ...teacherData, nome: formNome, email: formEmail, telefone: formTelefone });
       }
 
-      // Update logged user state
       if (setLoggedUser) {
         setLoggedUser(prev => prev ? { ...prev, nome: formNome } : null);
       }
 
-      // Update sessionStorage user name if changed
       const loggedStr = sessionStorage.getItem('sfbjj_logged_user');
       if (loggedStr) {
         const logged = JSON.parse(loggedStr);
@@ -247,54 +271,46 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
 
     if (!student) return;
 
-    // Validar CPF obrigatório
+    // Valida CPF
     const cleanedCpf = formCpf.replace(/\D/g, '');
     if (!cleanedCpf) {
       setInfoError('O CPF é obrigatório.');
-      setTimeout(() => setInfoError(null), 4000);
       return;
     }
     if (cleanedCpf.length !== 11) {
       setInfoError('O CPF deve conter exatamente 11 dígitos.');
-      setTimeout(() => setInfoError(null), 4000);
       return;
     }
 
-    // Validar Contato de Emergência para menores de idade
+    // Contato de Emergência para menores
     const age = getBjjAge(formDataNascimento);
     if (age < 18) {
       if (!formContatoEmergenciaNome.trim() || !formContatoEmergenciaTel.trim()) {
-        setInfoError('Para menores de idade, o Contato de Emergência (Nome e Telefone) é obrigatório.');
-        setTimeout(() => setInfoError(null), 4000);
+        setInfoError('Para menores de idade, o Contato de Emergência é obrigatório.');
         return;
       }
     }
 
-    // Validar faixa por idade
+    // Valida Faixa
     const allowed = getBeltsByAge(formDataNascimento);
     if (!allowed.includes(formFaixa)) {
       setInfoError(`A faixa "${formFaixa}" não é permitida para a idade de ${age} anos.`);
       return;
     }
 
-    // Validar rebaixamento de faixa ou graus
     const oldFaixa = student.faixa;
     const oldGraus = student.graus;
     if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
       setInfoError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${formFaixa}.`);
-      setTimeout(() => setInfoError(null), 4000);
       return;
     }
     if (formFaixa === oldFaixa && formGraus < oldGraus) {
       setInfoError('Não é permitido diminuir a quantidade de graus.');
-      setTimeout(() => setInfoError(null), 4000);
       return;
     }
 
-    // formUltimaGraduacao está no formato YYYY-MM (input type="month")
     const dbUltimaGrad = formUltimaGraduacao ? `${formUltimaGraduacao}-01` : null;
 
-    // Update in supabase
     const { error: updateError } = await supabase
       .from('alunos')
       .update({
@@ -322,35 +338,35 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    setStudents(prev => prev.map(s => {
-      if (student && s.id === student?.id) {
-        return {
-          ...s,
-          nome: formNome,
-          cpf: formCpf,
-          dataNascimento: formDataNascimento,
-          telefone: formTelefone,
-          email: formEmail,
-          genero: formGenero,
-          bairro: formBairro,
-          dataMatricula: formDataMatricula,
-          faixa: formFaixa,
-          graus: formGraus,
-          turma: formTurma,
-          dataUltimaGraduacao: dbUltimaGrad || '',
-          contatoEmergenciaNome: formContatoEmergenciaNome,
-          contatoEmergenciaTel: formContatoEmergenciaTel,
-          fotoPerfil: formFotoPerfil
-        };
-      }
-      return s;
-    }));
+    const updatedStudent: Aluno = {
+      ...student,
+      nome: formNome,
+      cpf: formCpf,
+      dataNascimento: formDataNascimento,
+      telefone: formTelefone,
+      email: formEmail,
+      genero: formGenero,
+      bairro: formBairro,
+      dataMatricula: formDataMatricula,
+      faixa: formFaixa,
+      graus: formGraus,
+      turma: formTurma,
+      dataUltimaGraduacao: dbUltimaGrad || '',
+      contatoEmergenciaNome: formContatoEmergenciaNome,
+      contatoEmergenciaTel: formContatoEmergenciaTel,
+      fotoPerfil: formFotoPerfil
+    };
 
-    // Update sessionStorage user name if changed
+    if (contextStudent) {
+      setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+    } else {
+      setLocalStudent(updatedStudent);
+    }
+
     const loggedStr = sessionStorage.getItem('sfbjj_logged_user');
     if (loggedStr) {
       const logged = JSON.parse(loggedStr);
-      if (student && logged.alunoId === student.id) {
+      if (logged.alunoId === student.id) {
         logged.nome = formNome;
         sessionStorage.setItem('sfbjj_logged_user', JSON.stringify(logged));
       }
@@ -428,12 +444,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
         return;
       }
 
-      setStudents(prev => prev.map(s => {
-        if (student && s.id === student.id) {
-          return { ...s, senha: newPassword };
-        }
-        return s;
-      }));
+      const updatedWithPass = { ...student, senha: newPassword };
+      if (contextStudent) {
+        setStudents(prev => prev.map(s => s.id === student.id ? updatedWithPass : s));
+      } else {
+        setLocalStudent(updatedWithPass);
+      }
       setPassSuccess('Sua senha foi atualizada com sucesso!');
     }
 
@@ -443,190 +459,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     setTimeout(() => setPassSuccess(null), 4000);
   };
 
-  const handleAddGraduacao = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isStudent || !student) return;
-
-    if (!newGradData) {
-      setGradError('A data da graduação é obrigatória.');
-      return;
-    }
-
-    // Validar faixa por idade
-    const age = getBjjAge(student.dataNascimento);
-    const allowed = getBeltsByAge(student.dataNascimento);
-    if (!allowed.includes(newGradFaixa)) {
-      setGradError(`A faixa "${newGradFaixa}" não é permitida para a idade de ${age} anos.`);
-      return;
-    }
-
-    // Validar rebaixamento de faixa ou graus
-    const oldFaixa = student.faixa;
-    const oldGraus = student.graus;
-    if (BELT_RANKS[newGradFaixa] < BELT_RANKS[oldFaixa]) {
-      setGradError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${newGradFaixa}.`);
-      setTimeout(() => setGradError(null), 4000);
-      return;
-    }
-    if (newGradFaixa === oldFaixa && newGradGrau < oldGraus) {
-      setGradError('Não é permitido diminuir a quantidade de graus.');
-      setTimeout(() => setGradError(null), 4000);
-      return;
-    }
-
-    // Insere novo registro de graduação no supabase
-    const { data: newGradDataDb, error: gradInsertError } = await supabase
-      .from('graduacoes_historico')
-      .insert({
-        aluno_id: student.id,
-        faixa: newGradFaixa,
-        graus: newGradGrau,
-        data_graduacao: newGradData,
-        avaliador: loggedUser.nome
-      })
-      .select()
-      .single();
-
-    if (gradInsertError) {
-      console.error('Error inserting graduation record:', gradInsertError);
-      setGradError('Erro ao registrar graduação no banco de dados.');
-      return;
-    }
-
-    // Update faixa, graus, and dataUltimaGraduacao in alunos table
-    const { error: studentUpdateError } = await supabase
-      .from('alunos')
-      .update({
-        faixa: newGradFaixa,
-        graus: newGradGrau,
-        data_graduacao: newGradData
-      })
-      .eq('id', student.id);
-
-    if (studentUpdateError) {
-      console.error('Error updating student graduation details:', studentUpdateError);
-    }
-
-    const newGrad: GraduacaoHistorico = {
-      id: newGradDataDb ? newGradDataDb.id : Date.now(),
-      data: newGradData,
-      faixa: newGradFaixa,
-      graus: newGradGrau,
-      avaliador: loggedUser.nome
-    };
-
-    setStudents(prev => prev.map(s => {
-      if (s.id === student.id) {
-        const hist = s.historicoGraduacoes || [];
-        return {
-          ...s,
-          faixa: newGradFaixa,
-          graus: newGradGrau,
-          dataUltimaGraduacao: newGradData,
-          historicoGraduacoes: [...hist, newGrad]
-        };
-      }
-      return s;
-    }));
-    
-    // Atualiza estados locais do formulário também
-    setFormFaixa(newGradFaixa);
-    setFormGraus(newGradGrau);
-    setFormUltimaGraduacao(toMonthInputValue(newGradData));
-
-    setShowGradModal(false);
-  };
-
-  const renderBeltBadge = (faixa: Belt, graus: Degree) => {
-    let beltClass = '';
-    let barColor = 'bg-black'; // Black sleeve bar standard
-    let stripeStyle: React.CSSProperties | undefined;
-
-    const lowerFaixa = faixa.toLowerCase();
-
-    if (lowerFaixa.includes('cinza')) {
-      beltClass = 'bg-slate-400 text-slate-950 border border-slate-500';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa.includes('amarela')) {
-      beltClass = 'bg-yellow-400 text-slate-950 border border-yellow-500';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa.includes('laranja')) {
-      beltClass = 'bg-orange-500 text-white';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa.includes('verde')) {
-      beltClass = 'bg-emerald-600 text-white';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa === 'azul') {
-      beltClass = 'bg-blue-600 text-white border border-blue-700';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa === 'roxa') {
-      beltClass = 'bg-purple-700 text-white border border-purple-800';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa === 'marrom') {
-      beltClass = 'bg-amber-900 text-white border border-amber-950';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa === 'preta') {
-      beltClass = 'bg-neutral-950 border border-gold-500/75 text-gold-450';
-      barColor = 'bg-red-650';
-    } else if (lowerFaixa === 'vermelha e preta') {
-      stripeStyle = {
-        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #171717 15px, #171717 30px)'
-      };
-      beltClass = 'text-white border border-red-700';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa === 'vermelha e branca') {
-      stripeStyle = {
-        background: 'repeating-linear-gradient(90deg, #b91c1c, #b91c1c 15px, #f8fafc 15px, #f8fafc 30px)'
-      };
-      beltClass = 'text-neutral-950 border border-red-700';
-      barColor = 'bg-neutral-950';
-    } else if (lowerFaixa === 'vermelha') {
-      beltClass = 'bg-red-750 text-white border border-red-850';
-      barColor = 'bg-neutral-950';
-    } else {
-      beltClass = 'bg-white text-slate-900 border border-slate-300';
-      barColor = 'bg-neutral-900';
-    }
-
-    const hasWhiteStripe = (lowerFaixa.includes('e branca') && !lowerFaixa.includes('vermelha'));
-    const hasBlackStripe = (lowerFaixa.includes('e preta') && !lowerFaixa.includes('vermelha'));
-
-    return (
-      <div 
-        className={`w-32 h-6 rounded flex items-center relative overflow-hidden font-extrabold text-[10px] tracking-wider shadow-sm select-none ${beltClass}`}
-        style={stripeStyle}
-      >
-        <span className={`pl-2 uppercase z-10 ${lowerFaixa === 'vermelha e branca' ? 'text-black bg-white/60 px-1 rounded-sm' : ''}`}>{faixa}</span>
-
-        {/* Horizontal stripe for child mixed belts */}
-        {hasWhiteStripe && (
-          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-white border-y border-neutral-300/30 z-0 pointer-events-none" />
-        )}
-        {hasBlackStripe && (
-          <div className="absolute inset-x-0 top-[38%] bottom-[38%] bg-neutral-950 border-y border-neutral-800/30 z-0 pointer-events-none" />
-        )}
-
-        <div className={`absolute right-0 top-0 bottom-0 w-10 ${barColor} flex items-center justify-around px-0.5 border-l border-obsidian-950`}>
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div
-              key={idx}
-              className={`w-1 h-3.5 rounded-sm transition-all ${idx < graus ? 'bg-white shadow-[0_0_3px_rgba(255,255,255,0.7)]' : 'bg-neutral-800/80'}`}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       {/* Header Profile Hero Card */}
       <div className="bg-obsidian-900/40 border border-obsidian-850/70 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden backdrop-blur-lg">
-        {/* Glow decoration */}
         <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] rounded-full bg-slate-500/5 blur-[100px] pointer-events-none" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 z-10 relative">
-          {/* Avatar / Profile Picture */}
           <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-200/15 bg-gradient-to-br from-slate-100/5 to-slate-200/5 flex items-center justify-center text-4xl shadow-md shrink-0 select-none">
             {isEditingAdmin ? (
               formFotoPerfil ? (
@@ -651,8 +490,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
             )}
           </div>
 
-          {/* Aluno/Admin Info Summary */}
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 space-y-2 text-left">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">
                 {isEditingAdmin ? formNome : isEditingTeacher ? formNome : student?.nome}
@@ -678,7 +516,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-sm text-slate-400 font-medium">
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500">Graduação:</span>
-                  {renderBeltBadge(student.faixa, student.graus)}
+                  <BeltBadge faixa={student.faixa} graus={student.graus} />
                 </div>
               </div>
             )}
@@ -686,9 +524,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
         </div>
       </div>
 
-      {/* Main Tabs and Form Section */}
+      {/* Navegação e Formulários */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-        {/* Navigation side card */}
         <div className="md:col-span-1 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md space-y-1">
           <button
             onClick={() => setActiveSubTab('profile')}
@@ -697,6 +534,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 ? 'bg-slate-100/5 border-l-2 border-slate-350 text-slate-105'
                 : 'text-slate-450 hover:text-slate-200 hover:bg-obsidian-900/30'
             }`}
+            type="button"
           >
             <User className="w-4 h-4" />
             Dados Pessoais
@@ -709,6 +547,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   ? 'bg-slate-100/5 border-l-2 border-slate-350 text-slate-105'
                   : 'text-slate-450 hover:text-slate-200 hover:bg-obsidian-900/30'
               }`}
+              type="button"
             >
               <Award className="w-4 h-4" />
               Graduações
@@ -721,16 +560,17 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                 ? 'bg-slate-100/5 border-l-2 border-slate-350 text-slate-105'
                 : 'text-slate-450 hover:text-slate-200 hover:bg-obsidian-900/30'
             }`}
+            type="button"
           >
             <Lock className="w-4 h-4" />
             Alterar Senha
           </button>
         </div>
 
-        {/* Form Container */}
+        {/* Painel do Formulário */}
         <div className="md:col-span-3 card-premium bg-obsidian-900/20 border border-obsidian-900/60 shadow-2xl backdrop-blur-md">
           {activeSubTab === 'profile' ? (
-            <div className="space-y-6">
+            <div className="space-y-6 text-left">
               <div>
                 <h2 className="text-xl font-bold text-slate-100">Atualizar Dados Pessoais</h2>
                 <p className="text-slate-400 text-xs mt-1">
@@ -754,7 +594,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               )}
 
               <form onSubmit={handleSaveInfo} className="space-y-4">
-                {/* Name */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nome Completo</label>
                   <input
@@ -767,7 +606,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   />
                 </div>
 
-                {/* Email & Phone */}
                 {!isEditingAdmin && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
@@ -790,7 +628,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     </div>
                   </div>
                 )}
-                {/* Birth & Gender */}
+
                 {isStudent && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
@@ -798,34 +636,17 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       <input
                         type="date"
                         value={formDataNascimento}
-                        onChange={(e) => {
-                          const newDate = e.target.value;
-                          setFormDataNascimento(newDate);
-                          const allowed = getBeltsByAge(newDate);
-                          if (!allowed.includes(formFaixa)) {
-                            setFormFaixa(allowed[0]);
-                          }
-                          if (newDate) {
-                            const age = getBjjAge(newDate);
-                            if (age >= 4 && age <= 12) {
-                              setFormTurma('Kids');
-                            } else if (age >= 13) {
-                              setFormTurma('Adulto');
-                            }
-                          }
-                        }}
                         className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         required
-                        disabled={isStudent}
+                        disabled={true}
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Gênero</label>
                       <select
                         value={formGenero}
-                        onChange={(e) => setFormGenero(e.target.value as Gender)}
                         className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isStudent}
+                        disabled={true}
                       >
                         <option value="Masculino">Masculino</option>
                         <option value="Feminino">Feminino</option>
@@ -834,7 +655,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   </div>
                 )}
 
-                {/* Neighborhood (Bairro) */}
                 {isStudent && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Bairro</label>
@@ -854,7 +674,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   </div>
                 )}
 
-                {/* Emergency Contact Header */}
                 {isStudent && (
                   <div className="border-t border-obsidian-750 pt-4 mt-2">
                     <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">
@@ -862,26 +681,20 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                          Nome do Contato {getBjjAge(formDataNascimento) < 18 && <span className="text-red-500 font-bold">*</span>}
-                        </label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nome do Contato</label>
                         <input
                           type="text"
                           value={formContatoEmergenciaNome}
                           onChange={(e) => setFormContatoEmergenciaNome(e.target.value)}
-                          placeholder="Nome do parente/amigo"
                           className="input-premium w-full"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                          Telefone do Contato {getBjjAge(formDataNascimento) < 18 && <span className="text-red-500 font-bold">*</span>}
-                        </label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone do Contato</label>
                         <input
                           type="text"
                           value={formContatoEmergenciaTel}
                           onChange={(e) => setFormContatoEmergenciaTel(formatPhone(e.target.value))}
-                          placeholder="(00) 00000-0000"
                           className="input-premium w-full"
                         />
                       </div>
@@ -889,12 +702,10 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   </div>
                 )}
 
-                {/* Foto de Perfil */}
                 {!isEditingTeacher && (
                   <div className="border-t border-obsidian-750 pt-4 mt-2">
                     <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Foto de Perfil</h3>
                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                      {/* Preview */}
                       <div className="w-20 h-20 rounded-xl overflow-hidden border border-gold-500/25 bg-obsidian-950 flex items-center justify-center text-3xl shadow-inner select-none shrink-0">
                         {formFotoPerfil ? (
                           formFotoPerfil.length === 2 ? (
@@ -906,7 +717,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           <span className="text-slate-600">🥋</span>
                         )}
                       </div>
-                      {/* Options */}
                       <div className="flex-1 space-y-3 w-full">
                         <div className="flex flex-wrap gap-2 items-center">
                           <span className="text-xs text-slate-500 mr-1">Avatares padrão:</span>
@@ -915,9 +725,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                           <button type="button" onClick={() => setFormFotoPerfil('🧑')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '🧑' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>🧑</button>
                           <button type="button" onClick={() => setFormFotoPerfil('👧')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👧' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👧</button>
                           <button type="button" onClick={() => setFormFotoPerfil('👩')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩</button>
-                          <button type="button" onClick={() => setFormFotoPerfil('👩‍🦰')} className={`p-1.5 rounded-lg border text-lg hover:bg-obsidian-700 transition-colors ${formFotoPerfil === '👩‍🦰' ? 'border-gold-500 bg-gold-500/10' : 'border-obsidian-700'}`}>👩‍🦰</button>
                         </div>
-
                         <div className="flex flex-col gap-1">
                           <span className="text-xs text-slate-500">Ou envie sua foto:</span>
                           <input
@@ -943,21 +751,17 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   </div>
                 )}
 
-                {/* Editable Academic & System Fields */}
                 {isStudent && (
                   <div className="border-t border-obsidian-750 pt-4 mt-2">
                     <h3 className="text-xs font-extrabold text-gold-400 uppercase tracking-widest mb-3">Informações Acadêmicas</h3>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF *</label>
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF</label>
                         <input
                           type="text"
                           value={formCpf}
-                          onChange={(e) => setFormCpf(e.target.value)}
                           className="input-premium w-full font-mono disabled:opacity-50 disabled:cursor-not-allowed"
-                          placeholder="000.000.000-00"
-                          disabled={isStudent}
+                          disabled={true}
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -965,8 +769,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         <input
                           type="month"
                           value={formUltimaGraduacao}
-                          onChange={(e) => setFormUltimaGraduacao(e.target.value)}
                           className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={true}
                         />
                       </div>
                     </div>
@@ -974,47 +778,26 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Faixa Atual</label>
-                        <select
-                          value={formFaixa}
-                          onChange={(e) => setFormFaixa(e.target.value as Belt)}
-                          className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {getBeltsByAge(formDataNascimento).map((b) => (
-                            <option key={b} value={b}>{b}</option>
-                          ))}
+                        <select value={formFaixa} className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed" disabled={true}>
+                          <option value={formFaixa}>{formFaixa}</option>
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Graus</label>
-                        <select
-                          value={formGraus}
-                          onChange={(e) => setFormGraus(Number(e.target.value) as Degree)}
-                          className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value={0}>0 Grau</option>
-                          <option value={1}>1 Grau</option>
-                          <option value={2}>2 Graus</option>
-                          <option value={3}>3 Graus</option>
-                          <option value={4}>4 Graus</option>
+                        <select value={formGraus} className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed" disabled={true}>
+                          <option value={formGraus}>{formGraus} Graus</option>
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Principal (Automática)</label>
-                        <select
-                          value={formTurma}
-                          onChange={(e) => setFormTurma(e.target.value as 'Kids' | 'Adulto')}
-                          className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={true}
-                        >
-                          <option value="Adulto">Adulto</option>
-                          <option value="Kids">Kids</option>
+                        <select value={formTurma} className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed" disabled={true}>
+                          <option value={formTurma}>{formTurma}</option>
                         </select>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Submit button */}
                 <div className="flex justify-end pt-4">
                   <button type="submit" className="btn-gold px-8 py-2.5">
                     Salvar Informações
@@ -1023,7 +806,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               </form>
             </div>
           ) : activeSubTab === 'password' ? (
-            <div className="space-y-6">
+            <div className="space-y-6 text-left">
               <div>
                 <h2 className="text-xl font-bold text-slate-100">Alterar Senha de Acesso</h2>
                 <p className="text-slate-400 text-xs mt-1">
@@ -1046,7 +829,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               )}
 
               <form onSubmit={handleSavePassword} className="space-y-4 max-w-md">
-                {/* Current Password */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Senha Atual</label>
                   <div className="relative">
@@ -1060,14 +842,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowCurrentPass(!showCurrentPass)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-300"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-330"
                     >
                       {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* New Password */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nova Senha</label>
                   <div className="relative">
@@ -1081,14 +862,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowNewPass(!showNewPass)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-300"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-330"
                     >
                       {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Confirm Password */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Confirmar Nova Senha</label>
                   <div className="relative">
@@ -1102,14 +882,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowConfirmPass(!showConfirmPass)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-300"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-330"
                     >
                       {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Submit button */}
                 <div className="flex justify-start pt-4">
                   <button type="submit" className="btn-gold px-8 py-2.5">
                     Atualizar Senha
@@ -1118,7 +897,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               </form>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 text-left">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-100">Histórico de Graduações</h2>
@@ -1126,20 +905,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     Acompanhe a jornada, faixas e graus alcançados.
                   </p>
                 </div>
-                {isStudent && (
-                  <button 
-                    onClick={() => {
-                      setShowGradModal(true);
-                      setGradError(null);
-                      setNewGradFaixa(student?.faixa || 'Branca');
-                      setNewGradGrau(student?.graus || 0);
-                    }}
-                    className="btn-gold flex items-center gap-2 text-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Registrar Graduação
-                  </button>
-                )}
               </div>
 
               <div className="mt-4 border border-obsidian-750 rounded-xl overflow-hidden">
@@ -1155,10 +920,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       student.historicoGraduacoes.slice().reverse().map((grad) => (
                         <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
-                            {formatToMonthYear(grad.data)}
+                            {formatMonthYear(grad.data)}
                           </td>
                           <td className="px-4 py-3">
-                            {renderBeltBadge(grad.faixa, grad.graus)}
+                            <div className="flex justify-start">
+                              <BeltBadge faixa={grad.faixa} graus={grad.graus} />
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1172,79 +939,6 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                   </tbody>
                 </table>
               </div>
-
-              {/* Modal de Registro de Graduação (Only Student) */}
-              {showGradModal && isStudent && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                  <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-scale-up">
-                    <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
-                      <Award className="w-5 h-5 text-gold-500" />
-                      Nova Graduação
-                    </h3>
-
-                    {gradError && (
-                      <div className="mb-4 flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>{gradError}</span>
-                      </div>
-                    )}
-
-                    <form onSubmit={handleAddGraduacao} className="space-y-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nova Faixa</label>
-                        <select
-                          value={newGradFaixa}
-                          onChange={(e) => setNewGradFaixa(e.target.value as Belt)}
-                          className="input-premium w-full bg-obsidian-950"
-                        >
-                          {getBeltsByAge(student?.dataNascimento).map((b) => (
-                            <option key={b} value={b}>{b}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Novo Grau</label>
-                        <select
-                          value={newGradGrau}
-                          onChange={(e) => setNewGradGrau(Number(e.target.value) as Degree)}
-                          className="input-premium w-full bg-obsidian-950"
-                        >
-                          <option value={0}>0 Grau</option>
-                          <option value={1}>1 Grau</option>
-                          <option value={2}>2 Graus</option>
-                          <option value={3}>3 Graus</option>
-                          <option value={4}>4 Graus</option>
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data da Graduação</label>
-                        <input
-                          type="date"
-                          value={newGradData}
-                          onChange={(e) => setNewGradData(e.target.value)}
-                          className="input-premium w-full bg-obsidian-950"
-                          required
-                        />
-                      </div>
-
-                      <div className="mt-6 flex justify-end gap-2 pt-2 border-t border-obsidian-750">
-                        <button 
-                          type="button" 
-                          onClick={() => setShowGradModal(false)}
-                          className="btn-obsidian px-4 py-2 text-xs"
-                        >
-                          Cancelar
-                        </button>
-                        <button type="submit" className="btn-gold px-4 py-2 text-xs">
-                          Registrar
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>

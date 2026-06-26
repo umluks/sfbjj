@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type {
-  Aluno,
   Aviso,
   LoggedUser
 } from '../types';
@@ -15,20 +14,20 @@ import {
   CalendarCheck,
   Edit
 } from 'lucide-react';
+import { useStudents } from '../contexts/StudentsContext';
 
 interface DashboardProps {
-  students: Aluno[];
   announcements: Aviso[];
   setAnnouncements: React.Dispatch<React.SetStateAction<Aviso[]>>;
   loggedUser: LoggedUser | null;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
-  students,
   announcements,
   setAnnouncements,
   loggedUser
 }) => {
+  const { students } = useStudents();
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [newNoticeTitle, setNewNoticeTitle] = useState('');
   const [newNoticeContent, setNewNoticeContent] = useState('');

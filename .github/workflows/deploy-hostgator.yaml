@@ -1,14 +1,14 @@
-name: Pipeline de Deploy Unificada
+name: Pipeline de Deploy Unificado
 
 on:
   workflow_dispatch:
     inputs:
       run-hostgator:
-        description: Executar Deploy HostGator?
+        description: 'Enviar aplicação para o HostGator?'
         type: boolean
         default: true
       run-dockerhub:
-        description: Executar Docker Hub?
+        description: 'Gerar e publicar imagem no Docker Hub?'
         type: boolean
         default: true
 
