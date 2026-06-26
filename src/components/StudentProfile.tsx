@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Aluno, Belt, Degree, Gender, LoggedUser, Administrador } from '../types';
+import type { Aluno, Belt, Degree, Gender, LoggedUser, Administrador, GraduacaoHistorico } from '../types';
 import { BAIRROS_DF, BELT_RANKS } from '../types';
 import { useStudents } from '../contexts/StudentsContext';
 import { BeltBadge } from './shared/BeltBadge';
@@ -13,7 +13,10 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Award
+  Award,
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 interface StudentProfileProps {
@@ -181,6 +184,14 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const [infoError, setInfoError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
   const [passError, setPassError] = useState<string | null>(null);
+
+  // Estados de Graduação (Ficha Pessoal do Aluno)
+  const [showGradModal, setShowGradModal] = useState(false);
+  const [newGradFaixa, setNewGradFaixa] = useState<Belt>('Branca');
+  const [newGradGrau, setNewGradGrau] = useState<Degree>(0);
+  const [newGradData, setNewGradData] = useState(new Date().toISOString().substring(0, 7));
+  const [gradError, setGradError] = useState<string | null>(null);
+  const [editingGrad, setEditingGrad] = useState<GraduacaoHistorico | null>(null);
 
   if (!isEditingAdmin && !isEditingTeacher && !student) {
     return (
@@ -459,6 +470,246 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
     setTimeout(() => setPassSuccess(null), 4000);
   };
 
+  const handleAddGraduacao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isStudent || !student) return;
+
+    if (!newGradData) {
+      setGradError('O mês e ano da graduação são obrigatórios.');
+      return;
+    }
+
+    // Normalizar a data para YYYY-MM-01 se for YYYY-MM (mês/ano)
+    const normalizedGradData = newGradData.length === 7 ? `${newGradData}-01` : newGradData;
+
+    // Validar faixa por idade
+    const age = getBjjAge(student.dataNascimento);
+    const allowed = getBeltsByAge(student.dataNascimento);
+    if (!allowed.includes(newGradFaixa)) {
+      setGradError(`A faixa "${newGradFaixa}" não é permitida para a idade de ${age} anos.`);
+      return;
+    }
+
+    // Validar regras de histórico (bloquear superior, permitir inferior ou igual)
+    const currentFaixaRank = BELT_RANKS[student.faixa];
+    const newFaixaRank = BELT_RANKS[newGradFaixa];
+
+    if (newFaixaRank > currentFaixaRank) {
+      setGradError(`Você não pode registrar uma faixa superior à sua faixa atual (${student.faixa}).`);
+      setTimeout(() => setGradError(null), 5000);
+      return;
+    }
+
+    // Se o registro for inferior à faixa atual, sua data deve ser retroativa à data da faixa atual
+    const isCurrentActive = newGradFaixa === student.faixa && newGradGrau === student.graus;
+    if (!isCurrentActive && student.dataUltimaGraduacao) {
+      const activeTime = new Date(student.dataUltimaGraduacao).getTime();
+      const newTime = new Date(normalizedGradData).getTime();
+
+      if (newTime >= activeTime) {
+        setGradError(`A data para a graduação anterior ${newGradFaixa} (${newGradGrau} Graus) deve ser anterior à data da sua faixa atual (${formatMonthYear(student.dataUltimaGraduacao)}).`);
+        setTimeout(() => setGradError(null), 7000);
+        return;
+      }
+    }
+
+    // Validar coerência cronológica do histórico (faixa branca 0 graus deve ser anterior à faixa branca 1 grau, etc.)
+    const getGradWeight = (f: Belt, g: number) => (BELT_RANKS[f] || 0) * 10 + g;
+    const currentWeight = getGradWeight(newGradFaixa, newGradGrau);
+
+    const otherGrads = (student.historicoGraduacoes || []).filter(g => !editingGrad || g.id !== editingGrad.id);
+
+    for (const other of otherGrads) {
+      const otherWeight = getGradWeight(other.faixa, other.graus);
+      const otherTime = new Date(other.data).getTime();
+      const newTime = new Date(normalizedGradData).getTime();
+
+      if (currentWeight < otherWeight && newTime >= otherTime) {
+        setGradError(`A data para a graduação ${newGradFaixa} (${newGradGrau} Graus) deve ser anterior à graduação ${other.faixa} (${other.graus} Graus) em ${formatMonthYear(other.data)}.`);
+        setTimeout(() => setGradError(null), 7000);
+        return;
+      }
+      if (currentWeight > otherWeight && newTime <= otherTime) {
+        setGradError(`A data para a graduação ${newGradFaixa} (${newGradGrau} Graus) deve ser posterior à graduação ${other.faixa} (${other.graus} Graus) em ${formatMonthYear(other.data)}.`);
+        setTimeout(() => setGradError(null), 7000);
+        return;
+      }
+      if (currentWeight === otherWeight) {
+        setGradError(`Você já possui um registro de graduação para ${newGradFaixa} (${newGradGrau} Graus).`);
+        setTimeout(() => setGradError(null), 5000);
+        return;
+      }
+    }
+
+    let updatedHistory = [];
+
+    if (editingGrad) {
+      // Impedir edição se a graduação que está sendo editada corresponder à faixa/grau atuais do aluno
+      if (editingGrad.faixa === student.faixa && editingGrad.graus === student.graus) {
+        setGradError('Você não pode editar o histórico da sua faixa ativa atual.');
+        setTimeout(() => setGradError(null), 5000);
+        return;
+      }
+
+      // Atualiza registro de graduação existente no supabase
+      const { error: gradUpdateError } = await supabase
+        .from('graduacoes_historico')
+        .update({
+          faixa: newGradFaixa,
+          graus: newGradGrau,
+          data_graduacao: normalizedGradData
+        })
+        .eq('id', editingGrad.id);
+
+      if (gradUpdateError) {
+        console.error('Error updating graduation record:', gradUpdateError);
+        setGradError('Erro ao atualizar graduação no banco de dados.');
+        return;
+      }
+
+      updatedHistory = (student.historicoGraduacoes || []).map(g =>
+        g.id === editingGrad.id
+          ? { ...g, data: normalizedGradData, faixa: newGradFaixa, graus: newGradGrau }
+          : g
+      );
+    } else {
+      // Insere novo registro de graduação no supabase
+      const { data: newGradDataDb, error: gradInsertError } = await supabase
+        .from('graduacoes_historico')
+        .insert({
+          aluno_id: student.id,
+          faixa: newGradFaixa,
+          graus: newGradGrau,
+          data_graduacao: normalizedGradData,
+          avaliador: 'Histórico Pessoal'
+        })
+        .select()
+        .single();
+
+      if (gradInsertError) {
+        console.error('Error inserting graduation record:', gradInsertError);
+        setGradError('Erro ao registrar graduação no banco de dados.');
+        return;
+      }
+
+      const newGrad = {
+        id: newGradDataDb ? newGradDataDb.id : Date.now(),
+        data: normalizedGradData,
+        faixa: newGradFaixa,
+        graus: newGradGrau,
+        avaliador: 'Histórico Pessoal'
+      };
+
+      updatedHistory = [...(student.historicoGraduacoes || []), newGrad];
+    }
+
+    // Sincroniza a data de última graduação na tabela alunos se for correspondente aos valores atuais de faixa e grau
+    if (isCurrentActive) {
+      const { error: studentUpdateError } = await supabase
+        .from('alunos')
+        .update({
+          dataUltimaGraduacao: normalizedGradData
+        })
+        .eq('id', student.id);
+
+      if (studentUpdateError) {
+        console.error('Error updating student graduation details:', studentUpdateError);
+      }
+    }
+
+    const sortedHistory = updatedHistory.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+
+    const updatedStudent = {
+      ...student,
+      dataUltimaGraduacao: isCurrentActive ? normalizedGradData : student.dataUltimaGraduacao,
+      historicoGraduacoes: sortedHistory
+    };
+
+    if (contextStudent) {
+      setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+    } else {
+      setLocalStudent(updatedStudent);
+    }
+    
+    if (isCurrentActive) {
+      setFormUltimaGraduacao(toMonthInputValue(normalizedGradData));
+    }
+
+    setShowGradModal(false);
+    setEditingGrad(null);
+  };
+
+  const handleDeleteGraduacao = async (gradId: number) => {
+    if (!isStudent || !student) return;
+
+    // Bloquear exclusão se for a faixa/grau atuais
+    const targetGrad = student.historicoGraduacoes?.find(g => g.id === gradId);
+    if (targetGrad && targetGrad.faixa === student.faixa && targetGrad.graus === student.graus) {
+      alert('Você não pode excluir a sua graduação ativa atual.');
+      return;
+    }
+
+    if (!window.confirm('Tem certeza que deseja excluir esta graduação do seu histórico?')) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from('graduacoes_historico')
+      .delete()
+      .eq('id', gradId);
+
+    if (deleteError) {
+      console.error('Error deleting graduation record:', deleteError);
+      alert('Erro ao excluir graduação do banco de dados.');
+      return;
+    }
+
+    const updatedHistory = (student.historicoGraduacoes || []).filter(g => g.id !== gradId);
+
+    const deletedGrad = student.historicoGraduacoes?.find(g => g.id === gradId);
+    const isCurrentActive = deletedGrad && deletedGrad.faixa === student.faixa && deletedGrad.graus === student.graus;
+
+    let newDataUltimaGrad = student.dataUltimaGraduacao;
+    if (isCurrentActive) {
+      const remainingActives = updatedHistory.filter(g => g.faixa === student.faixa && g.graus === student.graus);
+      if (remainingActives.length > 0) {
+        const sorted = remainingActives.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        newDataUltimaGrad = sorted[0].data;
+      } else {
+        newDataUltimaGrad = student.dataMatricula || '';
+      }
+
+      const { error: studentUpdateError } = await supabase
+        .from('alunos')
+        .update({
+          dataUltimaGraduacao: newDataUltimaGrad || null
+        })
+        .eq('id', student.id);
+
+      if (studentUpdateError) {
+        console.error('Error updating student graduation details on delete:', studentUpdateError);
+      }
+    }
+
+    const sortedHistory = updatedHistory.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+
+    const updatedStudent = {
+      ...student,
+      dataUltimaGraduacao: newDataUltimaGrad,
+      historicoGraduacoes: sortedHistory
+    };
+
+    if (contextStudent) {
+      setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+    } else {
+      setLocalStudent(updatedStudent);
+    }
+
+    if (isCurrentActive) {
+      setFormUltimaGraduacao(toMonthInputValue(newDataUltimaGrad));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Profile Hero Card */}
@@ -550,7 +801,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               type="button"
             >
               <Award className="w-4 h-4" />
-              Graduações
+              Histórico de Faixas
             </button>
           )}
           <button
@@ -900,11 +1151,27 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
             <div className="space-y-6 text-left">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-100">Histórico de Graduações</h2>
+                  <h2 className="text-xl font-bold text-slate-100">Histórico de Faixas & Graus</h2>
                   <p className="text-slate-400 text-xs mt-1">
                     Acompanhe a jornada, faixas e graus alcançados.
                   </p>
                 </div>
+                {isStudent && (
+                  <button 
+                    onClick={() => {
+                      setShowGradModal(true);
+                      setGradError(null);
+                      setEditingGrad(null);
+                      setNewGradFaixa(student?.faixa || 'Branca');
+                      setNewGradGrau(student?.graus || 0);
+                      setNewGradData(new Date().toISOString().substring(0, 7));
+                    }}
+                    className="btn-gold flex items-center gap-2 text-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Registrar Faixa/Grau
+                  </button>
+                )}
               </div>
 
               <div className="mt-4 border border-obsidian-750 rounded-xl overflow-hidden">
@@ -913,32 +1180,160 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     <tr>
                       <th className="px-4 py-3 font-semibold">Data</th>
                       <th className="px-4 py-3 font-semibold">Faixa & Grau</th>
+                      {isStudent && <th className="px-4 py-3 font-semibold text-right">Ações</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-obsidian-750/50">
-                    {student?.historicoGraduacoes && student.historicoGraduacoes.length > 0 ? (
-                      student.historicoGraduacoes.slice().reverse().map((grad) => (
-                        <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
-                            {formatMonthYear(grad.data)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-start">
-                              <BeltBadge faixa={grad.faixa} graus={grad.graus} />
-                            </div>
+                    {(() => {
+                      const hasCurrentInHistory = (student?.historicoGraduacoes || []).some(
+                        g => g.faixa === student?.faixa && g.graus === student?.graus
+                      );
+                      const displayHistory = [...(student?.historicoGraduacoes || [])];
+                      if (!hasCurrentInHistory && student?.faixa) {
+                        displayHistory.push({
+                          id: -999,
+                          data: student.dataUltimaGraduacao || student.dataMatricula || new Date().toISOString().substring(0, 10),
+                          faixa: student.faixa,
+                          graus: student.graus,
+                          avaliador: 'Sistema'
+                        });
+                      }
+
+                      const sortedHistory = displayHistory.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+                      return sortedHistory.length > 0 ? (
+                        sortedHistory.map((grad) => (
+                          <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
+                              {formatMonthYear(grad.data)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex justify-start">
+                                <BeltBadge faixa={grad.faixa} graus={grad.graus} />
+                              </div>
+                            </td>
+                            {isStudent && (
+                              <td className="px-4 py-3 text-right whitespace-nowrap">
+                                {grad.faixa === student?.faixa && grad.graus === student?.graus ? (
+                                  <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 select-none">
+                                    Faixa Atual
+                                  </span>
+                                ) : (
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setEditingGrad(grad);
+                                        setNewGradFaixa(grad.faixa);
+                                        setNewGradGrau(grad.graus);
+                                        setNewGradData(toMonthInputValue(grad.data));
+                                        setGradError(null);
+                                        setShowGradModal(true);
+                                      }}
+                                      className="p-1.5 rounded-lg bg-obsidian-750 text-slate-300 hover:bg-slate-200/10 hover:text-slate-100 transition-all border border-obsidian-700"
+                                      title="Editar"
+                                    >
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteGraduacao(grad.id)}
+                                      className="p-1.5 rounded-lg bg-obsidian-750 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all border border-obsidian-700"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={isStudent ? 3 : 2} className="px-4 py-8 text-center text-slate-500 text-xs">
+                            Nenhum registro de graduação encontrado para este aluno.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={2} className="px-4 py-8 text-center text-slate-500 text-xs">
-                          Nenhum registro de graduação encontrado para este aluno.
-                        </td>
-                      </tr>
-                    )}
+                      );
+                    })()}
                   </tbody>
                 </table>
               </div>
+
+              {/* Modal de Registro/Edição de Graduação (Apenas Aluno) */}
+              {showGradModal && isStudent && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                  <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-scale-up text-left">
+                    <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+                      <Award className="w-5 h-5 text-gold-500" />
+                      {editingGrad ? 'Editar Faixa/Grau' : 'Registrar Faixa/Grau'}
+                    </h3>
+
+                    {gradError && (
+                      <div className="mb-4 flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{gradError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleAddGraduacao} className="space-y-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nova Faixa</label>
+                        <select
+                          value={newGradFaixa}
+                          onChange={(e) => setNewGradFaixa(e.target.value as Belt)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          {getBeltsByAge(student?.dataNascimento).map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Novo Grau</label>
+                        <select
+                          value={newGradGrau}
+                          onChange={(e) => setNewGradGrau(Number(e.target.value) as Degree)}
+                          className="input-premium w-full bg-obsidian-950"
+                        >
+                          <option value={0}>0 Grau</option>
+                          <option value={1}>1 Grau</option>
+                          <option value={2}>2 Graus</option>
+                          <option value={3}>3 Graus</option>
+                          <option value={4}>4 Graus</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Mês/Ano da Graduação</label>
+                        <input
+                          type="month"
+                          value={newGradData}
+                          onChange={(e) => setNewGradData(e.target.value)}
+                          className="input-premium w-full bg-obsidian-950"
+                          required
+                        />
+                      </div>
+
+                      <div className="mt-6 flex justify-end gap-2 pt-2 border-t border-obsidian-750">
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setShowGradModal(false);
+                            setEditingGrad(null);
+                          }}
+                          className="btn-obsidian px-4 py-2 text-xs"
+                        >
+                          Cancelar
+                        </button>
+                        <button type="submit" className="btn-gold px-4 py-2 text-xs">
+                          {editingGrad ? 'Salvar' : 'Registrar'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
