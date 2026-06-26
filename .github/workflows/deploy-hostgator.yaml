@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - feat/ias-hostgator
+  workflow_dispatch: # Permite disparo manual via painel do GitHub
+
+# Previne deploys simultâneos conflitantes na mesma branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -22,13 +31,16 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Validar código (Lint)
+        run: npm run lint
+
       - name: Gerar build
         run: npm run build
 
-      - name: Publicar na HostGator
+      - name: Publicar na HostGator (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ftp.45954aab77704702afe51744375733133.domain-placeholder.temp
+          server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           local-dir: ./dist/
