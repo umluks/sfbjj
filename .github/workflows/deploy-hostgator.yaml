@@ -1,10 +1,18 @@
 name: Pipeline de Deploy Unificada (HostGator & Docker Hub)
 
 on:
-  push:
-    branches:
-      - production-hostgator
   workflow_dispatch:
+    inputs:
+      run-hostgator:
+        description: 'Executar Deploy HostGator (FTP)?'
+        type: boolean
+        required: true
+        default: true
+      run-dockerhub:
+        description: 'Executar Build e Push no Docker Hub?'
+        type: boolean
+        required: true
+        default: true
 
 permissions:
   contents: read
@@ -17,6 +25,7 @@ jobs:
   deploy-hostgator:
     name: Deploy HostGator (FTP)
     runs-on: ubuntu-latest
+    if: ${{ inputs.run-hostgator == true }}
 
     steps:
       - name: Obter código fonte do repositório (Git Checkout)
@@ -46,6 +55,7 @@ jobs:
   deploy-dockerhub:
     name: Build e Push Docker Hub
     runs-on: ubuntu-latest
+    if: ${{ inputs.run-dockerhub == true }}
     env:
       DOCKERHUB_REPO: umluks/sfbjj-app
 
