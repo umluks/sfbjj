@@ -13,7 +13,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
+jobs-deploy-hostgator:
   deploy-hostgator:
     name: Deploy HostGator (FTP)
     runs-on: ubuntu-latest
@@ -42,12 +42,12 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           local-dir: ./dist/
           server-dir: ./
-
+jobs-dockerhub:          
   deploy-dockerhub:
     name: Build e Push Docker Hub
     runs-on: ubuntu-latest
     env:
-      DOCKERHUB_REPO: umluks/sfbjj
+      DOCKERHUB_REPO: umluks/sfbjj-app
 
     steps:
       - name: Obter código fonte do repositório (Git Checkout)
