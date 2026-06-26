@@ -309,17 +309,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       return;
     }
 
-    const oldFaixa = student.faixa;
-    const oldGraus = student.graus;
-    if (BELT_RANKS[formFaixa] < BELT_RANKS[oldFaixa]) {
-      setInfoError(`Não é permitido rebaixar a faixa de ${oldFaixa} para ${formFaixa}.`);
-      return;
-    }
-    if (formFaixa === oldFaixa && formGraus < oldGraus) {
-      setInfoError('Não é permitido diminuir a quantidade de graus.');
-      return;
-    }
-
+    // Permitir alteração livre de faixa e graus na ficha principal
     const dbUltimaGrad = formUltimaGraduacao ? `${formUltimaGraduacao}-01` : null;
 
     const { error: updateError } = await supabase
@@ -1020,8 +1010,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                         <input
                           type="month"
                           value={formUltimaGraduacao}
-                          className="input-premium w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={true}
+                          onChange={(e) => setFormUltimaGraduacao(e.target.value)}
+                          className="input-premium w-full bg-obsidian-950 text-slate-200"
+                          disabled={false}
                         />
                       </div>
                     </div>
@@ -1029,14 +1020,30 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Faixa Atual</label>
-                        <select value={formFaixa} className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed" disabled={true}>
-                          <option value={formFaixa}>{formFaixa}</option>
+                        <select 
+                          value={formFaixa} 
+                          onChange={(e) => setFormFaixa(e.target.value as Belt)}
+                          className="input-premium w-full bg-obsidian-950 text-slate-200"
+                          disabled={false}
+                        >
+                          {getBeltsByAge(student?.dataNascimento).map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Graus</label>
-                        <select value={formGraus} className="input-premium w-full bg-obsidian-950 disabled:opacity-50 disabled:cursor-not-allowed" disabled={true}>
-                          <option value={formGraus}>{formGraus} Graus</option>
+                        <select 
+                          value={formGraus} 
+                          onChange={(e) => setFormGraus(Number(e.target.value) as Degree)}
+                          className="input-premium w-full bg-obsidian-950 text-slate-200"
+                          disabled={false}
+                        >
+                          <option value={0}>0 Grau</option>
+                          <option value={1}>1 Grau</option>
+                          <option value={2}>2 Graus</option>
+                          <option value={3}>3 Graus</option>
+                          <option value={4}>4 Graus</option>
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
