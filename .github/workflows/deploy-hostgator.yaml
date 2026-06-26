@@ -28,8 +28,8 @@ jobs:
       - name: Publicar na HostGator
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USER }}
+          server: ftp.distrito61.com.br
+          username: sfbjj@distrito61.com.br
           password: ${{ secrets.FTP_PASS }}
           local-dir: ./dist/
           server-dir: sfbjj/
