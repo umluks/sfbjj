@@ -1,107 +1,35 @@
-name: Pipeline CI/CD
+name: Deploy SFBJJ
 
 on:
   push:
     branches:
-      - feat/ci-cd
-  workflow_dispatch: # Permite disparar o deploy manualmente pela aba Actions do GitHub
-    inputs:
-      push_image:
-        description: 'Fazer push da imagem para o Docker Hub?'
-        required: true
-        type: boolean
-        default: true
-
-permissions:
-  id-token: write
-  contents: read        
+      - main
 
 jobs:
-  build:
-    name: Build_App
+  deploy:
     runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }} -t ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest .
-          
-      - name: Push Image
-        if: ${{ inputs.push_image }}
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:1.0.${{ github.run_number }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
-
-  deploy_ec2:
-    name: Deploy EC2
-    needs: build
-    runs-on: ubuntu-latest
-    env:
-      INSTANCE_KEY: ${{ secrets.INSTANCE_KEY }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
 
     steps:
-      - name: Checkout do código
+      - name: Baixar código
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Configurar Node
+        uses: actions/setup-node@v4
         with:
-          terraform_version: 1.7.0
+          node-version: 20
+          cache: npm
 
-      - name: Inicializar Terraform
-        run: |
-          # Caso queira passar o nome do bucket via segredo no GitHub Actions, descomente a linha abaixo e comente o 'terraform init' simples:
-          # terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
-          terraform init
-        working-directory: ./terraform
+      - name: Instalar dependências
+        run: npm ci
 
-      - name: Aplicar Infraestrutura Terraform
-        run: terraform apply -auto-approve
-        working-directory: ./terraform
+      - name: Gerar build
+        run: npm run build
 
-      - name: Obter IP Público da EC2
-        id: get_ip
-        run: |
-          PUBLIC_IP_OUTPUT=$(terraform output -raw ec2_public_ip)
-          echo "PUBLIC_IP=$PUBLIC_IP_OUTPUT" >> $GITHUB_ENV
-        working-directory: ./terraform
-
-      - name: Deploy EC2 SSH
-        run: |
-          echo "$INSTANCE_KEY" > chave-site.pem
-          chmod 400 chave-site.pem
-          ssh -i chave-site.pem -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP << EOF
-            # Aguarda o Docker estar pronto, caso a instância tenha acabado de ser criada
-            for i in {1..30}; do
-              if docker ps &>/dev/null; then
-                echo "Docker está rodando!"
-                break
-              fi
-              echo "Aguardando inicialização do Docker..."
-              sleep 5
-            done
-
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
-            echo "parando container antigo site"
-            docker stop sfbjj || true
-            echo "removendo container antigo site"
-            docker rm sfbjj || true
-            echo "rodando nova tag da imagem"
-            docker run -d -p 8080:80 --name sfbjj ${{ secrets.DOCKERHUB_USERNAME }}/sfbjj-app:latest
-            echo "Parabéns! Imagem foi atualizada!"
-            docker ps
-          EOF
-          rm chave-site.pem
-          
+      - name: Publicar na HostGator
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          local-dir: ./dist/
+          server-dir: public_html/sfbjj/
