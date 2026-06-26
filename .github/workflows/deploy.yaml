@@ -3,7 +3,7 @@ name: Deploy SFBJJ
 on:
   push:
     branches:
-      - main
+      - feat/ias-hostgator
 
 jobs:
   deploy:
