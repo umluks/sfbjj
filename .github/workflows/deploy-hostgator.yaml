@@ -3,7 +3,7 @@ name: Deploy SFBJJ
 on:
   push:
     branches:
-      - feat/ias-hostgator
+      - production-hostgator
   workflow_dispatch: # Permite disparo manual via painel do GitHub
 
 # Previne deploys simultâneos conflitantes na mesma branch
