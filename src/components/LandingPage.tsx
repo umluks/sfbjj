@@ -130,6 +130,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             </button>
             <a href="#horarios" className="hover:text-slate-100 transition-colors duration-300">Horários & Localização</a>
             <a href="#contato" className="hover:text-slate-100 transition-colors duration-300">Contato</a>
+            <button
+              onClick={onAccessLogin}
+              className="btn-gold text-[10px] tracking-widest uppercase font-black px-4 py-2"
+            >
+              Entrar
+            </button>
 
             {/* Botão de Instalação PWA */}
             {showInstallButton && (
@@ -142,12 +148,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
               </button>
             )}
 
-            <button
-              onClick={onAccessLogin}
-              className="btn-gold text-[10px] tracking-widest uppercase font-black px-4 py-2"
-            >
-              Entrar
-            </button>
           </nav>
 
           {/* Mobile Menu Button */}

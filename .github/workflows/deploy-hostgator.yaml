@@ -1,100 +1,106 @@
-name: Pipeline de Deploy Unificada (HostGator & Docker Hub)
+name: Pipeline de Deploy Unificada
 
 on:
   workflow_dispatch:
     inputs:
       run-hostgator:
-        description: 'Executar Deploy HostGator (FTP)?'
+        description: Executar Deploy HostGator?
         type: boolean
-        required: true
         default: true
       run-dockerhub:
-        description: 'Executar Build e Push no Docker Hub?'
+        description: Executar Docker Hub?
         type: boolean
-        required: true
         default: true
 
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  deploy-hostgator:
-    name: Deploy HostGator (FTP)
+  build:
+    name: Stage 1 - Build
     runs-on: ubuntu-latest
-    if: ${{ inputs.run-hostgator == true }}
+
+    outputs:
+      version: ${{ steps.version.outputs.tag }}
 
     steps:
-      - name: Obter código fonte do repositório (Git Checkout)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar ambiente do Node.js v22
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Instalar dependências do projeto (npm ci)
-        run: npm ci
+      - run: npm ci
 
-      - name: Compilar a aplicação para produção (Vite Build)
-        run: npm run build
+      - run: npm run build
 
-      - name: Publicar arquivos compilados na HostGator via FTP
+      - id: version
+        run: |
+          TAG="1.0.$(( ${{ github.run_number }} - 1 ))"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Salvar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  deploy-hostgator:
+    name: Stage 2 - Deploy HostGator
+    needs: build
+    if: ${{ inputs.run-hostgator }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Deploy FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
-          local-dir: ./dist/
+          local-dir: dist/
           server-dir: ./
 
   deploy-dockerhub:
-    name: Build e Push Docker Hub
+    name: Stage 2 - Docker Hub
+    needs: build
+    if: ${{ inputs.run-dockerhub }}
+
     runs-on: ubuntu-latest
-    if: ${{ inputs.run-dockerhub == true }}
+
     env:
       DOCKERHUB_REPO: umluks/sfbjj-app
 
     steps:
-      - name: Obter código fonte do repositório (Git Checkout)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar QEMU (Suporte multi-plataforma)
-        uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v3
 
-      - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Fazer login no Docker Hub
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Calcular versão incremental da Tag
-        id: versioning
-        run: |
-          RUN_NUMBER=${{ github.run_number }}
-          PATCH_VERSION=$((RUN_NUMBER - 1))
-          TAG_VERSION="1.0.${PATCH_VERSION}"
-          echo "TAG_VERSION=${TAG_VERSION}" >> $GITHUB_ENV
-          echo "tag_version=${TAG_VERSION}" >> $GITHUB_OUTPUT
-          echo "Versão incremental gerada: ${TAG_VERSION}"
-
-      - name: Compilar imagem e subir no Docker Hub (Build and Push)
+      - name: Build e Push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: Dockerfile
           push: true
           tags: |
-            ${{ env.DOCKERHUB_REPO }}:${{ steps.versioning.outputs.tag_version }}
+            ${{ env.DOCKERHUB_REPO }}:${{ needs.build.outputs.version }}
             ${{ env.DOCKERHUB_REPO }}:latest
           build-args: |
-            VITE_APP_VERSION=${{ steps.versioning.outputs.tag_version }}
+            VITE_APP_VERSION=${{ needs.build.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
