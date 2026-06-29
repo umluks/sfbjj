@@ -1,16 +1,10 @@
 name: Pipeline de Deploy Unificado
 
 on:
-  workflow_dispatch:
-    inputs:
-      run-hostgator:
-        description: 'Enviar aplicação para o HostGator?'
-        type: boolean
-        default: true
-      run-dockerhub:
-        description: 'Gerar e publicar imagem no Docker Hub?'
-        type: boolean
-        default: true
+  push:
+    branches:
+      - production-hostgator
+
 
 permissions:
   contents: read
@@ -49,7 +43,6 @@ jobs:
   deploy-hostgator:
     name: Stage 2 - Deploy HostGator
     needs: build
-    if: ${{ inputs.run-hostgator }}
 
     runs-on: ubuntu-latest
 
@@ -80,8 +73,7 @@ jobs:
 
   deploy-dockerhub:
     name: Stage 2 - Docker Hub
-    needs: build
-    if: ${{ inputs.run-dockerhub }}
+    needs: deploy-hostgator
 
     runs-on: ubuntu-latest
 
