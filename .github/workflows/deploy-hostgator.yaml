@@ -67,7 +67,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           local-dir: dist/
-          server-dir: ./
+          server-dir: ./sfbjj.distrito61.com.br
 
       - name: Deploy FTP - Sagrada Familia BJJ
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -76,7 +76,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           local-dir: dist/
-          server-dir: ./public_html/sagradafamiliabjj.com.br/
+          server-dir: ./sagradafamiliabjj.com.br
 
   deploy-dockerhub:
     name: Stage 2 - Docker Hub
