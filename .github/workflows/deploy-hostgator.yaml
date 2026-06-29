@@ -73,7 +73,7 @@ jobs:
 
   deploy-dockerhub:
     name: Stage 2 - Docker Hub
-    needs: deploy-hostgator
+    needs: [build, deploy-hostgator]
 
     runs-on: ubuntu-latest
 
