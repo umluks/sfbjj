@@ -27,12 +27,14 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
-
       - id: version
         run: |
           TAG="1.0.$(( ${{ github.run_number }} - 1 ))"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - run: npm run build
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.tag }}
 
       - name: Salvar artefato
         uses: actions/upload-artifact@v4
