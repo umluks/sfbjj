@@ -223,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
             © 2026 Sagrada Família BJJ
           </span>
           <span className="text-[9px] text-zinc-500 block mt-0.5 font-bold">
-            Lucas dos Anjos
+            Lucas dos Anjos • #myfaithismyshield
           </span>
         </div>
       </aside >

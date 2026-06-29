@@ -281,6 +281,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             </div>
           </div>
 
+          <span className="text-[10px] tracking-widest uppercase font-black text-slate-400/80 bg-slate-100/5 px-2.5 py-1 border border-slate-800/80 mb-6 block rounded-none animate-pulse-subtle">
+            #myfaithismyshield
+          </span>
+
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-100 max-w-4xl leading-[1.12]">
             A evolução do seu Jiu-Jitsu <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-400 bg-clip-text text-transparent text-glow-silver">
@@ -714,7 +718,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
             © 2026 Sagrada Família BJJ. Todos os direitos reservados.
           </span>
           <span className="flex items-center gap-1">
-            Brasília, DF • Orgulho e Tradição
+            Brasília, DF • Orgulho e Tradição • #myfaithismyshield
           </span>
         </div>
       </footer>
