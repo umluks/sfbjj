@@ -13,7 +13,7 @@ ON CONFLICT DO NOTHING;
 
 -- 2. Inserir Histórico de Graduação Inicial para os alunos inseridos
 INSERT INTO public.graduacoes_historico (aluno_id, faixa, graus, data_graduacao, avaliador)
-SELECT id, faixa, graus, COALESCE("dataUltimaGraduacao", "dataMatricula"), 'Admin Master'
+SELECT id, faixa, graus, COALESCE("dataUltimaGraduacao", "dataMatricula")::date, 'Admin Master'
 FROM public.alunos
 ON CONFLICT DO NOTHING;
 

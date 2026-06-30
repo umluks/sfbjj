@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS graduacoes_historico (
 
 -- Inserir um professor administrador mock para permitir testes, já que o login usará a tabela professores
 INSERT INTO professores (nome, email, telefone, especialidade, senha)
-VALUES ('Admin Master', 'admin@sfbjj.com', '00000000000', 'Gestão', 'admin123')
+VALUES ('Admin Master', 'admin@sagradafamiliabjj.com.br', '00000000000', 'Gestão', 'admin123')
 ON CONFLICT (email) DO NOTHING;
 
 -- Habilitar RLS (Row Level Security) - Políticas básicas (ajustáveis depois)

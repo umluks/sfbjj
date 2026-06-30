@@ -24,7 +24,7 @@ CREATE POLICY "Permitir atualização de administradores por si mesmos" ON publi
 INSERT INTO public.administradores (nome, email, senha, foto_perfil)
 SELECT nome, email, senha, foto_perfil 
 FROM public.professores 
-WHERE role = 'admin' OR email = 'admin@sfbjj.com'
+WHERE role = 'admin' OR email = 'admin@sagradafamiliabjj.com.br'
 ON CONFLICT (email) 
 DO UPDATE SET 
     nome = EXCLUDED.nome,
@@ -33,9 +33,9 @@ DO UPDATE SET
 
 -- Se o administrador inicial não existia na tabela professores, insere o padrão diretamente
 INSERT INTO public.administradores (nome, email, senha)
-VALUES ('Lucas dos Anjos', 'admin@sfbjj.com', '#sfbjj2026')
+VALUES ('Lucas dos Anjos', 'admin@sagradafamiliabjj.com.br', '#sfbjj2026')
 ON CONFLICT (email) DO NOTHING;
 
 -- 3. Deleta o administrador da tabela professores para não aparecer na listagem de professores do sistema
 DELETE FROM public.professores 
-WHERE role = 'admin' OR email = 'admin@sfbjj.com';
+WHERE role = 'admin' OR email = 'admin@sagradafamiliabjj.com.br';

@@ -50,11 +50,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBackToLanding })
 
       try {
         // 1. Verifica Login Admin
-        if (username === 'admin@sfbjj.com') {
+        if (username === 'admin@sagradafamiliabjj.com.br') {
           const { data: adminData } = await supabase
             .from('administradores')
             .select('*')
-            .eq('email', 'admin@sfbjj.com')
+            .eq('email', 'admin@sagradafamiliabjj.com.br')
             .single();
 
           if (adminData) {
