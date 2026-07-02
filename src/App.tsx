@@ -1,42 +1,46 @@
 import { useState, useEffect } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { StudentManager } from './components/StudentManager';
-import { FinancialManager } from './components/FinancialManager';
-import { ScheduleGrid } from './components/ScheduleGrid';
-import { Login } from './components/Login';
-import { TeacherManager } from './components/TeacherManager';
-import { StudentProfile } from './components/StudentProfile';
-import { Contact } from './components/Contact';
-import { LandingPage } from './components/LandingPage';
-import { BatchGraduation } from './components/BatchGraduation';
-import { GraduationSystem } from './components/GraduationSystem';
-import type { Aviso, LoggedUser } from './types';
-import { supabase } from './lib/supabase';
-import { StudentsProvider, useStudents } from './contexts/StudentsContext';
+import { AuthProvider, useAuthContext } from '@/application/contexts/AuthContext';
+import { StudentsProvider, useStudents } from '@/application/contexts/StudentsContext';
+import { MainLayout } from '@/presentation/layouts/MainLayout';
+
+// Páginas refatoradas sob Clean Architecture
+import { LoginPage } from '@/presentation/pages/LoginPage';
+import { LandingPage } from '@/presentation/pages/LandingPage';
+import { DashboardPage } from '@/presentation/pages/DashboardPage';
+import { StudentsPage } from '@/presentation/pages/StudentsPage';
+import { BatchGraduationPage } from '@/presentation/pages/BatchGraduationPage';
+import { StaffPage } from '@/presentation/pages/StaffPage';
+import { FinancialPage } from '@/presentation/pages/FinancialPage';
+import { GraduationSystemPage } from '@/presentation/pages/GraduationSystemPage';
+import { ContactPage } from '@/presentation/pages/ContactPage';
+import { SchedulePage } from '@/presentation/pages/SchedulePage';
+import { StudentProfilePage } from '@/presentation/pages/StudentProfilePage';
+
+import type { Aviso } from '@/domain/models/announcement';
+import { supabase } from '@/infrastructure/lib/supabaseClient';
 
 function AppContent() {
-  const [loggedUser, setLoggedUser] = useState<LoggedUser | null>(() => {
-    const saved = sessionStorage.getItem('sfbjj_logged_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-
+  const { loggedUser, logout } = useAuthContext();
   const [showLogin, setShowLogin] = useState(false);
-
-  const [currentTab, setCurrentTab] = useState<string>(() => {
-    const saved = sessionStorage.getItem('sfbjj_logged_user');
-    if (saved) {
-      const user = JSON.parse(saved) as LoggedUser;
-      if (user.role === 'admin') return 'dashboard';
-      if (user.role === 'teacher') return 'schedule';
-      return 'profile';
-    }
-    return 'dashboard';
-  });
-
+  const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [announcements, setAnnouncements] = useState<Aviso[]>([]);
   const { loadStudents, clearStudents } = useStudents();
+
+  // Define aba inicial baseada na role do usuário
+  useEffect(() => {
+    if (loggedUser) {
+      if (loggedUser.role === 'admin') {
+        setCurrentTab('dashboard');
+      } else if (loggedUser.role === 'teacher') {
+        setCurrentTab('schedule');
+      } else {
+        setCurrentTab('profile');
+      }
+    } else {
+      setCurrentTab('dashboard');
+    }
+  }, [loggedUser]);
 
   // Monitora o estado da rede (online/offline)
   useEffect(() => {
@@ -75,94 +79,90 @@ function AppContent() {
   // Roteamento condicional baseado nas permissões de cada role
   useEffect(() => {
     if (loggedUser) {
-      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'contact' && currentTab !== 'graduation-system') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'teachers' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('schedule');
       }
     }
   }, [loggedUser, currentTab]);
 
-  const handleLoginSuccess = (user: LoggedUser) => {
-    sessionStorage.setItem('sfbjj_logged_user', JSON.stringify(user));
-    setLoggedUser(user);
-    if (user.role === 'admin') {
-      setCurrentTab('dashboard');
-    } else if (user.role === 'teacher') {
-      setCurrentTab('schedule');
-    } else {
-      setCurrentTab('profile');
-    }
-  };
-
   const handleLogout = () => {
-    sessionStorage.removeItem('sfbjj_logged_user');
-    setLoggedUser(null);
+    logout();
+    setShowLogin(false);
   };
 
   // Renderização baseada na aba ativa
   const renderContent = () => {
     switch (currentTab) {
+      case 'landing':
+        return (
+          <LandingPage 
+            announcements={announcements} 
+            onAccessLogin={() => setCurrentTab(loggedUser?.role === 'admin' ? 'dashboard' : 'profile')} 
+          />
+        );
       case 'dashboard':
         return (
-          <Dashboard 
-            announcements={announcements} 
-            setAnnouncements={setAnnouncements} 
-            loggedUser={loggedUser}
-          />
+          <DashboardPage />
         );
       case 'students':
         return (
-          <StudentManager 
-            loggedUser={loggedUser}
-          />
+          <StudentsPage />
         );
       case 'batch-graduation':
         return (
-          <BatchGraduation 
-            loggedUser={loggedUser}
-          />
+          <BatchGraduationPage />
         );
       case 'teachers':
-        return <TeacherManager />;
+        return (
+          <StaffPage />
+        );
       case 'financial':
-        return <FinancialManager />;
+        return (
+          <FinancialPage />
+        );
       case 'graduation-system':
-        return <GraduationSystem />;
+        return (
+          <GraduationSystemPage />
+        );
       case 'contact':
-        return <Contact loggedUser={loggedUser} />;
+        return (
+          <ContactPage />
+        );
       case 'schedule':
-        return <ScheduleGrid loggedUser={loggedUser} />;
+        return (
+          <SchedulePage loggedUser={loggedUser} />
+        );
       case 'profile':
         return (
-          <StudentProfile 
+          <StudentProfilePage 
             alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
-            loggedUser={loggedUser}
-            setLoggedUser={setLoggedUser}
           />
         );
       default:
         return (
-          <div className="text-center py-20 text-slate-500">
+          <div className="text-center py-20 text-slate-500 font-bold uppercase tracking-wider text-xs">
             Página em desenvolvimento.
           </div>
         );
     }
   };
 
+  // Renderização de login se o usuário não estiver logado
   if (!loggedUser) {
     if (showLogin) {
       return (
         <div className="min-h-screen flex flex-col bg-obsidian-950">
           {isOffline && (
-            <div className="bg-red-950/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase sticky top-0 z-[9999] flex items-center justify-center gap-2">
+            <div className="bg-red-955/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase sticky top-0 z-[9999] flex items-center justify-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
               Você está no Modo Offline. O login requer conexão com a internet.
             </div>
           )}
           <div className="flex-1 flex flex-col justify-center">
-            <Login 
-              onLoginSuccess={handleLoginSuccess} 
+            <LoginPage 
+              onLoginSuccess={() => setShowLogin(false)}
               onBackToLanding={() => setShowLogin(false)} 
             />
           </div>
@@ -172,7 +172,7 @@ function AppContent() {
     return (
       <div className="min-h-screen flex flex-col bg-obsidian-950">
         {isOffline && (
-          <div className="bg-red-950/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase fixed top-0 w-full z-[9999] flex items-center justify-center gap-2">
+          <div className="bg-red-955/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase fixed top-0 w-full z-[9999] flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
             Você está no Modo Offline. Algumas informações podem estar desatualizadas.
           </div>
@@ -185,38 +185,25 @@ function AppContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-obsidian-950 text-slate-100 font-sans">
-      {isOffline && (
-        <div className="bg-red-950/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase z-[9999] flex items-center justify-center gap-2 w-full">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          Você está no Modo Offline. Alterações não serão salvas no servidor.
-        </div>
-      )}
-      <div className="flex flex-col md:flex-row flex-1 min-h-0">
-        {/* Sidebar Navigation */}
-        <Sidebar 
-          currentTab={currentTab} 
-          setCurrentTab={setCurrentTab} 
-          loggedUser={loggedUser}
-          onLogout={handleLogout}
-        />
-
-        {/* Main Workspace Container */}
-        <main className="flex-1 overflow-y-auto h-screen relative bg-obsidian-950">
-          <div className="max-w-[1600px] mx-auto p-4 sm:p-6 md:p-8">
-            {renderContent()}
-          </div>
-        </main>
-      </div>
-    </div>
+    <MainLayout
+      currentTab={currentTab}
+      setCurrentTab={setCurrentTab}
+      loggedUser={loggedUser}
+      onLogout={handleLogout}
+      isOffline={isOffline}
+    >
+      {renderContent()}
+    </MainLayout>
   );
 }
 
 function App() {
   return (
-    <StudentsProvider>
-      <AppContent />
-    </StudentsProvider>
+    <AuthProvider>
+      <StudentsProvider>
+        <AppContent />
+      </StudentsProvider>
+    </AuthProvider>
   );
 }
 

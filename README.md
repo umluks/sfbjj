@@ -13,7 +13,7 @@ O sistema possui um layout 100% responsivo e controle de acesso baseado em três
 ### 👤 Perfil Administrador (Admin)
 - **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia, destaque em tempo real para os aniversariantes do dia e publicação de avisos ou comunicados internos.
 - **Gestão de Alunos:** Cadastro completo de atletas (Kids e Adulto), edição de informações, busca e filtros avançados por status, graduação ou turma, além de suporte para exportar a listagem em formato CSV/Excel.
-- **Gestão de Professores:** Controle do quadro de professores da academia.
+- **Gestão de Equipe (Staff):** Controle completo do quadro de professores e administradores da academia em uma única interface unificada (CRUD), com suporte a campos adicionais (como registro CBJJ e fotos de perfil).
 - **Controle Financeiro:** Gerenciamento de faturamento mensal, fluxo de caixa detalhado, controle de mensalidades pagas e pendentes, e saldo acumulado com transição automática de saldos de meses anteriores.
 - **Grade de Horários:** Visualização completa da programação de aulas semanais.
 
@@ -81,6 +81,10 @@ Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 20 ou superior re
 
 O projeto possui o executável do Supabase CLI (`supabase.exe`) integrado para facilitar o desenvolvimento local com banco de dados PostgreSQL e migrações.
 
+> [!TIP]
+> **Aviso para usuários de Windows rodando o Git Bash:**
+> A barra invertida (`\`) é interpretada como caractere de escape no Git Bash. Por isso, para executar comandos do Supabase localmente por ele, utilize a barra normal `/` (ex: `./supabase.exe db reset` em vez de `.\supabase.exe db reset`).
+
 #### Pré-requisitos
 Ter o Docker rodando em sua máquina (necessário para subir os containers locais do Supabase).
 
@@ -116,10 +120,13 @@ Para interagir com o backend local do Supabase usando o executável do repositó
 
 #### Estrutura de Migrações do Banco
 As migrações SQL na pasta `supabase/migrations/` definem o schema do banco de dados local:
-1. `01_novas_funcionalidades.sql`: Tabelas e relacionamentos iniciais (ex: alunos, turmas).
-2. `02_graduacoes_lote.sql`: Funções para atualização de graduações em lote.
-3. `03_administradores.sql`: Tabela de administradores e chaves estrangeiras.
-4. `04_separacao_tabelas.sql`: Ajustes na separação de tabelas e definição de tipos de dados.
+1. `00_esquema_inicial.sql`: Tabelas e estruturas base do sistema (alunos, pagamentos, aulas e avisos) com RLS ativado.
+2. `01_novas_funcionalidades.sql`: Tabelas adicionais para gerenciamento de graduações, histórico e professores.
+3. `02_graduacoes_lote.sql`: Funções e triggers PostgreSQL para atualização de graduações de alunos em lote.
+4. `03_administradores.sql`: Tabela de administradores para acesso de gestão e chaves estrangeiras.
+5. `04_separacao_tabelas.sql`: Separação lógica de tabelas, limpeza de campos obsoletos e redefinição de relações.
+6. `05_melhorias_integridade.sql`: Restrições de validação (`CHECK`), chaves estrangeiras pendentes e índices de performance para otimizar JOINs e buscas.
+7. `06_foto_e_cbjj_professor.sql`: Adiciona suporte para foto de perfil (`foto_perfil`) e número de registro CBJJ (`cbjj`) na tabela de professores.
 
 ---
 
@@ -193,11 +200,15 @@ sfbjj/
 ├── public/                 # Arquivos estáticos (ícones do PWA, offline.html, favicon, logos)
 ├── src/
 │   ├── assets/             # Imagens e mídias estáticas do sistema
-│   ├── components/         # Componentes React (Painéis de controle, Login, Modais e Landing Page)
+│   ├── components/         # Componentes React (Painel Geral, Gestão de Equipe, Alunos, Financeiro, PWA)
+│   ├── contexts/           # Contextos React (Ex: controle global e estado de alunos)
 │   ├── hooks/              # Hooks customizados (Ex: usePWAInstall para fluxo do PWA)
-│   ├── types/              # Definições de tipagem global TypeScript
-│   ├── mockData.ts         # Dados fictícios para simulação de fluxo (alunos, pagamentos, avisos)
-│   ├── App.tsx             # Componente raiz do React, gerencia estados principais e rotas simples
+│   ├── lib/                # Configurações de clientes de terceiros (Supabase client)
+│   ├── services/           # Abstrações de serviços e requisições ao Supabase (admin, teacher, student, etc.)
+│   ├── utils/              # Funções utilitárias (Ex: formatadores de string, regras de graduação)
+│   ├── types.ts            # Definições de tipagem global TypeScript e interfaces de dados
+│   ├── mockData.ts         # Dados fictícios para fallback em desenvolvimento
+│   ├── App.tsx             # Componente raiz do React, gerencia rotas e layout principal
 │   └── main.tsx            # Ponto de entrada da aplicação
 ├── supabase/               # Configurações do backend Supabase
 │   ├── migrations/         # Arquivos de migração de banco de dados SQL

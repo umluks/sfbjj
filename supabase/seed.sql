@@ -32,9 +32,9 @@ ON CONFLICT DO NOTHING;
 -- 4. Inserir Aulas padrão de Jiu-Jitsu no cronograma
 INSERT INTO public.aulas (hora, categoria, professor, "diasSemana") VALUES
 ('18:00 - 19:15', 'Adulto', 'Andrigo Rodrigues Ramos', ARRAY[1, 3, 5]),
-('19:15 - 20:30', 'Avançado', 'Lucas Santiago Gonçalves dos Anjos', ARRAY[1, 3, 5]),
-('09:00 - 10:15', 'Infantil', 'Admin Master', ARRAY[2, 4]),
-('19:00 - 20:15', 'No-Gi', 'Lucas Santiago Gonçalves dos Anjos', ARRAY[2, 4])
+('19:15 - 20:30', 'Adulto', 'Lucas Santiago Gonçalves dos Anjos', ARRAY[1, 3, 5]),
+('09:00 - 10:15', 'Kids', 'Admin Master', ARRAY[2, 4]),
+('19:00 - 20:15', 'Open Match', 'Lucas Santiago Gonçalves dos Anjos', ARRAY[2, 4])
 ON CONFLICT DO NOTHING;
 
 -- 5. Inserir Avisos institucionais iniciais para a dashboard
