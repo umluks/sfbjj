@@ -13,7 +13,9 @@ import {
   Award,
   BookOpen,
   Download,
-  Mail
+  Mail,
+  ClipboardCheck,
+  Trophy
 } from 'lucide-react';
 import type { LoggedUser } from '@/domain/models/auth';
 import logoSFBJJ from '@/assets/logo-sfbjj.png';
@@ -51,6 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'profile', label: 'Meu Perfil', icon: User },
       { id: 'students', label: 'Gestão de Alunos', icon: Users },
+      { id: 'attendance-report', label: 'Frequência Alunos', icon: ClipboardCheck },
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Equipe', icon: Shield },
       { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
@@ -63,6 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'profile', label: 'Meu Perfil', icon: User },
       { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
       { id: 'students', label: 'Consultar Alunos', icon: Users },
+      { id: 'attendance-report', label: 'Frequência Alunos', icon: ClipboardCheck },
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Equipe', icon: Shield },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
@@ -71,6 +75,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
   } else {
     menuItems = [
       { id: 'profile', label: 'Meu Perfil', icon: User },
+      { id: 'my-journey', label: 'Minha Jornada', icon: Trophy },
+      { id: 'my-attendance', label: 'Minha Frequência', icon: ClipboardCheck },
+      { id: 'my-graduations', label: 'Histórico de Graduações', icon: Award },
       { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },

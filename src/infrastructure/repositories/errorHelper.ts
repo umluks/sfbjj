@@ -13,6 +13,8 @@ export function handleSupabaseError(error: any, defaultMessage: string): Error {
         userFriendlyMessage = 'Já existe um cadastro com este CPF.';
       } else if (error.message?.includes('email')) {
         userFriendlyMessage = 'Já existe um cadastro com este e-mail.';
+      } else if (error.message?.includes('uniq_aluno_aula_data') || error.message?.includes('frequencias')) {
+        userFriendlyMessage = 'Você já realizou check-in nesta aula hoje!';
       } else {
         userFriendlyMessage = 'Erro de duplicidade: Um registro com dados únicos informados já existe.';
       }

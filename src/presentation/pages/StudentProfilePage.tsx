@@ -12,9 +12,11 @@ import { User, Lock, Award } from 'lucide-react';
 
 interface StudentProfilePageProps {
   alunoId?: number; // Passado quando o admin visualiza a página de um aluno específico
+  initialSubTab?: 'profile' | 'password' | 'graduacoes';
+  hideSidebarMenu?: boolean;
 }
 
-export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId }) => {
+export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId, initialSubTab, hideSidebarMenu }) => {
   const { loggedUser, updateLoggedUser } = useAuth();
   const { students, updateStudent, loadStudents } = useStudents();
 
@@ -27,8 +29,14 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId 
 
   const student = contextStudent || localStudent;
 
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'graduacoes'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'graduacoes'>(initialSubTab || 'profile');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Efeito para carregar dados do aluno específico caso não esteja no contexto
   useEffect(() => {
@@ -210,59 +218,69 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId 
       {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight flex items-center gap-3 justify-start">
-          {isEditingOtherStudent ? 'Ficha do Aluno' : 'Meu Perfil'}
+          {hideSidebarMenu && activeSubTab === 'graduacoes' 
+            ? 'Histórico de Graduações' 
+            : isEditingOtherStudent 
+              ? 'Ficha do Aluno' 
+              : 'Meu Perfil'}
         </h1>
         <p className="text-slate-455 text-sm mt-1 uppercase tracking-wider font-bold">
-          {isEditingOtherStudent ? `Visualizando Perfil de ${student?.nome || ''}` : 'Gerencie seus dados e senha de acesso'}
+          {hideSidebarMenu && activeSubTab === 'graduacoes'
+            ? 'Acompanhe todas as suas promoções de faixas e graus'
+            : isEditingOtherStudent 
+              ? `Visualizando Perfil de ${student?.nome || ''}` 
+              : 'Gerencie seus dados e senha de acesso'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Menu Lateral de Sub-abas */}
-        <div className="lg:col-span-3 bg-obsidian-900 border border-obsidian-850 p-4 space-y-1 rounded-2xl shadow-lg">
-          <button
-            onClick={() => setActiveSubTab('profile')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeSubTab === 'profile'
-                ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
-                : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
-            }`}
-          >
-            <User className="w-4 h-4 shrink-0" />
-            Dados Pessoais
-          </button>
-
-          {isProfileOfStudent && student && (
+        {!hideSidebarMenu && (
+          <div className="lg:col-span-3 bg-obsidian-900 border border-obsidian-850 p-4 space-y-1 rounded-2xl shadow-lg">
             <button
-              onClick={() => setActiveSubTab('graduacoes')}
+              onClick={() => setActiveSubTab('profile')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-                activeSubTab === 'graduacoes'
+                activeSubTab === 'profile'
                   ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
                   : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
               }`}
             >
-              <Award className="w-4 h-4 shrink-0" />
-              Histórico de Graduações
+              <User className="w-4 h-4 shrink-0" />
+              Dados Pessoais
             </button>
-          )}
 
-          {!isEditingOtherStudent && (
-            <button
-              onClick={() => setActiveSubTab('password')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-                activeSubTab === 'password'
-                  ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
-                  : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
-              }`}
-            >
-              <Lock className="w-4 h-4 shrink-0" />
-              Alterar Senha
-            </button>
-          )}
-        </div>
+            {isProfileOfStudent && student && !isStudent && (
+              <button
+                onClick={() => setActiveSubTab('graduacoes')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                  activeSubTab === 'graduacoes'
+                    ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
+                    : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
+                }`}
+              >
+                <Award className="w-4 h-4 shrink-0" />
+                Histórico de Graduações
+              </button>
+            )}
+
+            {!isEditingOtherStudent && (
+              <button
+                onClick={() => setActiveSubTab('password')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                  activeSubTab === 'password'
+                    ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
+                    : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
+                }`}
+              >
+                <Lock className="w-4 h-4 shrink-0" />
+                Alterar Senha
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Workspace Central */}
-        <div className="lg:col-span-9 bg-obsidian-900 border border-obsidian-850 p-6 md:p-8 rounded-2xl shadow-lg">
+        <div className={`${hideSidebarMenu ? 'lg:col-span-12' : 'lg:col-span-9'} bg-obsidian-900 border border-obsidian-850 p-6 md:p-8 rounded-2xl shadow-lg`}>
           {activeSubTab === 'profile' && (
             <PersonalInfoForm
               initialData={getInitialFormData()}

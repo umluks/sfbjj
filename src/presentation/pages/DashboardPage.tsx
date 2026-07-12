@@ -12,7 +12,9 @@ import {
   Pin,
   CalendarCheck,
   Edit,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -39,15 +41,32 @@ export const DashboardPage: React.FC = () => {
   const currentMonthNum = String(todayDate.getMonth() + 1).padStart(2, '0');
   const currentDayNum = todayDate.getDate();
 
-  // Todos os aniversários do mês (contagem total, sem remoção)
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(todayDate.getMonth());
+
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const selectedMonthNum = String(selectedMonthIndex + 1).padStart(2, '0');
+
+  const handlePrevMonth = () => {
+    setSelectedMonthIndex(prev => (prev === 0 ? 11 : prev - 1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonthIndex(prev => (prev === 11 ? 0 : prev + 1));
+  };
+
+  // Todos os aniversários do mês selecionado
   const allMonthBirthdayStudents = students.filter(s => {
     if (!s.dataNascimento) return false;
     const parts = s.dataNascimento.split('-');
     const birthMonth = parts[1];
-    return birthMonth === currentMonthNum;
+    return birthMonth === selectedMonthNum;
   });
 
-
+  const isCurrentMonthSelected = selectedMonthNum === currentMonthNum;
 
   const handleAddNotice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,13 +310,36 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="card-premium p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-obsidian-800 pb-3 mb-2">
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                Aniversariantes do Mês
-              </span>
-              <span className="text-xs font-mono font-bold text-slate-350">
-                {allMonthBirthdayStudents.length} aluno(s)
-              </span>
+            <div className="flex flex-col gap-3 border-b border-obsidian-800 pb-3 mb-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  Aniversariantes
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-350">
+                  {allMonthBirthdayStudents.length} aluno(s)
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-obsidian-950 border border-obsidian-800 p-1">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  className="p-1.5 hover:bg-obsidian-850 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none"
+                  title="Mês Anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] font-black uppercase text-slate-200 tracking-wider">
+                  {monthNames[selectedMonthIndex]}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  className="p-1.5 hover:bg-obsidian-850 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none"
+                  title="Próximo Mês"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-1">
@@ -306,15 +348,14 @@ export const DashboardPage: React.FC = () => {
                   Sem aniversariantes neste mês.
                 </div>
               ) : (
-                [...allMonthBirthdayStudents]
+                allMonthBirthdayStudents
                   .sort((a, b) => {
                     const dayA = parseInt(a.dataNascimento.split('-')[2], 10);
                     const dayB = parseInt(b.dataNascimento.split('-')[2], 10);
                     return dayA - dayB;
                   })
                   .map(s => {
-                    const parts = s.dataNascimento.split('-');
-                    const isToday = parseInt(parts[2], 10) === currentDayNum && parts[1] === currentMonthNum;
+                    const isToday = isCurrentMonthSelected && parseInt(s.dataNascimento.split('-')[2], 10) === currentDayNum;
                     return (
                       <div
                         key={s.id}
@@ -331,7 +372,9 @@ export const DashboardPage: React.FC = () => {
                             {s.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 leading-tight">
-                            <span className={`text-xs font-black block truncate ${isToday ? 'animate-soft-blink' : 'text-slate-200'}`}>
+                            <span className={`text-xs font-black block truncate ${
+                              isToday ? 'text-amber-400 animate-soft-blink' : 'text-slate-200'
+                            }`}>
                               {s.nome}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider block mt-0.5">

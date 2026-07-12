@@ -15,6 +15,9 @@ import { GraduationSystemPage } from '@/presentation/pages/GraduationSystemPage'
 import { ContactPage } from '@/presentation/pages/ContactPage';
 import { SchedulePage } from '@/presentation/pages/SchedulePage';
 import { StudentProfilePage } from '@/presentation/pages/StudentProfilePage';
+import { MyAttendancePage } from '@/presentation/pages/MyAttendancePage';
+import { AttendanceReportPage } from '@/presentation/pages/AttendanceReportPage';
+import { MyJourneyPage } from '@/presentation/pages/MyJourneyPage';
 
 import type { Aviso } from '@/domain/models/announcement';
 import { supabase } from '@/infrastructure/lib/supabaseClient';
@@ -76,12 +79,11 @@ function AppContent() {
     fetchAnnouncements();
   }, []);
 
-  // Roteamento condicional baseado nas permissões de cada role
   useEffect(() => {
     if (loggedUser) {
-      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'my-journey' && currentTab !== 'my-attendance' && currentTab !== 'my-graduations' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'batch-graduation' && currentTab !== 'teachers' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'attendance-report' && currentTab !== 'batch-graduation' && currentTab !== 'teachers' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('schedule');
       }
     }
@@ -139,6 +141,30 @@ function AppContent() {
           <StudentProfilePage 
             alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
           />
+        );
+      case 'my-graduations':
+        return (
+          <StudentProfilePage 
+            alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
+            initialSubTab="graduacoes"
+            hideSidebarMenu={true}
+          />
+        );
+      case 'my-attendance':
+        return (
+          <MyAttendancePage 
+            alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
+          />
+        );
+      case 'my-journey':
+        return (
+          <MyJourneyPage 
+            alunoId={loggedUser?.role === 'student' ? loggedUser.alunoId : undefined}
+          />
+        );
+      case 'attendance-report':
+        return (
+          <AttendanceReportPage />
         );
       default:
         return (
