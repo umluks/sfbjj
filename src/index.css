@@ -138,3 +138,18 @@
 .animate-pulse-subtle {
   animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes softBlink {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 1px rgba(244, 244, 245, 0.3));
+  }
+  50% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 5px rgba(244, 244, 245, 0.7));
+  }
+}
+
+.animate-soft-blink {
+  animation: softBlink 1.8s ease-in-out infinite;
+}
