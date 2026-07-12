@@ -62,7 +62,7 @@ Você pode rodar este projeto de três formas: **desenvolvimento frontend isolad
 #### Pré-requisitos
 Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 20 ou superior recomendada) e o `npm` instalados em sua máquina.
 
-#### Passo a Passo
+##### Passo a Passo
 1. Instale as dependências necessárias:
    ```bash
    npm install
