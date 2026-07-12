@@ -47,14 +47,7 @@ export const DashboardPage: React.FC = () => {
     return birthMonth === currentMonthNum;
   });
 
-  // Próximos aniversários (apenas hoje e dias futuros)
-  const upcomingBirthdayStudents = students.filter(s => {
-    if (!s.dataNascimento) return false;
-    const parts = s.dataNascimento.split('-');
-    const birthMonth = parts[1];
-    const birthDay = parseInt(parts[2], 10);
-    return birthMonth === currentMonthNum && birthDay >= currentDayNum;
-  });
+
 
   const handleAddNotice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,44 +293,45 @@ export const DashboardPage: React.FC = () => {
           <div className="card-premium p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-obsidian-800 pb-3 mb-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                Próximos do Mês
+                Aniversariantes do Mês
               </span>
               <span className="text-xs font-mono font-bold text-slate-350">
-                {upcomingBirthdayStudents.length} aluno(s)
+                {allMonthBirthdayStudents.length} aluno(s)
               </span>
             </div>
 
             <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-1">
-              {upcomingBirthdayStudents.length === 0 ? (
+              {allMonthBirthdayStudents.length === 0 ? (
                 <div className="text-center py-10 text-slate-650 text-xs italic">
-                  Sem aniversários futuros neste mês.
+                  Sem aniversariantes neste mês.
                 </div>
               ) : (
-                upcomingBirthdayStudents
+                [...allMonthBirthdayStudents]
                   .sort((a, b) => {
                     const dayA = parseInt(a.dataNascimento.split('-')[2], 10);
                     const dayB = parseInt(b.dataNascimento.split('-')[2], 10);
                     return dayA - dayB;
                   })
                   .map(s => {
-                    const isToday = parseInt(s.dataNascimento.split('-')[2], 10) === currentDayNum;
+                    const parts = s.dataNascimento.split('-');
+                    const isToday = parseInt(parts[2], 10) === currentDayNum && parts[1] === currentMonthNum;
                     return (
                       <div
                         key={s.id}
                         className={`flex items-center justify-between p-3 border transition-colors ${
                           isToday
-                            ? 'border-gold-500/20 bg-gold-500/[0.02] text-gold-450 hover:bg-gold-500/[0.05]'
+                            ? 'border-yellow-500/20 bg-yellow-500/[0.02] hover:bg-yellow-500/[0.04]'
                             : 'border-obsidian-800/80 bg-obsidian-900/60 text-slate-300 hover:border-obsidian-750'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={`w-8.5 h-8.5 rounded-full shrink-0 flex items-center justify-center text-xs font-black ${
-                            isToday ? 'bg-gold-500 text-obsidian-950' : 'bg-obsidian-800 text-slate-400 border border-obsidian-750'
+                            isToday ? 'bg-yellow-500 text-obsidian-950 shadow-[0_0_8px_rgba(234,179,8,0.4)]' : 'bg-obsidian-800 text-slate-400 border border-obsidian-750'
                           }`}>
                             {s.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 leading-tight">
-                            <span className={`text-xs font-black block truncate ${isToday ? 'text-gold-400' : 'text-slate-200'}`}>
+                            <span className={`text-xs font-black block truncate ${isToday ? 'animate-soft-blink' : 'text-slate-200'}`}>
                               {s.nome}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider block mt-0.5">
@@ -347,7 +341,7 @@ export const DashboardPage: React.FC = () => {
                         </div>
                         <div className="text-right shrink-0 flex items-center gap-1.5">
                           {isToday && (
-                            <span className="text-[9px] font-black uppercase tracking-wider bg-gold-500 text-obsidian-950 px-1.5 py-0.5 rounded shadow-sm">
+                            <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500 text-obsidian-950 px-1.5 py-0.5 rounded shadow-sm shadow-yellow-500/25">
                               Hoje! 🎉
                             </span>
                           )}

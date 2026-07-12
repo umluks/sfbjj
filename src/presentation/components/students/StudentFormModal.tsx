@@ -6,6 +6,71 @@ import { formatCPF, formatPhone, formatMonthYear } from '@/utils/formatters';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 import { Shield, X, Heart, User } from 'lucide-react';
 
+const parseSafeDate = (dateStr: string): Date => {
+  if (!dateStr) return new Date();
+  
+  if (/^\d{4}-\d{2}$/.test(dateStr)) {
+    const [year, month] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, 15);
+  }
+  
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  
+  return new Date(dateStr);
+};
+
+const getDurationFriendly = (startDateStr: string, endDateStr: string): string => {
+  const start = parseSafeDate(startDateStr);
+  const end = parseSafeDate(endDateStr);
+  
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days = end.getDate() - start.getDate();
+  
+  if (days < 0) {
+    months -= 1;
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  
+  if (years < 0 || (years === 0 && months === 0)) {
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return '0 meses';
+    if (diffDays < 30) return 'Menos de 1 mês';
+    return '1 mês';
+  }
+  
+  const parts: string[] = [];
+  if (years > 0) {
+    parts.push(years === 1 ? '1 ano' : `${years} anos`);
+  }
+  if (months > 0) {
+    parts.push(months === 1 ? '1 mês' : `${months} meses`);
+  }
+  
+  return parts.join(' e ');
+};
+
+const getLocalTodayStr = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+
 interface StudentFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -167,6 +232,27 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       historicoGraduacoes
     });
   };
+
+  // Prepara histórico para exibição no modal
+  const hasCurrentInHistory = (historicoGraduacoes || []).some(
+    g => g.faixa === faixa && g.graus === graus
+  );
+  const displayHistory = [...(historicoGraduacoes || [])];
+  if (!hasCurrentInHistory && faixa) {
+    const resolvedData = dataUltimaGraduacao 
+      ? (dataUltimaGraduacao.includes('-') && dataUltimaGraduacao.length === 7 ? `${dataUltimaGraduacao}-01` : dataUltimaGraduacao)
+      : (dataMatricula || new Date().toISOString().substring(0, 10));
+      
+    displayHistory.push({
+      id: -999,
+      data: resolvedData,
+      faixa: faixa,
+      graus: graus
+    });
+  }
+
+  const sortedHistory = displayHistory.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const todayStr = getLocalTodayStr();
 
   if (!isOpen) return null;
 
@@ -440,23 +526,31 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     <tr>
                       <th className="px-4 py-2.5">Data</th>
                       <th className="px-4 py-2.5">Faixa & Grau</th>
+                      <th className="px-4 py-2.5">Tempo na Faixa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-obsidian-750/50 bg-obsidian-900/40">
-                    {historicoGraduacoes && historicoGraduacoes.length > 0 ? (
-                      historicoGraduacoes.slice().reverse().map((grad, idx) => (
-                        <tr key={idx} className="hover:bg-obsidian-800/30 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap font-mono">
-                            {formatMonthYear(grad.data)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <BeltBadge faixa={grad.faixa} graus={grad.graus} />
-                          </td>
-                        </tr>
-                      ))
+                    {sortedHistory.length > 0 ? (
+                      sortedHistory.map((grad, idx) => {
+                        const nextGradData = idx === 0 ? todayStr : sortedHistory[idx - 1].data;
+                        const tempoNaFaixa = getDurationFriendly(grad.data, nextGradData);
+                        return (
+                          <tr key={idx} className="hover:bg-obsidian-800/30 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap font-mono">
+                              {formatMonthYear(grad.data)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <BeltBadge faixa={grad.faixa} graus={grad.graus} />
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-400">
+                              {tempoNaFaixa}
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan={2} className="px-4 py-6 text-center text-slate-500 italic">
+                        <td colSpan={3} className="px-4 py-6 text-center text-slate-500 italic">
                           Nenhum histórico de graduação registrado.
                         </td>
                       </tr>

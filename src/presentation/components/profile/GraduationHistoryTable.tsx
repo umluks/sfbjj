@@ -5,6 +5,71 @@ import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 import { getBeltsByAge } from '@/application/services/diplomaService';
 import { formatMonthYear } from '@/utils/formatters';
 
+const parseSafeDate = (dateStr: string): Date => {
+  if (!dateStr) return new Date();
+  
+  if (/^\d{4}-\d{2}$/.test(dateStr)) {
+    const [year, month] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, 15);
+  }
+  
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  
+  return new Date(dateStr);
+};
+
+const getDurationFriendly = (startDateStr: string, endDateStr: string): string => {
+  const start = parseSafeDate(startDateStr);
+  const end = parseSafeDate(endDateStr);
+  
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days = end.getDate() - start.getDate();
+  
+  if (days < 0) {
+    months -= 1;
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  
+  if (years < 0 || (years === 0 && months === 0)) {
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return '0 meses';
+    if (diffDays < 30) return 'Menos de 1 mês';
+    return '1 mês';
+  }
+  
+  const parts: string[] = [];
+  if (years > 0) {
+    parts.push(years === 1 ? '1 ano' : `${years} anos`);
+  }
+  if (months > 0) {
+    parts.push(months === 1 ? '1 mês' : `${months} meses`);
+  }
+  
+  return parts.join(' e ');
+};
+
+const getLocalTodayStr = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+
 interface GraduationHistoryTableProps {
   student: Aluno;
   canEdit: boolean; // Se o usuário logado pode editar as graduações
@@ -107,6 +172,7 @@ export const GraduationHistoryTable: React.FC<GraduationHistoryTableProps> = ({
   }
 
   const sortedHistory = displayHistory.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const todayStr = getLocalTodayStr();
 
   return (
     <div className="space-y-6 text-left">
@@ -134,54 +200,62 @@ export const GraduationHistoryTable: React.FC<GraduationHistoryTableProps> = ({
             <tr>
               <th className="px-4 py-3 font-semibold">Data</th>
               <th className="px-4 py-3 font-semibold">Faixa & Grau</th>
+              <th className="px-4 py-3 font-semibold">Tempo na Faixa</th>
               {canEdit && <th className="px-4 py-3 font-semibold text-right">Ações</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-obsidian-755/50">
             {sortedHistory.length > 0 ? (
-              sortedHistory.map((grad) => (
-                <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
-                    {formatMonthYear(grad.data)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-start">
-                      <BeltBadge faixa={grad.faixa} graus={grad.graus} />
-                    </div>
-                  </td>
-                  {canEdit && (
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {grad.faixa === student.faixa && grad.graus === student.graus ? (
-                        <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 select-none font-sans">
-                          Faixa Atual
-                        </span>
-                      ) : (
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(grad)}
-                            className="p-1.5 rounded-lg bg-obsidian-750 text-slate-300 hover:bg-slate-200/10 hover:text-slate-100 transition-all border border-obsidian-700"
-                            title="Editar"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          {grad.id !== -999 && (
-                            <button
-                              onClick={() => handleDelete(grad.id)}
-                              className="p-1.5 rounded-lg bg-obsidian-750 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all border border-obsidian-700"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
+              sortedHistory.map((grad, idx) => {
+                const nextGradData = idx === 0 ? todayStr : sortedHistory[idx - 1].data;
+                const tempoNaFaixa = getDurationFriendly(grad.data, nextGradData);
+                return (
+                  <tr key={grad.id} className="hover:bg-obsidian-800/30 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
+                      {formatMonthYear(grad.data)}
                     </td>
-                  )}
-                </tr>
-              ))
+                    <td className="px-4 py-3">
+                      <div className="flex justify-start">
+                        <BeltBadge faixa={grad.faixa} graus={grad.graus} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">
+                      {tempoNaFaixa}
+                    </td>
+                    {canEdit && (
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {grad.faixa === student.faixa && grad.graus === student.graus ? (
+                          <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 select-none font-sans">
+                            Faixa Atual
+                          </span>
+                        ) : (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(grad)}
+                              className="p-1.5 rounded-lg bg-obsidian-750 text-slate-300 hover:bg-slate-200/10 hover:text-slate-100 transition-all border border-obsidian-700"
+                              title="Editar"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            {grad.id !== -999 && (
+                              <button
+                                onClick={() => handleDelete(grad.id)}
+                                className="p-1.5 rounded-lg bg-obsidian-750 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all border border-obsidian-700"
+                                title="Excluir"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={canEdit ? 3 : 2} className="px-4 py-8 text-center text-slate-500 text-xs">
+                <td colSpan={canEdit ? 4 : 3} className="px-4 py-8 text-center text-slate-500 text-xs">
                   Nenhum registro de graduação encontrado para este aluno.
                 </td>
               </tr>
