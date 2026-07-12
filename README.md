@@ -23,7 +23,10 @@ O sistema possui um layout 100% responsivo e controle de acesso baseado em três
 - **Suporte:** Acesso direto aos canais de comunicação interna.
 
 ### 🥋 Perfil Aluno (Student)
-- **Perfil do Atleta:** Histórico completo de graduações (incluindo cálculo dinâmico do **Tempo na Faixa** transcorrido em cada graduação ou até o dia atual na faixa ativa), datas de exames de faixa, dados cadastrais e visualização do status de pagamentos.
+- **Perfil do Atleta (Meu Perfil):** Dados cadastrais, alteração de senha e visualização de status de pagamentos.
+- **Minha Jornada:** Seção dedicada ao acompanhamento do desenvolvimento técnico do atleta com estatísticas de tempo de prática, horas acumuladas, sequência de treinos (streak de dias corridos), total de treinos registrados e progresso da meta mensal ilustrado em um anel circular de progresso.
+- **Minha Frequência:** Realização de check-in em tempo real em aulas abertas e histórico detalhado de presenças. Possibilita desmarcar presenças de aulas abertas com botão dinâmico (estilo de hover em vermelho para cancelamento) ou apagando itens diretamente pela lixeira da tabela de histórico.
+- **Histórico de Graduações:** Exibido em destaque como aba principal na Sidebar, listando a evolução das faixas e graus do aluno em tela cheia com o cálculo dinâmico do **Tempo na Faixa** transcorrido em cada graduação ou até o dia atual na faixa ativa.
 - **Grade de Horários:** Consulta de horários de aulas e turmas ativas.
 - **Contato & Suporte:** Acesso à localização física da academia integrada com mapa e formulário para contato direto.
 
