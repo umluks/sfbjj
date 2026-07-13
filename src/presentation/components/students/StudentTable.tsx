@@ -175,7 +175,7 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                 </td>
 
                 <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-2.5">
                     <button
                       onClick={() => onView(student)}
                       className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
@@ -204,6 +204,18 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                         </button>
                       </>
                     )}
+
+                    {/* Sinalização de Status do Usuário */}
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ml-1.5 ${
+                        student.status === 'Ativo'
+                          ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
+                          : student.status === 'Inativo'
+                          ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                          : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
+                      }`}
+                      title={`Status: ${student.status}`}
+                    />
                   </div>
                 </td>
               </tr>

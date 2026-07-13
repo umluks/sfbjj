@@ -5,7 +5,7 @@ import { useStudents } from '@/application/contexts/StudentsContext';
 import { paymentService } from '@/application/services/paymentService';
 import { FinancialSummary } from '@/presentation/components/financial/FinancialSummary';
 import { PaymentHistoryModal } from '@/presentation/components/financial/PaymentHistoryModal';
-import { supabase } from '@/infrastructure/lib/supabaseClient';
+
 import {
   Search,
   History,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const FinancialPage: React.FC = () => {
-  const { students, setStudents } = useStudents();
+  const { students, setStudents, loadStudents } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modais e Estados de histórico
@@ -231,25 +231,11 @@ export const FinancialPage: React.FC = () => {
           await paymentService.savePaymentsBatch(paymentsToUpsert);
         }
 
-        // Recarrega os alunos
-        const { data: refreshedData, error: refreshError } = await supabase
-          .from('alunos')
-          .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
-
-        if (!refreshError && refreshedData) {
-          const mapped = refreshedData.map((student: any) => ({
-            ...student,
-            historicoGraduacoes: (student.graduacoes_historico || []).map((g: any) => ({
-              id: g.id,
-              data: g.data_graduacao,
-              faixa: g.faixa,
-              graus: g.graus,
-              avaliador: g.avaliador
-            })).sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime())
-          }));
-          const sorted = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-          setStudents(sorted as any);
-        } else {
+        // Recarrega os alunos via contexto
+        try {
+          await loadStudents();
+        } catch (loadErr) {
+          console.error('Falha ao recarregar alunos:', loadErr);
           setStudents(prev => prev.map(student => {
             if (studentUpdates[student.id]) {
               return { ...student, pagamentos: studentUpdates[student.id] };

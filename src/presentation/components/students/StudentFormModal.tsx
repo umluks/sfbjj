@@ -4,7 +4,7 @@ import { BAIRROS_DF, BELT_RANKS } from '@/constants';
 import { getBeltsByAge, getBjjAge } from '@/application/services/diplomaService';
 import { formatCPF, formatPhone, formatMonthYear } from '@/utils/formatters';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
-import { Shield, X, Heart, User } from 'lucide-react';
+import { Shield, X, Heart, User, AlertCircle } from 'lucide-react';
 
 const parseSafeDate = (dateStr: string): Date => {
   if (!dateStr) return new Date();
@@ -70,6 +70,30 @@ const getLocalTodayStr = (): string => {
   return `${year}-${month}-${day}`;
 };
 
+const isValidCPF = (value: string): boolean => {
+  const cleanCPF = value.replace(/\D/g, '');
+  if (cleanCPF.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCPF.charAt(i)) * (10 - i);
+  }
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(cleanCPF.charAt(9))) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCPF.charAt(i)) * (11 - i);
+  }
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(cleanCPF.charAt(10))) return false;
+  
+  return true;
+};
+
 
 interface StudentFormModalProps {
   isOpen: boolean;
@@ -107,10 +131,12 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   const [turma, setTurma] = useState<'Kids' | 'Adulto'>('Adulto');
   const [fotoPerfil, setFotoPerfil] = useState('');
   const [historicoGraduacoes, setHistoricoGraduacoes] = useState<any[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const isDisabled = isTeacher || isReadOnly;
 
   // Inicializa o formulário com dados do aluno ao abrir para edição
   useEffect(() => {
+    setErrorMsg(null);
     if (editingStudent) {
       setNome(editingStudent.nome);
       setCpf(editingStudent.cpf || '');
@@ -163,18 +189,24 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
     }
   }, [editingStudent, isOpen]);
 
+  const handleClose = () => {
+    setErrorMsg(null);
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
 
     if (!nome || !dataNascimento) return;
 
     const cleanedCpf = cpf.replace(/\D/g, '');
     if (!cleanedCpf) {
-      alert('O CPF é obrigatório.');
+      setErrorMsg('O CPF é obrigatório.');
       return;
     }
-    if (cleanedCpf.length !== 11) {
-      alert('O CPF deve conter exatamente 11 dígitos.');
+    if (!isValidCPF(cleanedCpf)) {
+      setErrorMsg('CPF inválido. Por favor, digite um CPF válido.');
       return;
     }
 
@@ -182,14 +214,14 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
 
     if (age < 18) {
       if (!contatoEmergenciaNome.trim() || !contatoEmergenciaTel.trim()) {
-        alert('Para menores de idade, o Contato de Emergência (Nome e Telefone) é obrigatório.');
+        setErrorMsg('Para menores de idade, o Contato de Emergência (Nome e Telefone) é obrigatório.');
         return;
       }
     }
 
     const allowed = getBeltsByAge(dataNascimento);
     if (!allowed.includes(faixa)) {
-      alert(`A faixa "${faixa}" não é permitida para a idade de ${age} anos.`);
+      setErrorMsg(`A faixa "${faixa}" não é permitida para a idade de ${age} anos.`);
       return;
     }
 
@@ -202,35 +234,39 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       const oldGraus = editingStudent.graus;
 
       if (BELT_RANKS[faixa] < BELT_RANKS[oldFaixa]) {
-        alert(`Não é permitido rebaixar a faixa do aluno de ${oldFaixa} para ${faixa}.`);
+        setErrorMsg(`Não é permitido rebaixar a faixa do aluno de ${oldFaixa} para ${faixa}.`);
         return;
       }
       if (faixa === oldFaixa && graus < oldGraus) {
-        alert('Não é permitido diminuir a quantidade de graus do aluno.');
+        setErrorMsg('Não é permitido diminuir a quantidade de graus do aluno.');
         return;
       }
     }
 
-    await onSave({
-      nome,
-      cpf,
-      dataNascimento,
-      telefone,
-      email,
-      genero,
-      dataMatricula,
-      bairro,
-      faixa,
-      graus,
-      role,
-      dataUltimaGraduacao: dbUltimaGrad,
-      contatoEmergenciaNome,
-      contatoEmergenciaTel,
-      status,
-      turma,
-      fotoPerfil,
-      historicoGraduacoes
-    });
+    try {
+      await onSave({
+        nome,
+        cpf,
+        dataNascimento,
+        telefone,
+        email,
+        genero,
+        dataMatricula,
+        bairro,
+        faixa,
+        graus,
+        role,
+        dataUltimaGraduacao: dbUltimaGrad,
+        contatoEmergenciaNome,
+        contatoEmergenciaTel,
+        status,
+        turma,
+        fotoPerfil,
+        historicoGraduacoes
+      });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao salvar os dados do aluno.');
+    }
   };
 
   // Prepara histórico para exibição no modal
@@ -266,13 +302,20 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             {isDisabled ? 'Visualizar Cadastro de Membro' : editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-slate-400 hover:text-gold-550 p-1 transition-colors"
             type="button"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {errorMsg && (
+          <div className="mx-6 mt-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-semibold flex items-center gap-2 animate-shake">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
@@ -619,7 +662,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
           <div className="flex justify-end gap-3 p-6 border-t border-obsidian-750 shrink-0 bg-obsidian-850 rounded-b-2xl">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="btn-obsidian"
             >
               {isDisabled ? 'Fechar' : 'Cancelar'}

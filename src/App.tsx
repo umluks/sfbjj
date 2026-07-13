@@ -20,7 +20,7 @@ import { AttendanceReportPage } from '@/presentation/pages/AttendanceReportPage'
 import { MyJourneyPage } from '@/presentation/pages/MyJourneyPage';
 
 import type { Aviso } from '@/domain/models/announcement';
-import { supabase } from '@/infrastructure/lib/supabaseClient';
+import { announcementService } from '@/application/services/announcementService';
 
 function AppContent() {
   const { loggedUser, logout } = useAuthContext();
@@ -71,9 +71,13 @@ function AppContent() {
   // Carrega avisos públicos da Landing Page
   useEffect(() => {
     async function fetchAnnouncements() {
-      const { data, error } = await supabase.from('avisos').select('*');
-      if (!error && data && data.length > 0) {
-        setAnnouncements(data);
+      try {
+        const data = await announcementService.getAnnouncements();
+        if (data && data.length > 0) {
+          setAnnouncements(data);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar comunicados:', err);
       }
     }
     fetchAnnouncements();
