@@ -12,6 +12,7 @@ import {
   Loader2, 
   AlertCircle 
 } from 'lucide-react';
+import { formatCPF } from '@/utils/formatters';
 
 interface LoginPageProps {
   onLoginSuccess: (user: LoggedUser) => void;
@@ -21,6 +22,20 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLanding }) => {
   const { login } = useAuth();
   const [cpfInput, setCpfInput] = useState('');
+
+  const handleIdentifierChange = (value: string) => {
+    const onlyNumbers = value.replace(/[.-]/g, '');
+    const hasLettersOrAt = /[a-zA-Z@]/.test(value);
+
+    if (hasLettersOrAt) {
+      setCpfInput(value);
+    } else if (/^\d+$/.test(onlyNumbers)) {
+      setCpfInput(formatCPF(value));
+    } else {
+      setCpfInput(value);
+    }
+  };
+
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -115,7 +130,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
                   placeholder="exemplo@email.com ou 000.000.000-00"
                   className="w-full bg-obsidian-950/70 border border-obsidian-700 hover:border-obsidian-600 focus:border-slate-500 rounded-xl pl-11 pr-4 py-3.5 text-sm text-slate-200 placeholder:text-slate-650 focus:outline-none focus:ring-1 focus:ring-slate-500/25 transition-all"
                   value={cpfInput}
-                  onChange={(e) => setCpfInput(e.target.value)}
+                  onChange={(e) => handleIdentifierChange(e.target.value)}
                   disabled={loading}
                   required
                 />

@@ -16,7 +16,8 @@ import { studentService } from '@/application/services/studentService';
 import { attendanceService } from '@/application/services/attendanceService';
 import type { Aluno } from '@/domain/models/student';
 import type { Frequencia } from '@/domain/models/attendance';
-import { formatDate } from '@/utils/formatters';
+import { formatDate, getDurationFriendly } from '@/utils/formatters';
+import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 
 interface MyJourneyPageProps {
   alunoId?: number;
@@ -180,6 +181,26 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
 
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   }, [attendances]);
+
+  // Prepara histórico para exibição
+  const displayHistory = useMemo(() => {
+    if (!student) return [];
+    
+    const hasCurrentInHistory = (student.historicoGraduacoes || []).some(
+      g => g.faixa === student.faixa && g.graus === student.graus
+    );
+    const history = [...(student.historicoGraduacoes || [])];
+    if (!hasCurrentInHistory && student.faixa) {
+      history.push({
+        id: -999,
+        data: student.dataUltimaGraduacao || student.dataMatricula || new Date().toISOString().substring(0, 10),
+        faixa: student.faixa,
+        graus: student.graus,
+        avaliador: 'Sistema'
+      });
+    }
+    return history.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  }, [student]);
 
   // Renderização visual da faixa
   const renderBeltVisual = (faixa: string, graus: number) => {
@@ -563,6 +584,71 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Histórico de Graduações (Timeline) */}
+      <div className="space-y-5">
+        <h3 className="text-sm font-black text-slate-200 uppercase tracking-wider flex items-center gap-2 border-b border-obsidian-850 pb-3">
+          <Award className="w-4.5 h-4.5 text-zinc-500" />
+          Trajetória de Graduações
+        </h3>
+
+        <div className="card-premium p-6 md:p-8">
+          {displayHistory.length === 0 ? (
+            <div className="text-center py-10 text-slate-550 text-xs italic">
+              Nenhuma graduação registrada em seu histórico.
+            </div>
+          ) : (
+            <div className="relative pl-6 border-l-2 border-obsidian-850 space-y-8 py-2">
+              {displayHistory.map((grad, idx) => {
+                const isCurrent = grad.faixa === student.faixa && grad.graus === student.graus;
+                
+                // Calcula duração na faixa
+                const todayStr = new Date().toLocaleDateString('en-CA');
+                const nextGradData = idx === 0 ? todayStr : displayHistory[idx - 1].data;
+                const tempoNaFaixa = getDurationFriendly(grad.data, nextGradData);
+                
+                return (
+                  <div key={grad.id} className="relative group">
+                    {/* Indicador visual na linha da timeline */}
+                    <div className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                      isCurrent 
+                        ? 'bg-amber-500 border-amber-400 shadow-md shadow-amber-500/20 scale-110' 
+                        : 'bg-obsidian-950 border-obsidian-750 group-hover:border-slate-500'
+                    }`} />
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <BeltBadge faixa={grad.faixa} graus={grad.graus} />
+                          {isCurrent && (
+                            <span className="text-[9.5px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full select-none">
+                              Graduação Atual
+                            </span>
+                          )}
+                        </div>
+                        {grad.avaliador && (
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-1">
+                            Avaliador: {grad.avaliador}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="text-left sm:text-right shrink-0">
+                        <span className="text-[10px] font-bold text-slate-350 font-mono block">
+                          Graduado em: {formatDate(grad.data)}
+                        </span>
+                        <span className="text-[9.5px] text-zinc-500 font-semibold block mt-0.5">
+                          Permanência na Faixa: {tempoNaFaixa}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
