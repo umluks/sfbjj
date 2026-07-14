@@ -5,6 +5,7 @@ import { useStudents } from '@/application/contexts/StudentsContext';
 import { paymentService } from '@/application/services/paymentService';
 import { FinancialSummary } from '@/presentation/components/financial/FinancialSummary';
 import { PaymentHistoryModal } from '@/presentation/components/financial/PaymentHistoryModal';
+import { FinancialCharts } from '@/presentation/components/financial/FinancialCharts';
 
 import {
   Search,
@@ -90,6 +91,22 @@ export const FinancialPage: React.FC = () => {
   const totalAnoRecebido = getFaturamento(monthFilter, yearFilter, false);
   const totalAnoRecebidoAdulto = getFaturamentoPorTurma(monthFilter, yearFilter, false, 'Adulto');
   const totalAnoRecebidoKids = getFaturamentoPorTurma(monthFilter, yearFilter, false, 'Kids');
+
+  // Prepara dados de faturamento mensal para os 12 meses do ano ativo
+  const financialChartData = React.useMemo(() => {
+    return ALL_MONTHS.map(month => {
+      const refFilter = `${month}/${yearFilter}`;
+      const total = getFaturamento(refFilter, yearFilter, true);
+      const kids = getFaturamentoPorTurma(refFilter, yearFilter, true, 'Kids');
+      const adulto = getFaturamentoPorTurma(refFilter, yearFilter, true, 'Adulto');
+      return {
+        label: month.substring(0, 3),
+        total,
+        kids,
+        adulto
+      };
+    });
+  }, [students, yearFilter]);
 
   // Alertas e Uploader
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
@@ -466,6 +483,9 @@ export const FinancialPage: React.FC = () => {
         totalAnoRecebidoAdulto={totalAnoRecebidoAdulto}
         totalAnoRecebidoKids={totalAnoRecebidoKids}
       />
+
+      {/* Gráficos Financeiros */}
+      <FinancialCharts data={financialChartData} />
 
       {/* Listagem de Alunos e Ações Financeiras */}
       <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">

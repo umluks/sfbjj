@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Plus, Trash2, Edit2, X, Check, AlertCircle } from 'lucide-react';
+import { Clock, Plus, Trash2, Edit2, X, Check, AlertCircle, Calendar, Filter } from 'lucide-react';
 import type { Aula, Turma } from '@/domain/models/class';
 import type { Professor } from '@/domain/models/teacher';
 
@@ -14,12 +14,12 @@ interface TimeSlotManagerProps {
 }
 
 const DAYS = [
-  { id: 1, name: 'Segunda' },
-  { id: 2, name: 'Terça' },
-  { id: 3, name: 'Quarta' },
-  { id: 4, name: 'Quinta' },
-  { id: 5, name: 'Sexta' },
-  { id: 6, name: 'Sábado' }
+  { id: 1, name: 'Segunda', short: 'Seg' },
+  { id: 2, name: 'Terça', short: 'Ter' },
+  { id: 3, name: 'Quarta', short: 'Qua' },
+  { id: 4, name: 'Quinta', short: 'Qui' },
+  { id: 5, name: 'Sexta', short: 'Sex' },
+  { id: 6, name: 'Sábado', short: 'Sáb' }
 ];
 
 export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ 
@@ -40,6 +40,9 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
   const [professorId, setProfessorId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Filtro de dia selecionado na listagem
+  const [selectedDayFilter, setSelectedDayFilter] = useState<number | 'all'>('all');
 
   const openModal = (aula?: Aula) => {
     setError(null);
@@ -89,10 +92,10 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
 
         if (timeOverlap) {
           if (aula.professorId === professorId) {
-            return 'O professor selecionado já possui uma aula neste horário e dia(s).';
+            return `O professor já possui aula neste horário (${aula.hora}) no dia selecionado.`;
           }
           if (aula.turmaId === turmaId) {
-            return 'A turma selecionada já possui uma aula neste horário e dia(s).';
+            return `A turma já possui aula neste horário (${aula.hora}) no dia selecionado.`;
           }
         }
       }
@@ -170,137 +173,253 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
     });
   };
 
+  // Filtrar os horários
+  const filteredSchedule = schedule.filter(aula => {
+    if (selectedDayFilter === 'all') return true;
+    return Array.isArray(aula.diasSemana) && aula.diasSemana.includes(Number(selectedDayFilter));
+  });
+
+  // Ordenar horários por hora de início
+  const sortedSchedule = [...filteredSchedule].sort((a, b) => {
+    const aStart = a.hora.split(' - ')[0] || '00:00';
+    const bStart = b.hora.split(' - ')[0] || '00:00';
+    return aStart.localeCompare(bStart);
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header e Ação */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-obsidian-850 pb-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">
+          <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
+            <span className="p-2 bg-gold-500/10 rounded-xl text-gold-500">
+              <Clock className="w-5 h-5" />
+            </span>
             Gerenciar Horários
           </h2>
           <p className="text-slate-400 text-sm mt-1">
-            Vincule Turmas, Professores e Dias da Semana.
+            Vincule Turmas, Professores e Dias da Semana para a grade de treinos.
           </p>
         </div>
-        <button onClick={() => openModal()} className="btn-gold flex items-center gap-2">
+        <button
+          onClick={() => openModal()}
+          className="btn-gold flex items-center gap-2.5 py-2.5 px-4 shadow-lg shadow-gold-500/10 active:scale-[0.98] transition-all"
+        >
           <Plus className="w-4 h-4" />
           Novo Horário
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {schedule.map(aula => {
+      {/* Barra de Filtro de Dias */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-1.5 scrollbar-thin">
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5 shrink-0 pl-1">
+          <Filter className="w-3.5 h-3.5" /> Filtrar Dia:
+        </span>
+        <button
+          onClick={() => setSelectedDayFilter('all')}
+          className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all border shrink-0 ${
+            selectedDayFilter === 'all'
+              ? 'bg-slate-100 text-obsidian-950 border-slate-150 font-extrabold'
+              : 'bg-obsidian-900/50 text-slate-400 border-obsidian-800 hover:text-slate-200'
+          }`}
+        >
+          Todos
+        </button>
+        {DAYS.map(day => (
+          <button
+            key={day.id}
+            onClick={() => setSelectedDayFilter(day.id)}
+            className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all border shrink-0 ${
+              selectedDayFilter === day.id
+                ? 'bg-gold-500 text-obsidian-950 border-gold-400 font-extrabold shadow-md shadow-gold-500/10'
+                : 'bg-obsidian-900/50 text-slate-400 border-obsidian-800 hover:text-slate-200'
+            }`}
+          >
+            {day.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Grid de Listagem de Horários */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sortedSchedule.map(aula => {
           const prof = professores.find(p => p.id === aula.professorId) || { nome: aula.professor };
           const turma = turmas.find(t => t.id === aula.turmaId) || { nome: 'Turma Legada', categoria: aula.categoria };
-          const diasNames = DAYS.filter(d => Array.isArray(aula.diasSemana) && aula.diasSemana.includes(d.id)).map(d => d.name).join(', ');
+          const aulaDias = Array.isArray(aula.diasSemana) ? aula.diasSemana : [];
 
           return (
-            <div key={aula.id} className="card-premium p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-gold-500 font-bold bg-gold-500/10 px-2 py-1 rounded text-xs">
-                    {aula.hora}
-                  </span>
-                  <span className="text-sm font-extrabold text-slate-200">{turma.nome}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-obsidian-800 text-slate-400">
+            <div 
+              key={aula.id} 
+              className="card-premium p-5 flex flex-col justify-between gap-4 border border-obsidian-850 hover:border-obsidian-750 transition-all duration-300 relative group overflow-hidden"
+            >
+              {/* Indicador sutil de Categoria por cor lateral */}
+              <div className={`absolute top-0 left-0 bottom-0 w-1 ${
+                turma.categoria === 'Kids' ? 'bg-sky-500' : turma.categoria === 'Open Match' ? 'bg-emerald-500' : 'bg-gold-500'
+              }`} />
+
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-gold-500 font-black bg-gold-500/10 px-2.5 py-1 rounded-lg text-xs border border-gold-500/10">
+                      {aula.hora}
+                    </span>
+                    <span className="text-sm font-black text-slate-200">{turma.nome}</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                    turma.categoria === 'Kids' 
+                      ? 'bg-sky-500/10 text-sky-400 border-sky-500/10' 
+                      : turma.categoria === 'Open Match' 
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/10' 
+                        : 'bg-gold-500/10 text-gold-500 border-gold-500/10'
+                  }`}>
                     {turma.categoria}
                   </span>
                 </div>
-                <div className="text-xs text-slate-400 mt-2 flex gap-4">
-                  <span>👨‍🏫 Prof: {prof.nome}</span>
-                  <span>📅 Dias: {diasNames || 'Nenhum'}</span>
+
+                <div className="text-xs text-slate-400 space-y-1.5 pt-1">
+                  <p className="flex items-center gap-1.5">
+                    <span className="text-slate-500">👨‍🏫 Professor:</span> 
+                    <span className="font-semibold text-slate-300">{prof.nome}</span>
+                  </p>
+                  
+                  {/* Grid de dias da semana visual */}
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
+                    {DAYS.map(d => {
+                      const isActive = aulaDias.includes(d.id);
+                      return (
+                        <span 
+                          key={d.id} 
+                          className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${
+                            isActive 
+                              ? 'bg-slate-200 text-obsidian-950 font-black' 
+                              : 'bg-obsidian-900 text-slate-600 border border-obsidian-850'
+                          }`}
+                        >
+                          {d.short}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => openModal(aula)} className="p-2 bg-obsidian-850 hover:bg-obsidian-800 text-slate-300 rounded transition-colors">
-                  <Edit2 className="w-4 h-4" />
+
+              <div className="flex justify-end gap-2 border-t border-obsidian-900 pt-3">
+                <button 
+                  onClick={() => openModal(aula)} 
+                  className="p-2 bg-obsidian-850 hover:bg-obsidian-800 text-slate-300 hover:text-gold-500 rounded-lg transition-colors border border-obsidian-800"
+                  title="Editar Horário"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => handleDelete(aula.id)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded transition-colors">
-                  <Trash2 className="w-4 h-4" />
+                <button 
+                  onClick={() => handleDelete(aula.id)} 
+                  className="p-2 bg-red-500/5 hover:bg-red-500/15 text-red-400 hover:text-red-300 rounded-lg transition-colors border border-red-500/10"
+                  title="Excluir Horário"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           );
         })}
-        {schedule.length === 0 && (
-          <div className="text-center py-12 text-slate-500">
-            Nenhum horário configurado ainda.
+
+        {sortedSchedule.length === 0 && (
+          <div className="col-span-full card-premium py-16 text-center text-slate-500 border border-dashed border-obsidian-800">
+            <Calendar className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+            <p className="text-xs font-semibold">Nenhum horário cadastrado para este filtro.</p>
           </div>
         )}
       </div>
 
+      {/* Modal do Writer (Criar / Editar Horário) */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-obsidian-850 border border-obsidian-700 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 bg-obsidian-850 rounded-t-2xl">
-              <h2 className="text-md font-bold text-slate-100 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gold-500" />
-                {editingId ? 'Editar Horário' : 'Novo Horário'}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-obsidian-850 border border-obsidian-750 rounded-2xl w-full max-w-lg shadow-2xl animate-scale-up overflow-hidden">
+            
+            {/* Header Modal */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 bg-obsidian-900">
+              <h2 className="text-sm font-bold text-slate-100 uppercase tracking-widest flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gold-500 animate-pulse" />
+                {editingId ? 'Editar Slot de Horário' : 'Novo Slot de Horário'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-gold-500 p-1 transition-colors" disabled={submitting}>
+              <button 
+                onClick={() => setShowModal(false)} 
+                className="text-slate-400 hover:text-gold-500 p-1.5 transition-colors rounded-lg hover:bg-obsidian-800" 
+                disabled={submitting}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+
+            {/* Form Modal */}
+            <form onSubmit={handleSave} className="p-6 space-y-5">
               
               {error && (
-                <div className="flex items-start gap-2.5 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs animate-shake">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                <div className="flex items-start gap-2.5 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs animate-shake font-medium">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
                   <span>{error}</span>
                 </div>
               )}
 
+              {/* Hora Início e Hora Fim */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Hora Início</label>
+                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Hora Início *</label>
                   <input
                     type="time"
                     value={horaIncio}
                     onChange={(e) => setHoraInicio(e.target.value)}
-                    className="input-premium w-full bg-obsidian-950 font-mono"
+                    className="input-premium w-full bg-obsidian-950 font-mono text-center text-slate-200"
                     required
                     disabled={submitting}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Hora Fim</label>
+                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Hora Fim *</label>
                   <input
                     type="time"
                     value={horaFim}
                     onChange={(e) => setHoraFim(e.target.value)}
-                    className="input-premium w-full bg-obsidian-950 font-mono"
+                    className="input-premium w-full bg-obsidian-950 font-mono text-center text-slate-200"
                     required
                     disabled={submitting}
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 mt-2">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Dias da Semana</label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS.map(day => (
-                    <button
-                      key={day.id}
-                      type="button"
-                      onClick={() => toggleDay(day.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                        Array.isArray(diasSemana) && diasSemana.map(Number).includes(day.id)
-                          ? 'bg-gold-500 text-obsidian-950'
-                          : 'bg-obsidian-800 text-slate-400 hover:bg-obsidian-750'
-                      }`}
-                      disabled={submitting}
-                    >
-                      {day.name}
-                    </button>
-                  ))}
+              {/* Seletor Moderno de Dias da Semana */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Dias da Semana *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DAYS.map(day => {
+                    const isSelected = Array.isArray(diasSemana) && diasSemana.map(Number).includes(day.id);
+                    return (
+                      <button
+                        key={day.id}
+                        type="button"
+                        onClick={() => toggleDay(day.id)}
+                        className={`py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-gold-500 text-obsidian-950 border-gold-400 font-extrabold shadow-md shadow-gold-500/10'
+                            : 'bg-obsidian-950 text-slate-400 border-obsidian-800 hover:bg-obsidian-900 hover:text-slate-200'
+                        }`}
+                        disabled={submitting}
+                      >
+                        <span>{day.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 mt-2">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma</label>
+              {/* Dropdown Seleção de Turma */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Relacionada *</label>
                 <select
                   value={turmaId}
                   onChange={(e) => setTurmaId(Number(e.target.value))}
-                  className="input-premium w-full bg-obsidian-950"
+                  className="input-premium w-full bg-obsidian-950 text-slate-250 cursor-pointer"
                   required
                   disabled={submitting}
                 >
@@ -311,12 +430,13 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
                 </select>
               </div>
 
-              <div className="flex flex-col gap-1.5 mt-2">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Professor</label>
+              {/* Dropdown Seleção de Professor */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Professor *</label>
                 <select
                   value={professorId}
                   onChange={(e) => setProfessorId(Number(e.target.value))}
-                  className="input-premium w-full bg-obsidian-950"
+                  className="input-premium w-full bg-obsidian-950 text-slate-250 cursor-pointer"
                   required
                   disabled={submitting}
                 >
@@ -327,11 +447,32 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
                 </select>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-obsidian-750 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-obsidian px-4 py-2 text-xs" disabled={submitting}>Cancelar</button>
-                <button type="submit" className="btn-gold px-4 py-2 text-xs flex items-center gap-2" disabled={submitting}>
-                  <Check className="w-3.5 h-3.5" />
-                  {submitting ? 'Salvando...' : 'Salvar Horário'}
+              {/* Ações do Modal */}
+              <div className="mt-6 pt-4 border-t border-obsidian-750 flex justify-end gap-2 bg-obsidian-850">
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)} 
+                  className="btn-obsidian px-5 py-2.5 text-xs font-black uppercase tracking-wider" 
+                  disabled={submitting}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-gold px-5 py-2.5 text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-gold-500/10 active:scale-[0.98] transition-all" 
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-obsidian-950 border-t-transparent rounded-full animate-spin"></div>
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Salvar Horário
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -341,4 +482,5 @@ export const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
     </div>
   );
 };
+
 export default TimeSlotManager;

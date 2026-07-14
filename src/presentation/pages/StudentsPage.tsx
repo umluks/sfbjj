@@ -145,10 +145,13 @@ export const StudentsPage: React.FC = () => {
   // Filtragem e Ordenação
   const filteredStudents = students
     .filter(student => {
+      const cleanQuery = searchQuery.toLowerCase();
+      const cleanCPFQuery = searchQuery.replace(/\D/g, '');
+
       const matchesSearch =
-        student.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.cpf.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, '')) ||
-        (student.email && student.email.toLowerCase().includes(searchQuery.toLowerCase()));
+        student.nome.toLowerCase().includes(cleanQuery) ||
+        (student.cpf && cleanCPFQuery !== '' && student.cpf.replace(/\D/g, '').includes(cleanCPFQuery)) ||
+        (student.email && student.email.toLowerCase().includes(cleanQuery));
 
       const matchesBelt = selectedBelt === 'Todos' || student.faixa === selectedBelt;
       const matchesStatus = selectedStatus === 'Todos' || student.status === selectedStatus;

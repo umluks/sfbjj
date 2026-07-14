@@ -76,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'teachers', label: 'Gestão de Equipe', icon: Shield },
       { id: 'financial', label: 'Controle Financeiro', icon: DollarSign },
       { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
+      { id: 'techniques', label: 'Biblioteca de Posições', icon: BookOpen },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
@@ -87,6 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'attendance-report', label: 'Frequência Alunos', icon: ClipboardCheck },
       { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Equipe', icon: Shield },
+      { id: 'techniques', label: 'Biblioteca de Posições', icon: BookOpen },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
     ];
@@ -96,6 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'my-journey', label: 'Minha Jornada', icon: Trophy },
       { id: 'my-attendance', label: 'Minha Frequência', icon: ClipboardCheck },
       { id: 'my-graduations', label: 'Histórico de Graduações', icon: Award },
+      { id: 'techniques', label: 'Biblioteca de Posições', icon: BookOpen },
       { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
