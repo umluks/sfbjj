@@ -3,6 +3,7 @@ import type { Aluno, Belt, Degree, Gender } from '@/domain/models/student';
 import { BAIRROS_DF, BELT_RANKS } from '@/constants';
 import { getBeltsByAge, getBjjAge } from '@/application/services/diplomaService';
 import { formatCPF, formatPhone, formatMonthYear } from '@/utils/formatters';
+import { compressImage } from '@/utils/imageCompressor';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 import { Shield, X, Heart, User, AlertCircle } from 'lucide-react';
 
@@ -485,16 +486,23 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
+                            try {
+                              const compressed = await compressImage(file);
+                              setFotoPerfil(compressed);
+                            } catch (err) {
+                              console.error('Erro ao comprimir imagem:', err);
+                              // Fallback se falhar
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
                                   setFotoPerfil(event.target.result as string);
-                              }
-                            };
-                            reader.readAsDataURL(file);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
                           }
                         }}
                         className="text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"

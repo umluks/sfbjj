@@ -8,7 +8,13 @@ Esta aplicação foi configurada como uma **Progressive Web App (PWA)** totalmen
 
 ## 🚀 Funcionalidades Principais
 
-O sistema possui um layout 100% responsivo e controle de acesso baseado em três perfis de usuários principais (**Administrador**, **Professor** e **Aluno**):
+O sistema possui um layout 100% responsivo, controle de acesso baseado em três perfis de usuários principais (**Administrador**, **Professor** e **Aluno**) e foco em usabilidade moderna (UX/UI):
+
+### 👤 Autenticação e Segurança
+- **Login Híbrido com Máscara de CPF:** A tela de login permite a autenticação por e-mail ou CPF. Ao digitar apenas números, o sistema aplica automaticamente a máscara `000.000.000-00` de forma dinâmica e limpa, adaptando a entrada do usuário para evitar erros de preenchimento.
+
+### 📐 Layout e Navegação
+- **Menu Lateral Esquerdo Colapsável:** Painel de navegação moderno que pode ser recolhido para maximizar a área de trabalho (especialmente útil para visualização de dashboards e tabelas financeiras complexas). Conta com tooltips automáticos no estado colapsado, transições fluidas de largura (`transition-all`) e acessibilidade completa via leitor de telas (`aria-label`).
 
 ### 👤 Perfil Administrador (Admin)
 - **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia, exibição cronológica de todos os aniversariantes do mês com destaque visual e animação suave (`soft-blink`) para o aniversariante do dia, e publicação de avisos ou comunicados internos.
@@ -24,9 +30,9 @@ O sistema possui um layout 100% responsivo e controle de acesso baseado em três
 
 ### 🥋 Perfil Aluno (Student)
 - **Perfil do Atleta (Meu Perfil):** Dados cadastrais, alteração de senha e visualização de status de pagamentos.
-- **Minha Jornada:** Seção dedicada ao acompanhamento do desenvolvimento técnico do atleta com estatísticas de tempo de prática, horas acumuladas, sequência de treinos (streak de dias corridos), total de treinos registrados e progresso da meta mensal ilustrado em um anel circular de progresso.
+- **Minha Jornada:** Seção dedicada ao acompanhamento do desenvolvimento técnico do atleta com estatísticas de tempo de prática, horas acumuladas, sequência de treinos (streak de dias), total de treinos registrados e progresso da meta mensal com anel circular de progresso.
+  - **Linha do Tempo de Graduações (Timeline):** Integrada diretamente na página da Jornada, exibe em destaque a trajetória completa de graduações (faixas e graus) com o cálculo automático do **Tempo de Permanência na Faixa** entre cada promoção até o dia atual na faixa ativa.
 - **Minha Frequência:** Realização de check-in em tempo real em aulas abertas e histórico detalhado de presenças. Possibilita desmarcar presenças de aulas abertas com botão dinâmico (estilo de hover em vermelho para cancelamento) ou apagando itens diretamente pela lixeira da tabela de histórico.
-- **Histórico de Graduações:** Exibido em destaque como aba principal na Sidebar, listando a evolução das faixas e graus do aluno em tela cheia com o cálculo dinâmico do **Tempo na Faixa** transcorrido em cada graduação ou até o dia atual na faixa ativa.
 - **Grade de Horários:** Consulta de horários de aulas e turmas ativas.
 - **Contato & Suporte:** Acesso à localização física da academia integrada com mapa e formulário para contato direto.
 

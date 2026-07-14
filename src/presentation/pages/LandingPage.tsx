@@ -409,40 +409,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ announcements = [], on
         </div>
       </section>
 
-      {/* LOCALIZAÇÃO MAPA */}
-      <section id="localizacao" className="py-24 px-4 bg-obsidian-900/10 border-t border-obsidian-900/60">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
 
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black text-slate-100 uppercase tracking-tight">
-              Onde Estamos
-            </h2>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Nosso tatame principal fica localizado no subsolo da Paróquia Sagrado Coração de Jesus e Nossa Senhora das Mercês na Asa Sul, Brasília. Um local seguro, com excelente infraestrutura e estacionamento fácil.
-            </p>
-            <div className="pt-2">
-              <div className="text-xs text-slate-350 space-y-1.5">
-                <p>📍 SGAS 615, Conjunto D, Lotes 33/34</p>
-                <p>Brasília - DF, CEP 70200-750</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="rounded-xl overflow-hidden border border-obsidian-750 relative shadow-2xl">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3839.261295325858!2d-47.90098522525757!3d-15.811802184852928!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935a3ae455555555%3A0x6281729b48c7c98f!2sPar%C3%B3quia%20Sagrado%20Cora%C3%A7%C3%A3o%20de%20Jesus%20e%20Nossa%20Senhora%20das%20Merc%C3%AAs!5e0!3m2!1spt-BR!2sbr!4v1716739200000!5m2!1spt-BR!2sbr"
-                width="100%"
-                height="350"
-                style={{ border: 0 }}
-                allowFullScreen={true}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* CONTATO */}
       <section id="contato" className="py-24 px-4 max-w-7xl mx-auto border-t border-obsidian-850 scroll-mt-20">

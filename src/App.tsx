@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuthContext } from '@/application/contexts/AuthContext';
 import { StudentsProvider, useStudents } from '@/application/contexts/StudentsContext';
 import { MainLayout } from '@/presentation/layouts/MainLayout';
@@ -18,6 +18,7 @@ import { StudentProfilePage } from '@/presentation/pages/StudentProfilePage';
 import { MyAttendancePage } from '@/presentation/pages/MyAttendancePage';
 import { AttendanceReportPage } from '@/presentation/pages/AttendanceReportPage';
 import { MyJourneyPage } from '@/presentation/pages/MyJourneyPage';
+import { TechniquesPage } from '@/presentation/pages/TechniquesPage';
 
 import type { Aviso } from '@/domain/models/announcement';
 import { announcementService } from '@/application/services/announcementService';
@@ -83,11 +84,36 @@ function AppContent() {
     fetchAnnouncements();
   }, []);
 
+  // Solicita permissão para notificações do navegador
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Dispara notificação in-app/sistema operacional ao receber novos comunicados
+  const prevAnnouncementsLength = useRef(announcements.length);
+  useEffect(() => {
+    if (
+      announcements.length > prevAnnouncementsLength.current &&
+      prevAnnouncementsLength.current > 0
+    ) {
+      const novoAviso = announcements[0];
+      if (Notification.permission === 'granted') {
+        new Notification('Novo Comunicado SFBJJ', {
+          body: novoAviso.titulo || 'Há um novo comunicado importante no mural da academia.',
+          icon: '/pwa-192x192.png'
+        });
+      }
+    }
+    prevAnnouncementsLength.current = announcements.length;
+  }, [announcements]);
+
   useEffect(() => {
     if (loggedUser) {
-      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'my-journey' && currentTab !== 'my-attendance' && currentTab !== 'my-graduations' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
+      if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'my-journey' && currentTab !== 'my-attendance' && currentTab !== 'my-graduations' && currentTab !== 'techniques' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'attendance-report' && currentTab !== 'batch-graduation' && currentTab !== 'teachers' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'attendance-report' && currentTab !== 'batch-graduation' && currentTab !== 'teachers' && currentTab !== 'techniques' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('schedule');
       }
     }
@@ -131,6 +157,10 @@ function AppContent() {
       case 'graduation-system':
         return (
           <GraduationSystemPage />
+        );
+      case 'techniques':
+        return (
+          <TechniquesPage />
         );
       case 'contact':
         return (

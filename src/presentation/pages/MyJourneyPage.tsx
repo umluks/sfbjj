@@ -18,6 +18,7 @@ import type { Aluno } from '@/domain/models/student';
 import type { Frequencia } from '@/domain/models/attendance';
 import { formatDate, getDurationFriendly } from '@/utils/formatters';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
+import { AchievementsList } from '@/presentation/components/profile/AchievementsList';
 
 interface MyJourneyPageProps {
   alunoId?: number;
@@ -651,6 +652,18 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
           )}
         </div>
       </div>
+
+      {/* Seção de Conquistas/Badges */}
+      {student && (
+        <div className="card-premium p-6 md:p-8">
+          <AchievementsList
+            totalAulas={attendances.length}
+            streak={currentStreak}
+            dataMatricula={student.dataMatricula || ''}
+            metaMensalProgresso={monthlyStats.percentage}
+          />
+        </div>
+      )}
     </div>
   );
 };

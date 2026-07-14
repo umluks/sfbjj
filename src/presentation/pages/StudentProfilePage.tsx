@@ -59,7 +59,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
   }, [alunoId, contextStudent]);
 
   // Se o alunoId foi passado, quer dizer que estamos editando a ficha de OUTRO aluno
-  const isEditingOtherStudent = !!alunoId;
+  // Exceto se o usuário logado for o próprio aluno visualizando sua própria ficha
+  const isEditingOtherStudent = !!alunoId && loggedUser?.role !== 'student';
 
   // Monta os dados iniciais do formulário
   const getInitialFormData = () => {
