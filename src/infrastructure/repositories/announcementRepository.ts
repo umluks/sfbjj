@@ -1,19 +1,34 @@
-import { supabase } from '@/infrastructure/lib/supabaseClient';
+import { supabase, cache } from '@/infrastructure/lib/supabaseClient';
 import type { IAnnouncementRepository } from '@/domain/repositories/announcementRepository';
 import type { Aviso } from '@/domain/models/announcement';
 import { handleSupabaseError } from './errorHelper';
 
 export class AnnouncementRepository implements IAnnouncementRepository {
   async getAnnouncements(): Promise<Aviso[]> {
-    const { data, error } = await supabase
-      .from('avisos')
-      .select('*');
+    const cacheKey = 'announcements';
+    const cached = cache.getFresh<Aviso[]>(cacheKey);
+    if (cached) return cached;
 
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from('avisos')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      const result = data || [];
+      cache.set(cacheKey, result);
+      return result;
+    } catch (error: any) {
+      const staleCached = cache.get<Aviso[]>(cacheKey);
+      if (staleCached) {
+        console.warn('Operando offline: retornando comunicados do cache local.');
+        return staleCached;
+      }
       throw handleSupabaseError(error, `Erro ao carregar avisos do banco: ${error.message}`);
     }
-
-    return data || [];
   }
 
   async createAnnouncement(announcementData: Omit<Aviso, 'id'>): Promise<Aviso> {
@@ -27,6 +42,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       throw handleSupabaseError(error, `Erro ao criar aviso no banco: ${error.message}`);
     }
 
+    cache.clear('announcements');
     return data;
   }
 
@@ -41,6 +57,8 @@ export class AnnouncementRepository implements IAnnouncementRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao atualizar aviso no banco: ${error.message}`);
     }
+
+    cache.clear('announcements');
   }
 
   async deleteAnnouncement(id: number): Promise<void> {
@@ -52,5 +70,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao excluir aviso do banco: ${error.message}`);
     }
+
+    cache.clear('announcements');
   }
 }

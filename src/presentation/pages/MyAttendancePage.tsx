@@ -445,7 +445,7 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-obsidian-850 text-[9px] text-zinc-500 font-black uppercase tracking-wider">
                   <th className="py-3 px-4">Data</th>

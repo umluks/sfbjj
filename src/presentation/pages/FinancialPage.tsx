@@ -5,7 +5,6 @@ import { useStudents } from '@/application/contexts/StudentsContext';
 import { paymentService } from '@/application/services/paymentService';
 import { FinancialSummary } from '@/presentation/components/financial/FinancialSummary';
 import { PaymentHistoryModal } from '@/presentation/components/financial/PaymentHistoryModal';
-import { FinancialCharts } from '@/presentation/components/financial/FinancialCharts';
 
 import {
   Search,
@@ -91,22 +90,6 @@ export const FinancialPage: React.FC = () => {
   const totalAnoRecebido = getFaturamento(monthFilter, yearFilter, false);
   const totalAnoRecebidoAdulto = getFaturamentoPorTurma(monthFilter, yearFilter, false, 'Adulto');
   const totalAnoRecebidoKids = getFaturamentoPorTurma(monthFilter, yearFilter, false, 'Kids');
-
-  // Prepara dados de faturamento mensal para os 12 meses do ano ativo
-  const financialChartData = React.useMemo(() => {
-    return ALL_MONTHS.map(month => {
-      const refFilter = `${month}/${yearFilter}`;
-      const total = getFaturamento(refFilter, yearFilter, true);
-      const kids = getFaturamentoPorTurma(refFilter, yearFilter, true, 'Kids');
-      const adulto = getFaturamentoPorTurma(refFilter, yearFilter, true, 'Adulto');
-      return {
-        label: month.substring(0, 3),
-        total,
-        kids,
-        adulto
-      };
-    });
-  }, [students, yearFilter]);
 
   // Alertas e Uploader
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState<string | null>(null);
@@ -426,7 +409,7 @@ export const FinancialPage: React.FC = () => {
       )}
 
       {/* Seletor de Referência de Mês/Ano */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-obsidian-950 p-4 border border-obsidian-850/80">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-obsidian-900/40 border border-obsidian-850/60 rounded-2xl p-5 shadow-xl backdrop-blur-md">
         <div>
           <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
             Ano de Referência
@@ -440,7 +423,7 @@ export const FinancialPage: React.FC = () => {
               setSelectedHistoryMonth(getDefaultMonth(y));
               setCurrentPage(1);
             }}
-            className="input-premium w-full bg-obsidian-900 text-slate-200 cursor-pointer font-bold"
+            className="input-premium w-full bg-obsidian-950/70 text-slate-205 cursor-pointer font-bold"
           >
             {availableYears.map(y => (
               <option key={y} value={y}>{y}</option>
@@ -458,7 +441,7 @@ export const FinancialPage: React.FC = () => {
               setMonthFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="input-premium w-full bg-obsidian-900 text-slate-200 cursor-pointer font-bold"
+            className="input-premium w-full bg-obsidian-950/70 text-slate-205 cursor-pointer font-bold"
           >
             {availableMonths.map(m => (
               <option key={m} value={m}>{m}</option>
@@ -466,9 +449,9 @@ export const FinancialPage: React.FC = () => {
           </select>
         </div>
 
-        <div className="bg-obsidian-900 border border-obsidian-850/70 p-3.5 flex items-center justify-between text-xs text-slate-400">
-          <span>Valor Fixo Mensalidade:</span>
-          <strong className="text-slate-100 font-mono text-sm">R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}</strong>
+        <div className="bg-obsidian-950/50 border border-obsidian-850/60 p-4 rounded-xl flex items-center justify-between text-xs text-slate-400">
+          <span className="font-semibold uppercase tracking-wider text-[10px] text-slate-500">Valor Mensalidade:</span>
+          <strong className="text-gold-450 font-mono text-base">R$ {VALOR_MENSALIDADE.toFixed(2).replace('.', ',')}</strong>
         </div>
       </div>
 
@@ -484,14 +467,11 @@ export const FinancialPage: React.FC = () => {
         totalAnoRecebidoKids={totalAnoRecebidoKids}
       />
 
-      {/* Gráficos Financeiros */}
-      <FinancialCharts data={financialChartData} />
-
       {/* Listagem de Alunos e Ações Financeiras */}
-      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
+      <div className="bg-obsidian-900/30 border border-obsidian-850/60 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
         <div className="px-6 py-4 border-b border-obsidian-850/80 bg-obsidian-950/40 flex flex-wrap items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
+          <div className="relative w-full sm:w-80 group">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-550 group-focus-within:text-slate-350 transition-colors">
               <Search className="w-4 h-4" />
             </span>
             <input
@@ -502,10 +482,10 @@ export const FinancialPage: React.FC = () => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="input-premium pl-9 w-full"
+              className="input-premium pl-10 w-full"
             />
           </div>
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+          <span className="text-[10px] text-slate-550 font-bold uppercase tracking-wider">
             Mostrando {filteredStudents.length} aluno(s) ativo(s)
           </span>
         </div>
@@ -532,7 +512,7 @@ export const FinancialPage: React.FC = () => {
                   const pay = getCurrentPayment(student);
                   return (
                     <tr key={student.id} className="hover:bg-obsidian-800/15 transition-colors group">
-                      <td className="px-6 py-4 font-bold text-slate-200 group-hover:text-slate-105 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
                         {student.nome}
                       </td>
                       <td className="px-6 py-4">

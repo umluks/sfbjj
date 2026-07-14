@@ -1,4 +1,4 @@
-import { supabase } from '@/infrastructure/lib/supabaseClient';
+import { supabase, cache } from '@/infrastructure/lib/supabaseClient';
 import type { IAttendanceRepository } from '@/domain/repositories/attendanceRepository';
 import type { Frequencia } from '@/domain/models/attendance';
 import { handleSupabaseError } from './errorHelper';
@@ -22,29 +22,44 @@ export class AttendanceRepository implements IAttendanceRepository {
   }
 
   async getAttendanceByStudent(studentId: number): Promise<Frequencia[]> {
-    const { data, error } = await supabase
-      .from('frequencias')
-      .select(`
-        id,
-        aluno_id,
-        aula_id,
-        turma_id,
-        data,
-        horario,
-        created_at,
-        alunos (nome),
-        aulas (hora, professor, categoria),
-        turmas (nome)
-      `)
-      .eq('aluno_id', studentId)
-      .order('data', { ascending: false })
-      .order('horario', { ascending: false });
+    const cacheKey = `attendance_student_${studentId}`;
+    const cached = cache.getFresh<Frequencia[]>(cacheKey);
+    if (cached) return cached;
 
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from('frequencias')
+        .select(`
+          id,
+          aluno_id,
+          aula_id,
+          turma_id,
+          data,
+          horario,
+          created_at,
+          alunos (nome),
+          aulas (hora, professor, categoria),
+          turmas (nome)
+        `)
+        .eq('aluno_id', studentId)
+        .order('data', { ascending: false })
+        .order('horario', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const result = (data || []).map(item => this.mapDbToModel(item));
+      cache.set(cacheKey, result);
+      return result;
+    } catch (error: any) {
+      const staleCached = cache.get<Frequencia[]>(cacheKey);
+      if (staleCached) {
+        console.warn(`Operando offline: retornando frequências do aluno ${studentId} do cache local.`);
+        return staleCached;
+      }
       throw handleSupabaseError(error, `Erro ao carregar frequências do aluno: ${error.message}`);
     }
-
-    return (data || []).map(item => this.mapDbToModel(item));
   }
 
   async checkIn(alunoId: number, aulaId: number, turmaId?: number, dateStr?: string): Promise<Frequencia> {
@@ -82,6 +97,11 @@ export class AttendanceRepository implements IAttendanceRepository {
       throw handleSupabaseError(error, `Erro ao realizar check-in: ${error.message}`);
     }
 
+    cache.clearByPrefix('attendance');
+    // Como a frequência altera a visualização do perfil/histórico do aluno, limpamos também o cache do aluno
+    cache.clear('students');
+    cache.clear(`student_${alunoId}`);
+
     return this.mapDbToModel(data);
   }
 
@@ -91,46 +111,68 @@ export class AttendanceRepository implements IAttendanceRepository {
     categoria?: string;
     alunoId?: number;
   }): Promise<Frequencia[]> {
-    let query = supabase
-      .from('frequencias')
-      .select(`
-        id,
-        aluno_id,
-        aula_id,
-        turma_id,
-        data,
-        horario,
-        created_at,
-        alunos (nome),
-        aulas!inner (hora, professor, categoria),
-        turmas (nome)
-      `);
+    const cacheKey = `attendance_search_${JSON.stringify(filters)}`;
+    const cached = cache.getFresh<Frequencia[]>(cacheKey);
+    if (cached) return cached;
 
-    if (filters.startDate) {
-      query = query.gte('data', filters.startDate);
-    }
-    if (filters.endDate) {
-      query = query.lte('data', filters.endDate);
-    }
-    if (filters.categoria) {
-      query = query.eq('aulas.categoria', filters.categoria);
-    }
-    if (filters.alunoId) {
-      query = query.eq('aluno_id', filters.alunoId);
-    }
+    try {
+      let query = supabase
+        .from('frequencias')
+        .select(`
+          id,
+          aluno_id,
+          aula_id,
+          turma_id,
+          data,
+          horario,
+          created_at,
+          alunos (nome),
+          aulas!inner (hora, professor, categoria),
+          turmas (nome)
+        `);
 
-    const { data, error } = await query
-      .order('data', { ascending: false })
-      .order('horario', { ascending: false });
+      if (filters.startDate) {
+        query = query.gte('data', filters.startDate);
+      }
+      if (filters.endDate) {
+        query = query.lte('data', filters.endDate);
+      }
+      if (filters.categoria) {
+        query = query.eq('aulas.categoria', filters.categoria);
+      }
+      if (filters.alunoId) {
+        query = query.eq('aluno_id', filters.alunoId);
+      }
 
-    if (error) {
+      const { data, error } = await query
+        .order('data', { ascending: false })
+        .order('horario', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const result = (data || []).map(item => this.mapDbToModel(item));
+      cache.set(cacheKey, result);
+      return result;
+    } catch (error: any) {
+      const staleCached = cache.get<Frequencia[]>(cacheKey);
+      if (staleCached) {
+        console.warn('Operando offline: retornando busca de frequências do cache local.');
+        return staleCached;
+      }
       throw handleSupabaseError(error, `Erro ao filtrar frequências: ${error.message}`);
     }
-
-    return (data || []).map(item => this.mapDbToModel(item));
   }
 
   async deleteAttendance(attendanceId: number): Promise<void> {
+    // Para limpar o cache do aluno envolvido antes ou depois, precisamos buscar o aluno_id
+    const { data: attRecord } = await supabase
+      .from('frequencias')
+      .select('aluno_id')
+      .eq('id', attendanceId)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('frequencias')
       .delete()
@@ -138,6 +180,12 @@ export class AttendanceRepository implements IAttendanceRepository {
 
     if (error) {
       throw handleSupabaseError(error, `Erro ao desmarcar presença: ${error.message}`);
+    }
+
+    cache.clearByPrefix('attendance');
+    cache.clear('students');
+    if (attRecord) {
+      cache.clear(`student_${attRecord.aluno_id}`);
     }
   }
 }

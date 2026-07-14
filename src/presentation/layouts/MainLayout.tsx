@@ -37,7 +37,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         />
 
         {/* Main Workspace Container */}
-        <main className="flex-1 overflow-y-auto h-screen relative bg-obsidian-950">
+        <main className="flex-1 md:h-screen md:overflow-y-auto relative bg-obsidian-950">
           <div className="max-w-[1600px] mx-auto p-4 sm:p-6 md:p-8">
             {children}
           </div>
