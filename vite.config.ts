@@ -21,6 +21,7 @@ export default defineConfig({
         // Cachear todos os arquivos gerados pelo build estático
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg}'],
         navigateFallback: 'index.html',
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4MB
         // Fallback offline amigável para navegações fora do cache imediato
         runtimeCaching: [
           {

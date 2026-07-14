@@ -549,7 +549,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
               </div>
             ) : (
               <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead>
                     <tr className="border-b border-obsidian-850 text-[9.5px] text-zinc-500 font-black uppercase tracking-wider">
                       <th className="pb-3 px-3">Data</th>

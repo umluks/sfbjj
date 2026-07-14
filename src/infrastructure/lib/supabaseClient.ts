@@ -50,6 +50,20 @@ export const cache = {
   },
   clear: (key: string): void => {
     localStorage.removeItem(`sfbjj_cache_${key}`);
+  },
+  clearByPrefix: (prefix: string): void => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`sfbjj_cache_${prefix}`)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      console.warn('Erro ao limpar cache por prefixo:', e);
+    }
   }
 };
 
