@@ -8,7 +8,7 @@ ALTER TABLE public.professores ADD COLUMN IF NOT EXISTS foto_perfil TEXT;
 
 -- 3. Insere ou atualiza o administrador padrão na tabela professores
 INSERT INTO public.professores (nome, email, senha, cpf, role)
-VALUES ('Lucas dos Anjos', 'admin@sfbjj.com', '#sfbjj2026', NULL, 'admin')
+VALUES ('Lucas dos Anjos', 'admin@sagradafamiliabjj.com.br', '#sfbjj2026', NULL, 'admin')
 ON CONFLICT (email) 
 DO UPDATE SET 
     nome = EXCLUDED.nome,

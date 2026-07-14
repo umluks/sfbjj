@@ -8,12 +8,18 @@ Esta aplicação foi configurada como uma **Progressive Web App (PWA)** totalmen
 
 ## 🚀 Funcionalidades Principais
 
-O sistema possui um layout 100% responsivo e controle de acesso baseado em três perfis de usuários principais (**Administrador**, **Professor** e **Aluno**):
+O sistema possui um layout 100% responsivo, controle de acesso baseado em três perfis de usuários principais (**Administrador**, **Professor** e **Aluno**) e foco em usabilidade moderna (UX/UI):
+
+### 👤 Autenticação e Segurança
+- **Login Híbrido com Máscara de CPF:** A tela de login permite a autenticação por e-mail ou CPF. Ao digitar apenas números, o sistema aplica automaticamente a máscara `000.000.000-00` de forma dinâmica e limpa, adaptando a entrada do usuário para evitar erros de preenchimento.
+
+### 📐 Layout e Navegação
+- **Menu Lateral Esquerdo Colapsável:** Painel de navegação moderno que pode ser recolhido para maximizar a área de trabalho (especialmente útil para visualização de dashboards e tabelas financeiras complexas). Conta com tooltips automáticos no estado colapsado, transições fluidas de largura (`transition-all`) e acessibilidade completa via leitor de telas (`aria-label`).
 
 ### 👤 Perfil Administrador (Admin)
-- **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia, destaque em tempo real para os aniversariantes do dia e publicação de avisos ou comunicados internos.
-- **Gestão de Alunos:** Cadastro completo de atletas (Kids e Adulto), edição de informações, busca e filtros avançados por status, graduação ou turma, além de suporte para exportar a listagem em formato CSV/Excel.
-- **Gestão de Professores:** Controle do quadro de professores da academia.
+- **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia, exibição cronológica de todos os aniversariantes do mês com destaque visual e animação suave (`soft-blink`) para o aniversariante do dia, e publicação de avisos ou comunicados internos.
+- **Gestão de Alunos:** Cadastro completo de atletas (Kids e Adulto), edição de informações, busca e filtros avançados por status, graduação ou turma, suporte para exportar a listagem em formato CSV/Excel, e visualização detalhada do histórico de graduações calculando dinamicamente o tempo gasto em cada faixa (**Tempo na Faixa**).
+- **Gestão de Equipe (Staff):** Controle completo do quadro de professores e administradores da academia em uma única interface unificada (CRUD), com suporte a campos adicionais (como registro CBJJ e fotos de perfil).
 - **Controle Financeiro:** Gerenciamento de faturamento mensal, fluxo de caixa detalhado, controle de mensalidades pagas e pendentes, e saldo acumulado com transição automática de saldos de meses anteriores.
 - **Grade de Horários:** Visualização completa da programação de aulas semanais.
 
@@ -23,7 +29,10 @@ O sistema possui um layout 100% responsivo e controle de acesso baseado em três
 - **Suporte:** Acesso direto aos canais de comunicação interna.
 
 ### 🥋 Perfil Aluno (Student)
-- **Perfil do Atleta:** Histórico completo de graduações, datas de exames de faixa, dados cadastrais e visualização do status de pagamentos.
+- **Perfil do Atleta (Meu Perfil):** Dados cadastrais, alteração de senha e visualização de status de pagamentos.
+- **Minha Jornada:** Seção dedicada ao acompanhamento do desenvolvimento técnico do atleta com estatísticas de tempo de prática, horas acumuladas, sequência de treinos (streak de dias), total de treinos registrados e progresso da meta mensal com anel circular de progresso.
+  - **Linha do Tempo de Graduações (Timeline):** Integrada diretamente na página da Jornada, exibe em destaque a trajetória completa de graduações (faixas e graus) com o cálculo automático do **Tempo de Permanência na Faixa** entre cada promoção até o dia atual na faixa ativa.
+- **Minha Frequência:** Realização de check-in em tempo real em aulas abertas e histórico detalhado de presenças. Possibilita desmarcar presenças de aulas abertas com botão dinâmico (estilo de hover em vermelho para cancelamento) ou apagando itens diretamente pela lixeira da tabela de histórico.
 - **Grade de Horários:** Consulta de horários de aulas e turmas ativas.
 - **Contato & Suporte:** Acesso à localização física da academia integrada com mapa e formulário para contato direto.
 
@@ -59,7 +68,7 @@ Você pode rodar este projeto de três formas: **desenvolvimento frontend isolad
 #### Pré-requisitos
 Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 20 ou superior recomendada) e o `npm` instalados em sua máquina.
 
-#### Passo a Passo
+##### Passo a Passo
 1. Instale as dependências necessárias:
    ```bash
    npm install
@@ -80,6 +89,10 @@ Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 20 ou superior re
 ### 2. Gerenciando o Backend Localmente (Supabase CLI)
 
 O projeto possui o executável do Supabase CLI (`supabase.exe`) integrado para facilitar o desenvolvimento local com banco de dados PostgreSQL e migrações.
+
+> [!TIP]
+> **Aviso para usuários de Windows rodando o Git Bash:**
+> A barra invertida (`\`) é interpretada como caractere de escape no Git Bash. Por isso, para executar comandos do Supabase localmente por ele, utilize a barra normal `/` (ex: `./supabase.exe db reset` em vez de `.\supabase.exe db reset`).
 
 #### Pré-requisitos
 Ter o Docker rodando em sua máquina (necessário para subir os containers locais do Supabase).
@@ -116,10 +129,15 @@ Para interagir com o backend local do Supabase usando o executável do repositó
 
 #### Estrutura de Migrações do Banco
 As migrações SQL na pasta `supabase/migrations/` definem o schema do banco de dados local:
-1. `01_novas_funcionalidades.sql`: Tabelas e relacionamentos iniciais (ex: alunos, turmas).
-2. `02_graduacoes_lote.sql`: Funções para atualização de graduações em lote.
-3. `03_administradores.sql`: Tabela de administradores e chaves estrangeiras.
-4. `04_separacao_tabelas.sql`: Ajustes na separação de tabelas e definição de tipos de dados.
+1. `00_esquema_inicial.sql`: Tabelas e estruturas base do sistema (alunos, pagamentos, aulas e avisos) com RLS ativado.
+2. `01_novas_funcionalidades.sql`: Tabelas adicionais para gerenciamento de graduações, histórico e professores.
+3. `02_graduacoes_lote.sql`: Funções e triggers PostgreSQL para atualização de graduações de alunos em lote.
+4. `03_administradores.sql`: Tabela de administradores para acesso de gestão e chaves estrangeiras.
+5. `04_separacao_tabelas.sql`: Separação lógica de tabelas, limpeza de campos obsoletos e redefinição de relações.
+6. `05_melhorias_integridade.sql`: Restrições de validação (`CHECK`), chaves estrangeiras pendentes e índices de performance para otimizar JOINs e buscas.
+7. `06_foto_e_cbjj_professor.sql`: Adiciona suporte para foto de perfil (`foto_perfil`) e número de registro CBJJ (`cbjj`) na tabela de professores.
+8. `07_ajuste_categorias_grade.sql`: Padronização de categorias existentes de aulas e turmas (`Kids` e `Adulto`).
+9. `08_cria_tabela_turmas.sql`: Criação da tabela dedicada de turmas, com RLS habilitado e vinculação de integridade na tabela de aulas.
 
 ---
 
@@ -186,18 +204,33 @@ Para que funcione, configure os seguintes segredos no repositório GitHub:
 
 ## 📂 Estrutura de Pastas
 
+O projeto adota uma arquitetura em camadas baseada em princípios de **Clean Architecture** (Arquitetura Limpa), separando responsabilidades e facilitando testes e manutenção:
+
 ```text
 sfbjj/
 ├── .github/                # Configurações do GitHub e fluxos de CI/CD (Workflows)
 │   └── workflows/          # Arquivos yaml de automação de Deploy (HostGator e Docker Hub)
 ├── public/                 # Arquivos estáticos (ícones do PWA, offline.html, favicon, logos)
 ├── src/
+│   ├── application/        # Regras de aplicação e lógica de fluxo de dados (Use Cases, Hooks, Contexts)
+│   │   ├── contexts/       # Contextos globais do React (ex: Autenticação, Estado de Alunos)
+│   │   ├── hooks/          # Hooks customizados (ex: gerenciamento de horários, anúncios e PWA)
+│   │   └── services/       # Serviços que operam regras de aplicação
 │   ├── assets/             # Imagens e mídias estáticas do sistema
-│   ├── components/         # Componentes React (Painéis de controle, Login, Modais e Landing Page)
-│   ├── hooks/              # Hooks customizados (Ex: usePWAInstall para fluxo do PWA)
-│   ├── types/              # Definições de tipagem global TypeScript
-│   ├── mockData.ts         # Dados fictícios para simulação de fluxo (alunos, pagamentos, avisos)
-│   ├── App.tsx             # Componente raiz do React, gerencia estados principais e rotas simples
+│   ├── constants/          # Constantes globais (ex: graduações, regras de faixas)
+│   ├── domain/             # Núcleo de domínio da aplicação (independente de frameworks e APIs)
+│   │   ├── models/         # Definições e modelos de dados (Aluno, Professor, Pagamento, etc.)
+│   │   └── repositories/   # Definições de contratos (interfaces) de Repositórios
+│   ├── infrastructure/     # Detalhes de infraestrutura e serviços externos
+│   │   ├── lib/            # Clientes externos configurados (ex: Supabase Client)
+│   │   └── repositories/   # Implementações concretas das interfaces de repositório (Supabase)
+│   ├── presentation/       # Componentes de interface com o usuário (UI) e controle de estado visual
+│   │   ├── components/     # Componentes visuais reutilizáveis organizados por contexto (financeiro, alunos, etc.)
+│   │   ├── layouts/        # Layouts de estrutura de página (MainLayout)
+│   │   └── pages/          # Páginas inteiras da aplicação
+│   ├── utils/              # Funções utilitárias auxiliares e formatadores genéricos
+│   ├── App.tsx             # Componente raiz do React, gerencia as rotas
+│   ├── index.css           # Folha de estilos globais e animações Tailwind CSS
 │   └── main.tsx            # Ponto de entrada da aplicação
 ├── supabase/               # Configurações do backend Supabase
 │   ├── migrations/         # Arquivos de migração de banco de dados SQL
