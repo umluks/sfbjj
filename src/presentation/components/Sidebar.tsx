@@ -86,7 +86,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
       { id: 'students', label: 'Consultar Alunos', icon: Users },
       { id: 'attendance-report', label: 'Frequência Alunos', icon: ClipboardCheck },
-      { id: 'batch-graduation', label: 'Graduação & Diplomas', icon: Award },
       { id: 'teachers', label: 'Gestão de Equipe', icon: Shield },
       { id: 'techniques', label: 'Biblioteca de Posições', icon: BookOpen },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },

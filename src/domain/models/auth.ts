@@ -7,4 +7,5 @@ export interface LoggedUser {
   email?: string;
   telefone?: string;
   foto_perfil?: string;
+  assinatura?: string;
 }

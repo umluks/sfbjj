@@ -18,6 +18,7 @@ interface PersonalInfoFormProps {
     contatoEmergenciaNome?: string;
     contatoEmergenciaTel?: string;
     fotoPerfil?: string;
+    assinatura?: string;
   };
   role: 'admin' | 'teacher' | 'student';
   isEditingOtherStudent: boolean; // Se o admin/professor está editando a ficha de outro aluno
@@ -44,6 +45,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [contatoEmergenciaNome, setContatoEmergenciaNome] = useState('');
   const [contatoEmergenciaTel, setContatoEmergenciaTel] = useState('');
   const [fotoPerfil, setFotoPerfil] = useState('');
+  const [assinatura, setAssinatura] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -61,6 +63,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     setContatoEmergenciaNome(initialData.contatoEmergenciaNome || '');
     setContatoEmergenciaTel(initialData.contatoEmergenciaTel || '');
     setFotoPerfil(initialData.fotoPerfil || '');
+    setAssinatura(initialData.assinatura || '');
   }, [initialData]);
 
   const handlePhoneMask = (val: string) => {
@@ -107,6 +110,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         payload.email = email;
         payload.telefone = telefone;
         payload.foto_perfil = fotoPerfil;
+        payload.assinatura = assinatura;
       } else if (role === 'admin') {
         payload.foto_perfil = fotoPerfil;
       }
@@ -131,48 +135,91 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Avatar Upload */}
-        <div className="md:col-span-3 flex flex-col items-center justify-center bg-obsidian-900 border border-obsidian-850 p-6 rounded-2xl relative shadow-md">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gold-550/20 bg-obsidian-950 flex items-center justify-center text-4xl shadow-inner select-none mb-4 shrink-0">
-            {fotoPerfil ? (
-              fotoPerfil.length <= 2 ? (
-                <span>{fotoPerfil}</span>
+        {/* Avatar & Signature Upload (for teacher) */}
+        <div className="md:col-span-3 flex flex-col gap-6">
+          {/* Avatar Upload Card */}
+          <div className="flex flex-col items-center justify-center bg-obsidian-900 border border-obsidian-850 p-6 rounded-2xl relative shadow-md">
+            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gold-550/20 bg-obsidian-950 flex items-center justify-center text-4xl shadow-inner select-none mb-4 shrink-0">
+              {fotoPerfil ? (
+                fotoPerfil.length <= 2 ? (
+                  <span>{fotoPerfil}</span>
+                ) : (
+                  <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+                )
               ) : (
-                <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
-              )
-            ) : (
-              <span className="text-slate-500">🥋</span>
-            )}
+                <span className="text-slate-500">🥋</span>
+              )}
+            </div>
+            <div className="flex gap-1.5 mb-3">
+              {['🥋', '🥇', '🦁', '🛡️'].map(emoji => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setFotoPerfil(emoji)}
+                  className={`p-1.5 border rounded hover:bg-obsidian-750 text-sm ${fotoPerfil === emoji ? 'border-gold-550 bg-gold-550/10' : 'border-obsidian-700'}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    if (event.target?.result) {
+                      setFotoPerfil(event.target.result as string);
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer w-full"
+            />
           </div>
-          <div className="flex gap-1.5 mb-3">
-            {['🥋', '🥇', '🦁', '🛡️'].map(emoji => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => setFotoPerfil(emoji)}
-                className={`p-1.5 border rounded hover:bg-obsidian-750 text-sm ${fotoPerfil === emoji ? 'border-gold-550 bg-gold-550/10' : 'border-obsidian-700'}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                  if (event.target?.result) {
-                    setFotoPerfil(event.target.result as string);
+
+          {/* Signature Upload Card */}
+          {role === 'teacher' && (
+            <div className="flex flex-col items-center justify-center bg-obsidian-900 border border-obsidian-850 p-6 rounded-2xl relative shadow-md">
+              <span className="text-xs font-bold text-slate-350 mb-2 uppercase tracking-wider">Assinatura Digital</span>
+              <div className="w-full h-16 rounded border border-obsidian-800 bg-white flex items-center justify-center p-2 mb-3 overflow-hidden shadow-inner">
+                {assinatura ? (
+                  <img src={assinatura} alt="Assinatura Digital" className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <span className="text-slate-400 text-[10px] italic">Sem assinatura</span>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      if (event.target?.result) {
+                        setAssinatura(event.target.result as string);
+                      }
+                    };
+                    reader.readAsDataURL(file);
                   }
-                };
-                reader.readAsDataURL(file);
-              }
-            }}
-            className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer"
-          />
+                }}
+                className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer w-full"
+              />
+              {assinatura && (
+                <button
+                  type="button"
+                  onClick={() => setAssinatura('')}
+                  className="text-[10px] text-red-400 hover:underline mt-2 font-semibold"
+                >
+                  Remover Assinatura
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Inputs */}

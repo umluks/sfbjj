@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Aluno, Belt, Degree } from '@/domain/models/student';
+import type { Professor } from '@/domain/models/teacher';
 import { BELT_RANKS } from '@/constants';
 import { useAuth } from '@/application/hooks/useAuth';
 import { useStudents } from '@/application/contexts/StudentsContext';
 import { diplomaService } from '@/application/services/diplomaService';
 import { studentService } from '@/application/services/studentService';
+import { teacherService } from '@/application/services/teacherService';
+import { diplomaConfigService } from '@/application/services/diplomaConfigService';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 import { getBeltsByAge, getBjjAge } from '@/application/services/diplomaService';
 import {
@@ -14,12 +17,33 @@ import {
   Square,
   ChevronLeft,
   ChevronRight,
-  Check
+  Check,
+  Upload,
+  Settings,
+  Filter,
+  Image as ImageIcon,
+  PenTool
 } from 'lucide-react';
 
 export const BatchGraduationPage: React.FC = () => {
   const { loggedUser } = useAuth();
   const { students, loadStudents } = useStudents();
+
+  if (loggedUser?.role !== 'admin') {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center bg-obsidian-900/60 p-8 rounded-2xl border border-obsidian-850 max-w-md backdrop-blur-md">
+          <h2 className="text-xl font-bold text-red-400">Acesso Restrito</h2>
+          <p className="text-slate-400 text-xs mt-2 leading-relaxed">
+            Apenas administradores do sistema têm permissão para acessar a área de Graduação & Diplomas e emitir certificados.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Controle da visualização das configurações
+  const [showConfig, setShowConfig] = useState<boolean>(false);
 
   // Busca e Filtros
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +69,133 @@ export const BatchGraduationPage: React.FC = () => {
 
   // Alunos que foram confirmados nesta sessão
   const [confirmedStudentIds, setConfirmedStudentIds] = useState<number[]>([]);
+
+  // Configurações de Template do Diploma
+  const [bgTemplate, setBgTemplate] = useState<string | null>(null);
+  const [keepDefaultTitles, setKeepDefaultTitles] = useState<boolean>(true);
+  const [keepDefaultDecoration, setKeepDefaultDecoration] = useState<boolean>(false);
+  const [textoLinha1, setTextoLinha1] = useState<string>('A SAGRADA FAMILIA BRASÍLIA JIU-JITSU CONFERE A GRADUAÇÃO DE');
+  const [textoLinha3, setTextoLinha3] = useState<string>('AO ALUNO');
+  const [textoDataPrefix, setTextoDataPrefix] = useState<string>('em graduação presencial realizada em');
+
+  // Professores para Assinatura
+  const [teachers, setTeachers] = useState<Professor[]>([]);
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
+  const [globalDate, setGlobalDate] = useState<string>('');
+
+  useEffect(() => {
+    const loadDiplomaData = async () => {
+      try {
+        // Carrega configurações de template do Supabase
+        const config = await diplomaConfigService.getConfig();
+        setBgTemplate(config.backgroundTemplate || null);
+        setKeepDefaultTitles(config.keepDefaultTitles);
+        setKeepDefaultDecoration(config.keepDefaultDecor);
+        setTextoLinha1(config.textoLinha1 || 'A SAGRADA FAMILIA BRASÍLIA JIU-JITSU CONFERE A GRADUAÇÃO DE');
+        setTextoLinha3(config.textoLinha3 || 'AO ALUNO');
+        setTextoDataPrefix(config.textoDataPrefix || 'em graduação presencial realizada em');
+
+        // Carrega lista de professores cadastrados
+        const list = await teacherService.getTeachers();
+        setTeachers(list);
+      } catch (err) {
+        console.error('Erro ao carregar configurações do diploma ou professores:', err);
+      }
+    };
+    loadDiplomaData();
+  }, []);
+
+  const handleUpdateTextoLinha1 = async (val: string) => {
+    setTextoLinha1(val);
+    try {
+      await diplomaConfigService.updateConfig({ textoLinha1: val });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateTextoLinha3 = async (val: string) => {
+    setTextoLinha3(val);
+    try {
+      await diplomaConfigService.updateConfig({ textoLinha3: val });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateTextoDataPrefix = async (val: string) => {
+    setTextoDataPrefix(val);
+    try {
+      await diplomaConfigService.updateConfig({ textoDataPrefix: val });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUploadTemplate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Por favor, selecione uma imagem menor que 2MB para garantir o bom funcionamento do banco de dados.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        try {
+          setBgTemplate(base64);
+          await diplomaConfigService.updateConfig({ backgroundTemplate: base64 });
+        } catch (err) {
+          alert('Erro ao salvar o template de fundo no banco de dados.');
+          console.error(err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearTemplate = async () => {
+    try {
+      setBgTemplate(null);
+      await diplomaConfigService.updateConfig({ backgroundTemplate: null });
+    } catch (err) {
+      alert('Erro ao remover o template de fundo.');
+      console.error(err);
+    }
+  };
+
+  const handleToggleTitles = async (val: boolean) => {
+    try {
+      setKeepDefaultTitles(val);
+      await diplomaConfigService.updateConfig({ keepDefaultTitles: val });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleDecor = async (val: boolean) => {
+    try {
+      setKeepDefaultDecoration(val);
+      await diplomaConfigService.updateConfig({ keepDefaultDecor: val });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const getSignatoryData = (teacherId: string) => {
+    if (!teacherId) return null;
+    const t = teachers.find(teacher => String(teacher.id) === teacherId);
+    if (!t) return null;
+    return {
+      nome: t.nome,
+      cbjj: t.cbjj,
+      role: 'Professor',
+      assinatura: t.assinatura
+    };
+  };
 
   // Filtra estudantes ativos
   const activeStudents = useMemo(() => {
@@ -224,7 +375,23 @@ export const BatchGraduationPage: React.FC = () => {
 
   const handlePrintIndividual = (student: Aluno) => {
     const config = getStudentConfig(student);
-    const pdfDoc = diplomaService.generateDiplomaPDF(student.nome, config.faixa, config.graus, config.data);
+    const signatories = selectedTeacherIds.map(id => getSignatoryData(id)).filter(Boolean) as any[];
+
+    const pdfDoc = diplomaService.generateDiplomaPDF(
+      student.nome,
+      config.faixa,
+      config.graus,
+      globalDate || config.data,
+      {
+        backgroundTemplate: bgTemplate,
+        keepDefaultTitles,
+        keepDefaultDecoration,
+        textoLinha1,
+        textoLinha3,
+        textoDataPrefix,
+        signatories
+      }
+    );
     pdfDoc.save(`diploma_${student.nome.toLowerCase().replace(/\s+/g, '_')}.pdf`);
   };
 
@@ -241,112 +408,333 @@ export const BatchGraduationPage: React.FC = () => {
         nome: student.nome,
         faixa: config.faixa,
         graus: config.graus,
-        data: config.data
+        data: globalDate || config.data
       };
     });
 
-    const doc = diplomaService.generateConsolidatedDiplomaPDF(payload);
+    const signatories = selectedTeacherIds.map(id => getSignatoryData(id)).filter(Boolean) as any[];
+
+    const doc = diplomaService.generateConsolidatedDiplomaPDF(payload, {
+      backgroundTemplate: bgTemplate,
+      keepDefaultTitles,
+      keepDefaultDecoration,
+      textoLinha1,
+      textoLinha3,
+      textoDataPrefix,
+      signatories
+    });
     doc.save(`diplomas_lote_sfbjj_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in pb-12">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
-          <span className="text-gold-500">
-            <Award className="w-8 h-8" />
-          </span>{' '}
-          Graduação & Diplomas
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Gerencie a promoção de faixas de forma individualizada para cada aluno e emita diplomas oficiais da SFBJJ.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 tracking-tight flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-gold-500/20 to-gold-700/10 rounded-xl border border-gold-500/20 shadow-lg shadow-gold-500/5">
+              <Award className="w-7 h-7 text-gold-450" />
+            </div>
+            Graduação & Diplomas
+          </h1>
+          <p className="text-slate-400 text-sm mt-2 max-w-2xl leading-relaxed">
+            Gerencie a promoção de faixas de forma individualizada para cada aluno e emita diplomas oficiais da SFBJJ com templates personalizados e assinaturas digitais.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg border ${
+            showConfig 
+              ? 'bg-gold-500 text-obsidian-950 border-gold-400 shadow-gold-500/20' 
+              : 'bg-obsidian-900 text-slate-300 border-obsidian-800 hover:bg-obsidian-800 hover:text-white shadow-black/40'
+          }`}
+          type="button"
+        >
+          <Settings className={`w-4 h-4 ${showConfig ? 'animate-spin-slow' : ''}`} />
+          {showConfig ? 'Ocultar Configurações' : 'Configurar Diplomas'}
+        </button>
       </div>
 
-      {/* Busca e Filtros Rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-obsidian-900/40 p-4 rounded-xl border border-obsidian-850/60 backdrop-blur-md">
-        <div className="relative md:col-span-2">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
-            <Search className="w-4 h-4" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Buscar por nome do aluno..."
-            className="input-premium w-full pl-10"
-          />
-        </div>
+      {/* Configurações do Diploma (Collapsible) */}
+      <div 
+        className={`transition-all duration-500 ease-in-out overflow-hidden origin-top ${
+          showConfig ? 'max-h-[2000px] opacity-100 scale-y-100 mb-6' : 'max-h-0 opacity-0 scale-y-95 mb-0'
+        }`}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-2">
+          {/* Signatário / Professor Assinante */}
+          <div className="bg-gradient-to-b from-obsidian-900/80 to-obsidian-900/40 border border-obsidian-800/80 p-5 rounded-2xl backdrop-blur-xl shadow-xl flex flex-col justify-between group hover:border-gold-500/30 transition-colors duration-300">
+            <div>
+              <h2 className="text-sm font-black text-slate-100 flex items-center gap-2.5 uppercase tracking-wide">
+                <PenTool className="w-4 h-4 text-gold-500" />
+                Assinatura do Diploma
+              </h2>
+              <p className="text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                Selecione os professores cujos registros e assinaturas digitais serão impressos no rodapé dos diplomas emitidos.
+              </p>
+            </div>
+            <div className="mt-4 space-y-3 flex-1">
+              <div className="bg-obsidian-950/50 p-3 rounded-xl border border-obsidian-850/50 h-full max-h-48 overflow-y-auto custom-scrollbar space-y-1">
+                {teachers.map((t) => {
+                  const isSelected = selectedTeacherIds.includes(String(t.id));
+                  return (
+                    <label key={t.id} className={`flex items-center gap-3 text-xs p-2.5 rounded-lg cursor-pointer transition-all duration-200 border ${isSelected ? 'bg-gold-500/10 border-gold-500/20 text-gold-400 font-bold' : 'bg-transparent border-transparent text-slate-300 hover:bg-obsidian-800/50 hover:border-obsidian-700 hover:text-slate-100'}`}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTeacherIds(prev => [...prev, String(t.id)]);
+                          } else {
+                            setSelectedTeacherIds(prev => prev.filter(id => id !== String(t.id)));
+                          }
+                        }}
+                        className="rounded border-obsidian-700 text-gold-500 focus:ring-0 focus:ring-offset-0 bg-obsidian-900 w-4 h-4 transition-all"
+                      />
+                      <span className="flex-1">{t.nome} {t.cbjj ? <span className="text-slate-500 text-[10px] ml-1 font-normal">(CBJJ: {t.cbjj})</span> : ''}</span>
+                      {t.assinatura ? <span title="Assinatura Cadastrada"><Check className="w-4 h-4 text-emerald-500" /></span> : <span className="text-amber-500 text-[10px] font-bold" title="Sem Assinatura">⚠</span>}
+                    </label>
+                  );
+                })}
+                {teachers.length === 0 && <div className="text-xs text-slate-500 text-center py-4 italic">Nenhum professor cadastrado</div>}
+              </div>
+            </div>
+          </div>
 
-        <div>
-          <select
-            value={filterBelt}
-            onChange={(e) => {
-              setFilterBelt(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Todas as Faixas Atuais</option>
-            <option value="Branca">Branca</option>
-            <option value="Cinza">Cinza</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Laranja">Laranja</option>
-            <option value="Verde">Verde</option>
-            <option value="Azul">Azul</option>
-            <option value="Roxa">Roxa</option>
-            <option value="Marrom">Marrom</option>
-            <option value="Preta">Preta</option>
-          </select>
-        </div>
+          {/* Template de Fundo */}
+          <div className="lg:col-span-2 bg-gradient-to-b from-obsidian-900/80 to-obsidian-900/40 border border-obsidian-800/80 p-5 rounded-2xl backdrop-blur-xl shadow-xl flex flex-col gap-5 group hover:border-gold-500/30 transition-colors duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-sm font-black text-slate-100 flex items-center gap-2.5 uppercase tracking-wide">
+                  <ImageIcon className="w-4 h-4 text-gold-500" />
+                  Template e Design
+                </h2>
+                <p className="text-slate-400 text-[11px] mt-1.5 leading-relaxed">
+                  {loggedUser?.role === 'admin' 
+                    ? 'Personalize o fundo (A4 Paisagem) e os textos que serão impressos no certificado.'
+                    : 'O template de fundo ativo é gerenciado pelo administrador da equipe.'}
+                </p>
+              </div>
 
-        <div>
-          <select
-            value={filterTurma}
-            onChange={(e) => {
-              setFilterTurma(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value="Todos">Todas as Turmas</option>
-            <option value="Adulto">Adulto</option>
-            <option value="Kids">Kids</option>
-          </select>
-        </div>
+              {bgTemplate ? (
+                <div className="flex items-center gap-4 shrink-0 bg-obsidian-950/60 p-2.5 rounded-xl border border-obsidian-800/60">
+                  <div className="relative group/img w-28 h-20 rounded-lg border border-obsidian-700 overflow-hidden shadow-md bg-white">
+                    <img src={bgTemplate} alt="Preview do Template" className="w-full h-full object-cover" />
+                    {loggedUser?.role === 'admin' && (
+                      <div className="absolute inset-0 bg-red-950/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={handleClearTemplate}
+                          className="text-red-400 text-[10px] uppercase font-black tracking-wider hover:text-white transition-colors"
+                          type="button"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-left pr-3">
+                    <div className="text-[11px] font-black text-emerald-400 flex items-center gap-1.5 uppercase tracking-widest mb-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
+                      Ativo
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-medium">Design Customizado</div>
+                  </div>
+                </div>
+              ) : (
+                loggedUser?.role === 'admin' ? (
+                  <label className="flex items-center gap-2 bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-obsidian-950 text-xs font-black uppercase tracking-wider py-3 px-5 rounded-xl cursor-pointer transition-all duration-300 shadow-lg shadow-gold-500/20 active:scale-95 shrink-0">
+                    <Upload className="w-4 h-4" />
+                    Upload Imagem
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleUploadTemplate}
+                    />
+                  </label>
+                ) : (
+                  <div className="text-xs text-slate-400 font-medium italic bg-obsidian-950 px-4 py-2 rounded-xl border border-obsidian-850">Design Padrão SFBJJ</div>
+                )
+              )}
+            </div>
 
-        <div>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => {
-              setItemsPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="input-premium w-full bg-obsidian-950 text-slate-200"
-          >
-            <option value={10}>10 por página</option>
-            <option value={20}>20 por página</option>
-            <option value={30}>30 por página</option>
-            <option value={9999}>Todos</option>
-          </select>
+            {bgTemplate && (
+              <div className="pt-4 border-t border-obsidian-800/50 flex flex-col sm:flex-row gap-6">
+                <label className="flex items-center gap-3 text-xs font-medium text-slate-300 cursor-pointer select-none hover:text-white transition-colors group/check">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={keepDefaultTitles}
+                      disabled={loggedUser?.role !== 'admin'}
+                      onChange={(e) => handleToggleTitles(e.target.checked)}
+                      className="peer appearance-none w-5 h-5 border-2 border-obsidian-600 rounded bg-obsidian-950 checked:bg-gold-500 checked:border-gold-500 focus:outline-none transition-all disabled:opacity-50 cursor-pointer"
+                    />
+                    <Check className="w-3.5 h-3.5 text-obsidian-950 absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                  </div>
+                  Títulos Originais (SFBJJ)
+                </label>
+                <label className="flex items-center gap-3 text-xs font-medium text-slate-300 cursor-pointer select-none hover:text-white transition-colors group/check">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={keepDefaultDecoration}
+                      disabled={loggedUser?.role !== 'admin'}
+                      onChange={(e) => handleToggleDecor(e.target.checked)}
+                      className="peer appearance-none w-5 h-5 border-2 border-obsidian-600 rounded bg-obsidian-950 checked:bg-gold-500 checked:border-gold-500 focus:outline-none transition-all disabled:opacity-50 cursor-pointer"
+                    />
+                    <Check className="w-3.5 h-3.5 text-obsidian-950 absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                  </div>
+                  Decorações e Marcas d'água
+                </label>
+              </div>
+            )}
+
+            {loggedUser?.role === 'admin' && (
+              <div className="pt-5 border-t border-obsidian-800/50 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    Texto Linha 1 <span className="text-slate-500 font-normal normal-case">(Topo)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={textoLinha1}
+                    onChange={(e) => handleUpdateTextoLinha1(e.target.value)}
+                    className="w-full bg-obsidian-950/80 border border-obsidian-800 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-200 placeholder-obsidian-600 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    Texto Linha 3 <span className="text-slate-500 font-normal normal-case">(Abaixo da Faixa)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={textoLinha3}
+                    onChange={(e) => handleUpdateTextoLinha3(e.target.value)}
+                    className="w-full bg-obsidian-950/80 border border-obsidian-800 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-200 placeholder-obsidian-600 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex flex-col sm:flex-row gap-5">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                        Prefixo da Data
+                      </label>
+                      <input
+                        type="text"
+                        value={textoDataPrefix}
+                        onChange={(e) => handleUpdateTextoDataPrefix(e.target.value)}
+                        className="w-full bg-obsidian-950/80 border border-obsidian-800 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-200 placeholder-obsidian-600 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner"
+                      />
+                    </div>
+                    <div className="sm:w-1/3 space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gold-400 flex items-center gap-1.5">
+                        Data Unificada Lote
+                      </label>
+                      <input
+                        type="date"
+                        value={globalDate}
+                        onChange={(e) => setGlobalDate(e.target.value)}
+                        className="w-full bg-gold-500/10 border border-gold-500/30 rounded-xl px-4 py-2.5 text-xs font-bold text-gold-300 focus:outline-none focus:border-gold-400 focus:ring-1 focus:ring-gold-500/50 transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Tabela de Listagem Interativa */}
-      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[950px]">
+      {/* Tabela Interativa de Alunos */}
+      <div className="bg-gradient-to-b from-obsidian-900/60 to-obsidian-900/30 border border-obsidian-800/80 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col">
+        {/* Toolbar Superior (Busca e Filtros) */}
+        <div className="p-4 border-b border-obsidian-800/50 bg-obsidian-950/40 flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:w-96 group">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-500 group-focus-within:text-gold-500 transition-colors">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar aluno por nome..."
+              className="w-full bg-obsidian-900 border border-obsidian-700 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner"
+            />
+          </div>
+
+          <div className="flex flex-wrap md:flex-nowrap gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-44">
+              <select
+                value={filterBelt}
+                onChange={(e) => {
+                  setFilterBelt(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner cursor-pointer"
+              >
+                <option value="Todos">Todas as Faixas</option>
+                <option value="Branca">Branca</option>
+                <option value="Cinza">Cinza</option>
+                <option value="Amarela">Amarela</option>
+                <option value="Laranja">Laranja</option>
+                <option value="Verde">Verde</option>
+                <option value="Azul">Azul</option>
+                <option value="Roxa">Roxa</option>
+                <option value="Marrom">Marrom</option>
+                <option value="Preta">Preta</option>
+              </select>
+              <Filter className="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            <div className="relative flex-1 md:w-36">
+              <select
+                value={filterTurma}
+                onChange={(e) => {
+                  setFilterTurma(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner cursor-pointer"
+              >
+                <option value="Todos">Todas Turmas</option>
+                <option value="Adulto">Adulto</option>
+                <option value="Kids">Kids</option>
+              </select>
+              <Filter className="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+            
+            <div className="relative w-28">
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner cursor-pointer"
+              >
+                <option value={10}>10 / pág</option>
+                <option value={20}>20 / pág</option>
+                <option value={50}>50 / pág</option>
+                <option value={9999}>Todos</option>
+              </select>
+              <Filter className="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela de Dados */}
+        <div className="overflow-x-auto min-h-[400px]">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
-              <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">
-                <th className="px-6 py-4 w-12 text-center">
+              <tr className="border-b border-obsidian-800/80 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-obsidian-950/60">
+                <th className="px-6 py-5 w-14 text-center">
                   <button
                     onClick={handleToggleSelectAllPage}
-                    className="text-slate-450 hover:text-slate-200 transition-colors"
+                    className="text-slate-450 hover:text-white transition-colors"
                     type="button"
+                    title="Selecionar Todos da Página"
                   >
                     {isAllPageSelected ? (
                       <CheckSquare className="w-4 h-4 text-gold-500" />
@@ -355,19 +743,23 @@ export const BatchGraduationPage: React.FC = () => {
                     )}
                   </button>
                 </th>
-                <th className="px-6 py-4">Membro</th>
-                <th className="px-6 py-4">Faixa Atual</th>
-                <th className="px-6 py-4 text-center">Nova Faixa Promovida</th>
-                <th className="px-6 py-4 text-center">Graus (Pontas)</th>
-                <th className="px-6 py-4 text-center">Data Outorga</th>
-                <th className="px-6 py-4 text-right">Ações de Outorga</th>
+                <th className="px-6 py-5">Membro</th>
+                <th className="px-6 py-5">Faixa Atual</th>
+                <th className="px-6 py-5 text-center">Nova Faixa Promovida</th>
+                <th className="px-6 py-5 text-center">Graus (Pontas)</th>
+                <th className="px-6 py-5 text-center">Data Outorga</th>
+                <th className="px-6 py-5 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-900/40 text-xs text-slate-305">
+            <tbody className="divide-y divide-obsidian-800/40 text-xs text-slate-300">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-500 font-semibold uppercase tracking-wider">
-                    Nenhum aluno ativo encontrado para graduação.
+                  <td colSpan={7} className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center text-slate-500">
+                      <Award className="w-12 h-12 mb-3 opacity-20" />
+                      <span className="font-semibold uppercase tracking-wider text-sm">Nenhum aluno ativo encontrado</span>
+                      <span className="text-[11px] mt-1">Tente ajustar os filtros de busca.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -381,12 +773,12 @@ export const BatchGraduationPage: React.FC = () => {
                   return (
                     <tr
                       key={student.id}
-                      className="hover:bg-obsidian-800/15 transition-colors group"
+                      className="hover:bg-obsidian-800/20 transition-colors group"
                     >
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => handleToggleSelectStudent(student.id)}
-                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-400 hover:text-white transition-colors"
                           type="button"
                         >
                           {selectedStudentIds.includes(student.id) ? (
@@ -397,11 +789,13 @@ export const BatchGraduationPage: React.FC = () => {
                         </button>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
+                        <div className="font-bold text-slate-200 group-hover:text-white transition-colors text-sm">
                           {student.nome}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-semibold mt-1">
-                          Idade Esportiva: {getBjjAge(student.dataNascimento)} anos • Turma: {student.turma}
+                        <div className="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-1.5">
+                          <span>Idade: <span className="text-slate-300">{getBjjAge(student.dataNascimento)} anos</span></span>
+                          <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                          <span>Turma: <span className="text-slate-300">{student.turma}</span></span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -414,7 +808,7 @@ export const BatchGraduationPage: React.FC = () => {
                           <select
                             value={config.faixa}
                             onChange={(e) => handleUpdateConfig(student.id, 'faixa', e.target.value as Belt)}
-                            className="bg-obsidian-950 border border-obsidian-800 rounded px-2.5 py-1.5 text-slate-200 text-xs focus:border-gold-500/50 outline-none w-32 font-bold"
+                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-bold focus:border-gold-500/50 outline-none w-36 shadow-inner cursor-pointer"
                           >
                             {getBeltsByAge(student.dataNascimento).map((b: Belt) => (
                               <option key={b} value={b}>{b}</option>
@@ -427,7 +821,7 @@ export const BatchGraduationPage: React.FC = () => {
                           <select
                             value={config.graus}
                             onChange={(e) => handleUpdateConfig(student.id, 'graus', Number(e.target.value) as Degree)}
-                            className="bg-obsidian-950 border border-obsidian-800 rounded px-2 py-1.5 text-slate-200 text-xs focus:border-gold-500/50 outline-none font-bold"
+                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-bold focus:border-gold-500/50 outline-none w-28 shadow-inner cursor-pointer"
                           >
                             <option value={0}>0 Grau</option>
                             <option value={1}>1 Grau</option>
@@ -443,19 +837,19 @@ export const BatchGraduationPage: React.FC = () => {
                             type="date"
                             value={config.data}
                             onChange={(e) => handleUpdateConfig(student.id, 'data', e.target.value)}
-                            className="bg-obsidian-950 border border-obsidian-800 rounded px-2 py-1 text-slate-205 text-xs focus:border-gold-500/50 outline-none font-mono font-semibold"
+                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-[11px] font-mono font-semibold focus:border-gold-500/50 outline-none shadow-inner cursor-text"
                           />
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2.5">
                           {success && (
-                            <span className="text-[10px] text-emerald-450 font-bold uppercase tracking-wider animate-pulse mr-2">
+                            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest animate-pulse mr-1">
                               {success}
                             </span>
                           )}
                           {error && (
-                            <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider animate-shake mr-2">
+                            <span className="text-[10px] text-red-400 font-bold uppercase tracking-widest animate-shake mr-1 max-w-[120px] truncate" title={error}>
                               {error}
                             </span>
                           )}
@@ -463,7 +857,7 @@ export const BatchGraduationPage: React.FC = () => {
                           <button
                             onClick={() => handleConfirmSingleGraduation(student)}
                             disabled={isProcessing}
-                            className={`text-[9px] uppercase tracking-wider font-black px-3.5 py-2 rounded transition-all active:scale-[0.98] ${
+                            className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] ${
                               isConfirmed
                                 ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
                                 : 'bg-gold-500/10 border border-gold-500/20 text-gold-450 hover:bg-gold-500/20'
@@ -477,9 +871,7 @@ export const BatchGraduationPage: React.FC = () => {
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                               </svg>
                             ) : isConfirmed ? (
-                              <span className="flex items-center gap-1">
-                                <Check className="w-3.5 h-3.5" /> Salvo!
-                              </span>
+                              <><Check className="w-3.5 h-3.5" /> Salvo</>
                             ) : (
                               'Outorgar'
                             )}
@@ -487,11 +879,11 @@ export const BatchGraduationPage: React.FC = () => {
 
                           <button
                             onClick={() => handlePrintIndividual(student)}
-                            className="p-2 rounded bg-obsidian-950 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                            className="p-2.5 rounded-xl bg-obsidian-950 hover:bg-obsidian-900 border border-obsidian-800 hover:border-slate-600 text-slate-300 hover:text-white transition-all shadow-md"
                             title="Gerar e Baixar Diploma PDF"
                             type="button"
                           >
-                            PDF
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                           </button>
                         </div>
                       </td>
@@ -503,41 +895,50 @@ export const BatchGraduationPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Sub-bar de Ações em Lote e Paginação */}
-        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-obsidian-850/80 bg-obsidian-950/20 gap-4">
-          <div className="flex items-center gap-2">
+        {/* Rodapé da Tabela (Ações em Lote e Paginação) */}
+        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-obsidian-800/80 bg-obsidian-950/60 gap-4">
+          <div className="flex items-center gap-3">
             {selectedStudentIds.length > 0 ? (
               <button
                 onClick={handleDownloadConsolidatedPDF}
-                className="flex items-center gap-1.5 bg-gold-500/10 hover:bg-gold-500/20 text-gold-450 hover:text-gold-400 border border-gold-500/20 font-bold text-[9px] uppercase tracking-wider py-2 px-4 transition-colors"
+                className="flex items-center gap-2 bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-obsidian-950 font-black text-[10px] uppercase tracking-widest py-2.5 px-5 rounded-xl transition-all shadow-lg shadow-gold-500/20 active:scale-95"
                 type="button"
               >
-                Imprimir {selectedStudentIds.length} Diplomas em Lote (PDF)
+                <Award className="w-4 h-4" />
+                Imprimir {selectedStudentIds.length} {selectedStudentIds.length === 1 ? 'Diploma' : 'Diplomas'}
               </button>
             ) : (
-              <span className="text-[10px] text-slate-500 italic">Selecione alunos na tabela para habilitar a geração de diplomas em lote</span>
+              <span className="text-[11px] text-slate-500 font-medium italic flex items-center gap-2">
+                <Square className="w-3.5 h-3.5 opacity-50" />
+                Selecione alunos para emitir diplomas em lote
+              </span>
             )}
           </div>
 
           {totalPages > 1 && (
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 bg-obsidian-900 p-1.5 rounded-xl border border-obsidian-800">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-obsidian-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 type="button"
+                title="Página Anterior"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                Anterior
+                <ChevronLeft className="w-5 h-5" />
               </button>
+              
+              <span className="text-[11px] font-bold text-slate-300 px-3">
+                Pág <span className="text-white">{currentPage}</span> de {totalPages}
+              </span>
+
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className="btn-obsidian py-1.5 px-3 text-[10px] uppercase font-black tracking-widest disabled:opacity-50 disabled:pointer-events-none"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-obsidian-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 type="button"
+                title="Próxima Página"
               >
-                Próximo
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           )}

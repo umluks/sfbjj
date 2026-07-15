@@ -39,6 +39,7 @@ export const StaffPage: React.FC = () => {
   const [teacherTelefone, setTeacherTelefone] = useState('');
   const [teacherCbjj, setTeacherCbjj] = useState('');
   const [teacherFoto, setTeacherFoto] = useState('');
+  const [teacherAssinatura, setTeacherAssinatura] = useState('');
 
   // Estados de Administradores
   const [admins, setAdmins] = useState<Administrador[]>([]);
@@ -98,6 +99,7 @@ export const StaffPage: React.FC = () => {
     setTeacherTelefone('');
     setTeacherCbjj('');
     setTeacherFoto('');
+    setTeacherAssinatura('');
     setShowPassword(false);
     setShowTeacherModal(true);
   };
@@ -110,6 +112,7 @@ export const StaffPage: React.FC = () => {
     setTeacherTelefone(t.telefone || '');
     setTeacherCbjj(t.cbjj || '');
     setTeacherFoto(t.foto_perfil || '');
+    setTeacherAssinatura(t.assinatura || '');
     setShowPassword(false);
     setShowTeacherModal(true);
   };
@@ -127,7 +130,8 @@ export const StaffPage: React.FC = () => {
       senha: teacherSenha,
       telefone: teacherTelefone,
       cbjj: teacherCbjj,
-      foto_perfil: teacherFoto
+      foto_perfil: teacherFoto,
+      assinatura: teacherAssinatura
     };
 
     try {
@@ -555,8 +559,50 @@ export const StaffPage: React.FC = () => {
                           reader.readAsDataURL(file);
                         }
                       }}
-                      className="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-200 hover:file:bg-obsidian-750 file:cursor-pointer"
+                      className="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Assinatura Selector para Professor */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Assinatura Digital (PNG transparente)</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-10 rounded border border-obsidian-800 bg-white flex items-center justify-center p-1 overflow-hidden shrink-0 shadow-inner">
+                    {teacherAssinatura ? (
+                      <img src={teacherAssinatura} alt="Assinatura" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <span className="text-slate-400 text-[9px] italic">Sem assinatura</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            if (event.target?.result) {
+                              setTeacherAssinatura(event.target.result as string);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer"
+                    />
+                    {teacherAssinatura && (
+                      <button
+                        type="button"
+                        onClick={() => setTeacherAssinatura('')}
+                        className="text-[9px] text-red-400 hover:underline block mt-1 font-semibold"
+                      >
+                        Remover Assinatura
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
