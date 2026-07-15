@@ -113,7 +113,7 @@ function AppContent() {
     if (loggedUser) {
       if (loggedUser.role === 'student' && currentTab !== 'profile' && currentTab !== 'my-journey' && currentTab !== 'my-attendance' && currentTab !== 'my-graduations' && currentTab !== 'techniques' && currentTab !== 'schedule' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('profile');
-      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'attendance-report' && currentTab !== 'batch-graduation' && currentTab !== 'teachers' && currentTab !== 'techniques' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
+      } else if (loggedUser.role === 'teacher' && currentTab !== 'profile' && currentTab !== 'schedule' && currentTab !== 'students' && currentTab !== 'attendance-report' && currentTab !== 'teachers' && currentTab !== 'techniques' && currentTab !== 'contact' && currentTab !== 'graduation-system' && currentTab !== 'landing') {
         setCurrentTab('schedule');
       }
     }

@@ -8,4 +8,5 @@ export interface Professor {
   role?: string;
   cpf?: string;
   foto_perfil?: string;
+  assinatura?: string;
 }

@@ -55,7 +55,8 @@ export class AuthService {
             nome: profData.nome,
             email: profData.email,
             telefone: profData.telefone,
-            foto_perfil: profData.foto_perfil
+            foto_perfil: profData.foto_perfil,
+            assinatura: profData.assinatura
           };
         } else {
           throw new Error('Senha incorreta para o professor.');

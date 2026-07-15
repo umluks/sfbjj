@@ -72,7 +72,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
         nome: loggedUser?.nome || 'Professor', 
         email: loggedUser?.email,
         telefone: loggedUser?.telefone,
-        fotoPerfil: loggedUser?.foto_perfil
+        fotoPerfil: loggedUser?.foto_perfil,
+        assinatura: loggedUser?.assinatura
       };
     }
     if (student) {
@@ -109,7 +110,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
           nome: formData.nome, 
           email: formData.email, 
           telefone: formData.telefone,
-          foto_perfil: formData.foto_perfil 
+          foto_perfil: formData.foto_perfil,
+          assinatura: formData.assinatura
         });
         alert('Perfil professor atualizado com sucesso!');
       } else if (student) {
