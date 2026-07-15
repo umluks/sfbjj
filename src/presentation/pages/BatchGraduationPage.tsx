@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import type { Aluno, Belt, Degree } from '@/domain/models/student';
 import type { Professor } from '@/domain/models/teacher';
 import { BELT_RANKS } from '@/constants';
@@ -66,6 +66,18 @@ export const BatchGraduationPage: React.FC = () => {
   const [studentProcessing, setStudentProcessing] = useState<Record<number, boolean>>({});
   const [studentSuccess, setStudentSuccess] = useState<Record<number, string | null>>({});
   const [studentError, setStudentError] = useState<Record<number, string | null>>({});
+
+  // Refs para gerenciar timeouts e evitar memory leaks
+  const successTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const errorTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    return () => {
+      // Limpa os timeouts no unmount
+      Object.values(successTimeoutsRef.current).forEach(clearTimeout);
+      Object.values(errorTimeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   // Alunos que foram confirmados nesta sessão
   const [confirmedStudentIds, setConfirmedStudentIds] = useState<number[]>([]);
@@ -271,7 +283,7 @@ export const BatchGraduationPage: React.FC = () => {
     );
   };
 
-  const handleToggleSelectAllPage = () => {
+  const handleToggleSelectAllPage = useCallback(() => {
     const pageIds = paginatedStudents.map((s) => s.id);
     const allSelected = pageIds.every((id) => selectedStudentIds.includes(id));
 
@@ -283,7 +295,7 @@ export const BatchGraduationPage: React.FC = () => {
         ...pageIds.filter((id) => !prev.includes(id))
       ]);
     }
-  };
+  }, [paginatedStudents, selectedStudentIds]);
 
   const isAllPageSelected = useMemo(() => {
     if (paginatedStudents.length === 0) return false;
@@ -295,6 +307,10 @@ export const BatchGraduationPage: React.FC = () => {
     const config = getStudentConfig(student);
     const faixaAntiga = student.faixa;
     const grausAntigos = student.graus;
+
+    // Limpa timeouts anteriores para este aluno
+    if (errorTimeoutsRef.current[student.id]) clearTimeout(errorTimeoutsRef.current[student.id]);
+    if (successTimeoutsRef.current[student.id]) clearTimeout(successTimeoutsRef.current[student.id]);
 
     // 1. Validar regras de faixa por idade
     const age = getBjjAge(student.dataNascimento);
@@ -313,7 +329,7 @@ export const BatchGraduationPage: React.FC = () => {
         ...prev,
         [student.id]: `Não é permitido rebaixar a faixa de ${faixaAntiga} para ${config.faixa}.`
       }));
-      setTimeout(() => {
+      errorTimeoutsRef.current[student.id] = setTimeout(() => {
         setStudentError((prev) => ({ ...prev, [student.id]: null }));
       }, 4000);
       return;
@@ -323,7 +339,7 @@ export const BatchGraduationPage: React.FC = () => {
         ...prev,
         [student.id]: `Não é permitido diminuir a quantidade de graus.`
       }));
-      setTimeout(() => {
+      errorTimeoutsRef.current[student.id] = setTimeout(() => {
         setStudentError((prev) => ({ ...prev, [student.id]: null }));
       }, 4000);
       return;
@@ -359,7 +375,7 @@ export const BatchGraduationPage: React.FC = () => {
         ...prev,
         [student.id]: `Graduação salva!`
       }));
-      setTimeout(() => {
+      successTimeoutsRef.current[student.id] = setTimeout(() => {
         setStudentSuccess((prev) => ({ ...prev, [student.id]: null }));
       }, 4000);
     } catch (err: any) {
@@ -661,7 +677,8 @@ export const BatchGraduationPage: React.FC = () => {
                 setCurrentPage(1);
               }}
               placeholder="Buscar aluno por nome..."
-              className="w-full bg-obsidian-900 border border-obsidian-700 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner"
+              aria-label="Buscar aluno por nome"
+              className="w-full bg-obsidian-900 border border-obsidian-700 rounded-xl pl-11 pr-4 py-2.5 text-sm font-medium text-slate-200 placeholder-slate-500 focus-visible:outline-none focus-visible:border-gold-500/50 focus-visible:ring-1 focus-visible:ring-gold-500/50 transition-all shadow-inner"
             />
           </div>
 
@@ -669,11 +686,12 @@ export const BatchGraduationPage: React.FC = () => {
             <div className="relative flex-1 md:w-44">
               <select
                 value={filterBelt}
+                aria-label="Filtrar por Faixa"
                 onChange={(e) => {
                   setFilterBelt(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner cursor-pointer"
+                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus-visible:outline-none focus-visible:border-gold-500/50 focus-visible:ring-1 focus-visible:ring-gold-500/50 transition-all shadow-inner cursor-pointer"
               >
                 <option value="Todos">Todas as Faixas</option>
                 <option value="Branca">Branca</option>
@@ -692,11 +710,12 @@ export const BatchGraduationPage: React.FC = () => {
             <div className="relative flex-1 md:w-36">
               <select
                 value={filterTurma}
+                aria-label="Filtrar por Turma"
                 onChange={(e) => {
                   setFilterTurma(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner cursor-pointer"
+                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus-visible:outline-none focus-visible:border-gold-500/50 focus-visible:ring-1 focus-visible:ring-gold-500/50 transition-all shadow-inner cursor-pointer"
               >
                 <option value="Todos">Todas Turmas</option>
                 <option value="Adulto">Adulto</option>
@@ -708,11 +727,12 @@ export const BatchGraduationPage: React.FC = () => {
             <div className="relative w-28">
               <select
                 value={itemsPerPage}
+                aria-label="Itens por página"
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all shadow-inner cursor-pointer"
+                className="w-full appearance-none bg-obsidian-900 border border-obsidian-700 rounded-xl pl-4 pr-9 py-2.5 text-xs font-semibold text-slate-200 focus-visible:outline-none focus-visible:border-gold-500/50 focus-visible:ring-1 focus-visible:ring-gold-500/50 transition-all shadow-inner cursor-pointer"
               >
                 <option value={10}>10 / pág</option>
                 <option value={20}>20 / pág</option>
@@ -725,15 +745,16 @@ export const BatchGraduationPage: React.FC = () => {
         </div>
 
         {/* Tabela de Dados */}
-        <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="border-b border-obsidian-800/80 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-obsidian-950/60">
+        <div className="w-full min-h-[400px]">
+          <table className="w-full text-left border-collapse block lg:table">
+            <thead className="hidden lg:table-header-group">
+              <tr className="border-b border-obsidian-800/80 text-[11px] font-black uppercase tracking-widest text-slate-400 bg-obsidian-950/60">
                 <th className="px-6 py-5 w-14 text-center">
                   <button
                     onClick={handleToggleSelectAllPage}
-                    className="text-slate-450 hover:text-white transition-colors"
+                    className="text-slate-450 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 rounded"
                     type="button"
+                    aria-label="Selecionar Todos da Página"
                     title="Selecionar Todos da Página"
                   >
                     {isAllPageSelected ? (
@@ -751,14 +772,14 @@ export const BatchGraduationPage: React.FC = () => {
                 <th className="px-6 py-5 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-800/40 text-xs text-slate-300">
+            <tbody className="block lg:table-row-group divide-y lg:divide-y-0 divide-obsidian-800/40 text-xs text-slate-300">
               {paginatedStudents.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-16">
+                <tr className="block lg:table-row">
+                  <td colSpan={7} className="block lg:table-cell text-center py-16">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <Award className="w-12 h-12 mb-3 opacity-20" />
                       <span className="font-semibold uppercase tracking-wider text-sm">Nenhum aluno ativo encontrado</span>
-                      <span className="text-[11px] mt-1">Tente ajustar os filtros de busca.</span>
+                      <span className="text-xs mt-1">Tente ajustar os filtros de busca.</span>
                     </div>
                   </td>
                 </tr>
@@ -773,13 +794,43 @@ export const BatchGraduationPage: React.FC = () => {
                   return (
                     <tr
                       key={student.id}
-                      className="hover:bg-obsidian-800/20 transition-colors group"
+                      className="flex flex-col lg:table-row hover:bg-obsidian-800/20 transition-colors group p-4 lg:p-0 border-b border-obsidian-800/40 lg:border-none relative"
                     >
-                      <td className="px-6 py-4 text-center">
+                      {/* Mobile Header (Membro + Checkbox) */}
+                      <td className="flex items-center justify-between lg:hidden pb-3 border-b border-obsidian-800/40 mb-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleToggleSelectStudent(student.id)}
+                            className="text-slate-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 rounded"
+                            type="button"
+                            aria-label={`Selecionar ${student.nome}`}
+                          >
+                            {selectedStudentIds.includes(student.id) ? (
+                              <CheckSquare className="w-5 h-5 text-gold-500" />
+                            ) : (
+                              <Square className="w-5 h-5" />
+                            )}
+                          </button>
+                          <div>
+                            <div className="font-bold text-slate-200 text-sm">
+                              {student.nome}
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                              <span>Idade: <span className="text-slate-300">{getBjjAge(student.dataNascimento)} anos</span></span>
+                              <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                              <span>Turma: <span className="text-slate-300">{student.turma}</span></span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Desktop cells start here */}
+                      <td className="hidden lg:table-cell px-6 py-4 text-center">
                         <button
                           onClick={() => handleToggleSelectStudent(student.id)}
-                          className="text-slate-400 hover:text-white transition-colors"
+                          className="text-slate-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 rounded"
                           type="button"
+                          aria-label={`Selecionar ${student.nome}`}
                         >
                           {selectedStudentIds.includes(student.id) ? (
                             <CheckSquare className="w-4 h-4 text-gold-500" />
@@ -788,27 +839,31 @@ export const BatchGraduationPage: React.FC = () => {
                           )}
                         </button>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden lg:table-cell px-6 py-4">
                         <div className="font-bold text-slate-200 group-hover:text-white transition-colors text-sm">
                           {student.nome}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-1.5">
+                        <div className="text-[11px] text-slate-400 font-medium mt-1 flex items-center gap-1.5">
                           <span>Idade: <span className="text-slate-300">{getBjjAge(student.dataNascimento)} anos</span></span>
                           <span className="w-1 h-1 rounded-full bg-slate-600"></span>
                           <span>Turma: <span className="text-slate-300">{student.turma}</span></span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+
+                      <td className="flex justify-between items-center lg:table-cell px-2 lg:px-6 py-2 lg:py-4">
+                        <span className="lg:hidden text-[11px] font-black uppercase text-slate-500">Faixa Atual</span>
                         <div className="flex justify-start">
                           <BeltBadge faixa={student.faixa} graus={student.graus} />
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="flex justify-between items-center lg:table-cell px-2 lg:px-6 py-2 lg:py-4 text-center">
+                        <span className="lg:hidden text-[11px] font-black uppercase text-slate-500">Nova Faixa</span>
                         <div className="flex justify-center">
                           <select
                             value={config.faixa}
+                            aria-label={`Nova Faixa para ${student.nome}`}
                             onChange={(e) => handleUpdateConfig(student.id, 'faixa', e.target.value as Belt)}
-                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-bold focus:border-gold-500/50 outline-none w-36 shadow-inner cursor-pointer"
+                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 w-36 shadow-inner cursor-pointer"
                           >
                             {getBeltsByAge(student.dataNascimento).map((b: Belt) => (
                               <option key={b} value={b}>{b}</option>
@@ -816,12 +871,14 @@ export const BatchGraduationPage: React.FC = () => {
                           </select>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="flex justify-between items-center lg:table-cell px-2 lg:px-6 py-2 lg:py-4 text-center">
+                        <span className="lg:hidden text-[11px] font-black uppercase text-slate-500">Graus</span>
                         <div className="flex justify-center">
                           <select
                             value={config.graus}
+                            aria-label={`Graus para ${student.nome}`}
                             onChange={(e) => handleUpdateConfig(student.id, 'graus', Number(e.target.value) as Degree)}
-                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-bold focus:border-gold-500/50 outline-none w-28 shadow-inner cursor-pointer"
+                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 w-28 shadow-inner cursor-pointer"
                           >
                             <option value={0}>0 Grau</option>
                             <option value={1}>1 Grau</option>
@@ -831,60 +888,67 @@ export const BatchGraduationPage: React.FC = () => {
                           </select>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="flex justify-between items-center lg:table-cell px-2 lg:px-6 py-2 lg:py-4 text-center">
+                        <span className="lg:hidden text-[11px] font-black uppercase text-slate-500">Data</span>
                         <div className="flex justify-center">
                           <input
                             type="date"
+                            aria-label={`Data da graduação de ${student.nome}`}
                             value={config.data}
                             onChange={(e) => handleUpdateConfig(student.id, 'data', e.target.value)}
-                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-[11px] font-mono font-semibold focus:border-gold-500/50 outline-none shadow-inner cursor-text"
+                            className="bg-obsidian-950 border border-obsidian-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 shadow-inner cursor-text"
                           />
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2.5">
-                          {success && (
-                            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest animate-pulse mr-1">
-                              {success}
-                            </span>
-                          )}
-                          {error && (
-                            <span className="text-[10px] text-red-400 font-bold uppercase tracking-widest animate-shake mr-1 max-w-[120px] truncate" title={error}>
-                              {error}
-                            </span>
-                          )}
-
-                          <button
-                            onClick={() => handleConfirmSingleGraduation(student)}
-                            disabled={isProcessing}
-                            className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] ${
-                              isConfirmed
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                : 'bg-gold-500/10 border border-gold-500/20 text-gold-450 hover:bg-gold-500/20'
-                            }`}
-                            title="Confirmar Outorga no Banco"
-                            type="button"
-                          >
-                            {isProcessing ? (
-                              <svg className="animate-spin h-3.5 w-3.5 text-gold-450" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                            ) : isConfirmed ? (
-                              <><Check className="w-3.5 h-3.5" /> Salvo</>
-                            ) : (
-                              'Outorgar'
+                      <td className="flex lg:table-cell px-2 lg:px-6 py-4 mt-2 lg:mt-0 lg:text-right border-t border-obsidian-800/40 lg:border-none">
+                        <div className="flex flex-1 lg:flex-none items-center justify-between lg:justify-end gap-2.5">
+                          <div className="flex-1 lg:flex-none text-left lg:text-right">
+                            {success && (
+                              <span className="text-[11px] text-emerald-400 font-bold uppercase tracking-widest animate-pulse mr-1">
+                                {success}
+                              </span>
                             )}
-                          </button>
+                            {error && (
+                              <span className="text-[11px] text-red-400 font-bold uppercase tracking-widest animate-shake mr-1 max-w-[120px] truncate block lg:inline" title={error}>
+                                {error}
+                              </span>
+                            )}
+                          </div>
 
-                          <button
-                            onClick={() => handlePrintIndividual(student)}
-                            className="p-2.5 rounded-xl bg-obsidian-950 hover:bg-obsidian-900 border border-obsidian-800 hover:border-slate-600 text-slate-300 hover:text-white transition-all shadow-md"
-                            title="Gerar e Baixar Diploma PDF"
-                            type="button"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleConfirmSingleGraduation(student)}
+                              disabled={isProcessing}
+                              className={`flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-widest font-black px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gold-500 focus-visible:ring-offset-obsidian-900 ${
+                                isConfirmed
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                  : 'bg-gold-500/10 border border-gold-500/20 text-gold-450 hover:bg-gold-500/20'
+                              }`}
+                              title="Confirmar Outorga no Banco"
+                              type="button"
+                            >
+                              {isProcessing ? (
+                                <svg className="animate-spin h-3.5 w-3.5 text-gold-450" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                              ) : isConfirmed ? (
+                                <><Check className="w-3.5 h-3.5" /> Salvo</>
+                              ) : (
+                                'Outorgar'
+                              )}
+                            </button>
+
+                            <button
+                              onClick={() => handlePrintIndividual(student)}
+                              className="p-2.5 rounded-xl bg-obsidian-950 hover:bg-obsidian-900 border border-obsidian-800 hover:border-slate-600 text-slate-300 hover:text-white transition-all shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                              title="Gerar e Baixar Diploma PDF"
+                              aria-label={`Gerar diploma para ${student.nome}`}
+                              type="button"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
