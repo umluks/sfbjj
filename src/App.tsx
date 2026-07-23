@@ -209,6 +209,45 @@ function AppContent() {
     }
   };
 
+  // Renderização quando o usuário está logado mas decide visualizar o Site Principal (Landing Page)
+  if (loggedUser && currentTab === 'landing') {
+    const returnTab = loggedUser.role === 'admin' ? 'dashboard' : loggedUser.role === 'teacher' ? 'schedule' : 'profile';
+    return (
+      <div className="min-h-screen flex flex-col bg-obsidian-950">
+        {isOffline && (
+          <div className="bg-red-955/90 text-red-200 border-b border-red-800 text-center py-2 px-4 text-xs font-black tracking-widest uppercase fixed top-0 w-full z-[9999] flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            Você está no Modo Offline. Algumas informações podem estar desatualizadas.
+          </div>
+        )}
+        {/* Banner no topo informando sobre a sessão e facilitando o retorno à Área do Aluno */}
+        <div className="bg-obsidian-900 border-b border-obsidian-800 text-slate-300 py-2 px-4 text-xs flex items-center justify-between fixed top-0 left-0 right-0 z-[60] backdrop-blur-md bg-obsidian-900/90 shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-[11px] font-medium hidden sm:inline">
+              Sessão Ativa: <strong className="text-white font-bold">{loggedUser.nome}</strong> ({loggedUser.role === 'admin' ? 'Administrador' : loggedUser.role === 'teacher' ? 'Professor' : 'Aluno'})
+            </span>
+            <span className="text-[11px] font-bold text-white sm:hidden">
+              {loggedUser.nome.split(' ')[0]}
+            </span>
+          </div>
+          <button
+            onClick={() => setCurrentTab(returnTab)}
+            className="btn-gold text-[10px] font-black uppercase tracking-wider px-4 py-1 hover:scale-105 transition-all shadow-md"
+          >
+            Voltar para Área do Aluno
+          </button>
+        </div>
+        <div className="pt-8">
+          <LandingPage
+            announcements={announcements}
+            onAccessLogin={() => setCurrentTab(returnTab)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // Renderização de login se o usuário não estiver logado
   if (!loggedUser) {
     if (showLogin) {

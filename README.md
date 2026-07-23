@@ -1,8 +1,8 @@
 # SFBJJ - Sistema de Gestão de Academia de Jiu-Jitsu
 
-O **SFBJJ** é um sistema moderno de gestão interna desenvolvido sob medida para academias de Jiu-Jitsu (especialmente a **Sagrada Família Brasília Jiu-Jitsu**). A aplicação facilita a administração de alunos, controle financeiro, visualização de grades de horários, acompanhamento de perfis individuais de atletas (graduação, frequência, pagamentos e dados cadastrais) e muito mais.
+O **SFBJJ** é um sistema moderno de gestão interna desenvolvido sob medida para academias de Jiu-Jitsu (especialmente a **Sagrada Família Brasília Jiu-Jitsu**). A aplicação facilita a administração de alunos, controle financeiro, emissão de diplomas de graduação em PDF, controle de presenças/frequência, consulta ao currículo de técnicas, visualização de grades de horários e acompanhamento de perfis individuais de atletas (graduação com tempo na faixa, frequência, pagamentos e dados cadastrais).
 
-Esta aplicação foi configurada como uma **Progressive Web App (PWA)** totalmente instalável e otimizada para uso em dispositivos móveis e desktops, contando com suporte a funcionamento offline e notificações de rede.
+Esta aplicação foi configurada como uma **Progressive Web App (PWA)** totalmente instalável e otimizada para uso em dispositivos móveis e desktops, contando com suporte a funcionamento offline, notificações de rede e avisos in-app.
 
 ---
 
@@ -19,12 +19,18 @@ O sistema possui um layout 100% responsivo, controle de acesso baseado em três 
 ### 👤 Perfil Administrador (Admin)
 - **Painel Geral (Dashboard):** Visualização de estatísticas rápidas da academia, exibição cronológica de todos os aniversariantes do mês com destaque visual e animação suave (`soft-blink`) para o aniversariante do dia, e publicação de avisos ou comunicados internos.
 - **Gestão de Alunos:** Cadastro completo de atletas (Kids e Adulto), edição de informações, busca e filtros avançados por status, graduação ou turma, suporte para exportar a listagem em formato CSV/Excel, e visualização detalhada do histórico de graduações calculando dinamicamente o tempo gasto em cada faixa (**Tempo na Faixa**).
-- **Gestão de Equipe (Staff):** Controle completo do quadro de professores e administradores da academia em uma única interface unificada (CRUD), com suporte a campos adicionais (como registro CBJJ e fotos de perfil).
+- **Graduação em Lote & Diplomas:** Promoção em massa de alunos por turma ou graduação e geração instantânea de diplomas de graduação oficiais em formato PDF (download individual ou empacotado em arquivo ZIP).
+- **Configuração de Diplomas:** Customização visual dos diplomas de graduação, incluindo upload de imagem de fundo (template), assinatura digital dos professores/mestres e personalização de textos de cabeçalho, corpo e data.
+- **Relatório de Frequência:** Painel analítico de presenças e assiduidade dos alunos por turma, aula e período.
+- **Currículo de Técnicas:** Gerenciamento da biblioteca de posições e técnicas da semana divididas por público (Kids, Adulto, Geral) e classificação (Guarda, Passagem, Raspagem, Finalização, Queda, Defesa, Outros) com integração de vídeos demonstrativos.
+- **Gestão de Equipe (Staff):** Controle completo do quadro de professores e administradores da academia em uma única interface unificada (CRUD), com suporte a campos adicionais (como registro CBJJ, foto de perfil e assinatura digital).
 - **Controle Financeiro:** Gerenciamento de faturamento mensal, fluxo de caixa detalhado, controle de mensalidades pagas e pendentes, e saldo acumulado com transição automática de saldos de meses anteriores.
-- **Grade de Horários:** Visualização completa da programação de aulas semanais.
+- **Grade de Horários:** Visualização e gerenciamento completo da programação de aulas semanais e turmas.
 
 ### 🎓 Perfil Professor (Teacher)
 - **Consultar Alunos:** Acesso rápido à listagem de alunos para acompanhamento das turmas.
+- **Relatório de Frequência:** Consulta de presenças e histórico de assiduidade dos atletas nas aulas.
+- **Currículo de Técnicas:** Acesso à biblioteca técnica e vídeos de referência para instrução das turmas.
 - **Grade de Horários:** Visualização completa da programação de aulas semanais.
 - **Suporte:** Acesso direto aos canais de comunicação interna.
 
@@ -32,7 +38,8 @@ O sistema possui um layout 100% responsivo, controle de acesso baseado em três 
 - **Perfil do Atleta (Meu Perfil):** Dados cadastrais, alteração de senha e visualização de status de pagamentos.
 - **Minha Jornada:** Seção dedicada ao acompanhamento do desenvolvimento técnico do atleta com estatísticas de tempo de prática, horas acumuladas, sequência de treinos (streak de dias), total de treinos registrados e progresso da meta mensal com anel circular de progresso.
   - **Linha do Tempo de Graduações (Timeline):** Integrada diretamente na página da Jornada, exibe em destaque a trajetória completa de graduações (faixas e graus) com o cálculo automático do **Tempo de Permanência na Faixa** entre cada promoção até o dia atual na faixa ativa.
-- **Minha Frequência:** Realização de check-in em tempo real em aulas abertas e histórico detalhado de presenças. Possibilita desmarcar presenças de aulas abertas com botão dinâmico (estilo de hover em vermelho para cancelamento) ou apagando itens diretamente pela lixeira da tabela de histórico.
+- **Minha Frequência:** Realização de check-in em tempo real em aulas abertas e histórico detalhado de presenças. Possibilita desmarcar presenças de aulas abertas com botão dinâmico ou exclusão direta no histórico.
+- **Currículo de Técnicas:** Consulta de técnicas da semana e vídeos tutoriais cadastrados pelos professores.
 - **Grade de Horários:** Consulta de horários de aulas e turmas ativas.
 - **Contato & Suporte:** Acesso à localização física da academia integrada com mapa e formulário para contato direto.
 
@@ -40,7 +47,8 @@ O sistema possui um layout 100% responsivo, controle de acesso baseado em três 
 - **Instalação Facilitada:** Botão "Instalar Aplicativo" integrado à barra de navegação superior, seção Hero da Landing Page e rodapé da barra lateral interna (disponível para Desktop e Android).
 - **Compatibilidade com iOS:** Modal dinâmico instrutivo que guia o usuário a adicionar o aplicativo à tela de início a partir do Safari no iPhone/iPad.
 - **Suporte Offline:** A aplicação permanece funcional mesmo sem conexão de internet (servindo recursos em cache via Service Worker). Um banner vermelho no topo da interface alerta quando o aplicativo está operando offline.
-- **Tela Offline Customizada:** Exibição de uma tela offline amigável e estilizada caso o usuário acesse o app sem conexão e sem recursos previamente armazenados no cache.
+- **Tela Offline Customizada:** Exibição de uma tela offline amigável e estilizada (`offline.html`) caso o usuário acesse o app sem conexão e sem recursos previamente armazenados no cache.
+- **Notificações Push / In-App:** Integração com a API de Notificações do navegador para avisar os usuários sobre novos comunicados cadastrados.
 
 ---
 
@@ -49,10 +57,11 @@ O sistema possui um layout 100% responsivo, controle de acesso baseado em três 
 A aplicação foi construída utilizando ferramentas modernas do ecossistema Web:
 
 - **Frontend Core:** [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Ferramenta de Build & Bundler:** [Vite](https://vite.dev/)
+- **Ferramenta de Build & Bundler:** [Vite 8](https://vite.dev/)
 - **Backend as a Service (BaaS):** [Supabase](https://supabase.com/) (Banco de dados PostgreSQL, Autenticação e Armazenamento)
-- **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
-- **Ferramenta PWA:** [Vite PWA Plugin](https://vite-pwa-org.netlify.app/) (para geração e automação do Service Worker e do Web Manifest)
+- **Estilização:** [Tailwind CSS](https://tailwindcss.com/) + PostCSS + Autoprefixer
+- **Geração de PDF & Arquivos:** [jsPDF](https://github.com/parallax/jsPDF) (geração de diplomas) + [JSZip](https://stuk.github.io/jszip/) (compactação de lote)
+- **Ferramenta PWA:** [Vite PWA Plugin](https://vite-pwa-org.netlify.app/) (geração e automação de Service Worker e Web Manifest)
 - **Biblioteca de Ícones:** [Lucide React](https://lucide.dev/)
 - **Servidor Web & Proxy de Produção:** [Nginx](https://www.nginx.com/)
 - **Containerização:** [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
@@ -138,6 +147,10 @@ As migrações SQL na pasta `supabase/migrations/` definem o schema do banco de 
 7. `06_foto_e_cbjj_professor.sql`: Adiciona suporte para foto de perfil (`foto_perfil`) e número de registro CBJJ (`cbjj`) na tabela de professores.
 8. `07_ajuste_categorias_grade.sql`: Padronização de categorias existentes de aulas e turmas (`Kids` e `Adulto`).
 9. `08_cria_tabela_turmas.sql`: Criação da tabela dedicada de turmas, com RLS habilitado e vinculação de integridade na tabela de aulas.
+10. `09_controle_frequencia.sql`: Criação da tabela `frequencias` para registro de presenças e check-in dos alunos com restrição única por aluno/aula/data.
+11. `10_curriculo_e_rls.sql`: Tabela `tecnicas` para gestão do currículo da semana (categoria, classificação e vídeo) e refinamento de políticas RLS em alunos, pagamentos e frequências.
+12. `11_diplomas_template.sql`: Coluna de assinatura digital na tabela de professores e criação da tabela `configuracoes_diploma` para modelos de certificados.
+13. `12_diplomas_custom_text.sql`: Suporte a textos e prefixos de data customizáveis na emissão de diplomas de graduação.
 
 ---
 
@@ -212,10 +225,10 @@ sfbjj/
 │   └── workflows/          # Arquivos yaml de automação de Deploy (HostGator e Docker Hub)
 ├── public/                 # Arquivos estáticos (ícones do PWA, offline.html, favicon, logos)
 ├── src/
-│   ├── application/        # Regras de aplicação e lógica de fluxo de dados (Use Cases, Hooks, Contexts)
+│   ├── application/        # Regras de aplicação e lógica de fluxo de dados (Use Cases, Hooks, Contexts, Services)
 │   │   ├── contexts/       # Contextos globais do React (ex: Autenticação, Estado de Alunos)
 │   │   ├── hooks/          # Hooks customizados (ex: gerenciamento de horários, anúncios e PWA)
-│   │   └── services/       # Serviços que operam regras de aplicação
+│   │   └── services/       # Serviços de aplicação (ex: diplomaService, announcementService)
 │   ├── assets/             # Imagens e mídias estáticas do sistema
 │   ├── constants/          # Constantes globais (ex: graduações, regras de faixas)
 │   ├── domain/             # Núcleo de domínio da aplicação (independente de frameworks e APIs)
@@ -227,13 +240,13 @@ sfbjj/
 │   ├── presentation/       # Componentes de interface com o usuário (UI) e controle de estado visual
 │   │   ├── components/     # Componentes visuais reutilizáveis organizados por contexto (financeiro, alunos, etc.)
 │   │   ├── layouts/        # Layouts de estrutura de página (MainLayout)
-│   │   └── pages/          # Páginas inteiras da aplicação
+│   │   └── pages/          # Páginas inteiras da aplicação (Dashboard, Students, BatchGraduation, etc.)
 │   ├── utils/              # Funções utilitárias auxiliares e formatadores genéricos
-│   ├── App.tsx             # Componente raiz do React, gerencia as rotas
+│   ├── App.tsx             # Componente raiz do React, gerencia o roteamento principal
 │   ├── index.css           # Folha de estilos globais e animações Tailwind CSS
 │   └── main.tsx            # Ponto de entrada da aplicação
 ├── supabase/               # Configurações do backend Supabase
-│   ├── migrations/         # Arquivos de migração de banco de dados SQL
+│   ├── migrations/         # Arquivos de migração de banco de dados SQL (00 a 12)
 │   └── config.toml         # Configuração de portas e comportamento do Supabase CLI
 ├── Dockerfile              # Dockerfile multi-stage com compilação e servidor Nginx
 ├── docker-compose.yml      # Manifesto de composição de containers de produção

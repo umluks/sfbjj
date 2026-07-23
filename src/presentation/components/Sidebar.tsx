@@ -17,7 +17,8 @@ import {
   ClipboardCheck,
   Trophy,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Globe
 } from 'lucide-react';
 import type { LoggedUser } from '@/domain/models/auth';
 import logoSFBJJ from '@/assets/logo-sfbjj.png';
@@ -79,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'techniques', label: 'Biblioteca de Posições', icon: BookOpen },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
+      { id: 'landing', label: 'Site Principal', icon: Globe },
     ];
   } else if (loggedUser.role === 'teacher') {
     menuItems = [
@@ -90,6 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'techniques', label: 'Biblioteca de Posições', icon: BookOpen },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
+      { id: 'landing', label: 'Site Principal', icon: Globe },
     ];
   } else {
     menuItems = [
@@ -101,6 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
       { id: 'schedule', label: 'Horários & Localização', icon: Calendar },
       { id: 'graduation-system', label: 'Regras IBJJF', icon: BookOpen },
       { id: 'contact', label: 'Contato', icon: Mail },
+      { id: 'landing', label: 'Site Principal', icon: Globe },
     ];
   }
 
