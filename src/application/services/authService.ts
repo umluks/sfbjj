@@ -78,7 +78,7 @@ export class AuthService {
         const studentPassword = studentByEmail.senha || '#sfbjj2026';
         if (passwordString === studentPassword) {
           if (studentByEmail.status === 'Inativo') {
-            throw new Error('Sua matrícula está inativa. Entre em contato com a administração.');
+            throw new Error('Sua conta ainda não foi ativada. Aguarde a validação de um professor ou da administração para acessar o sistema.');
           }
           return {
             role: studentByEmail.role || 'student',
@@ -110,7 +110,7 @@ export class AuthService {
         const studentPassword = student.senha || '#sfbjj2026';
         if (passwordString === studentPassword) {
           if (student.status === 'Inativo') {
-            throw new Error('Sua matrícula está inativa. Entre em contato com a administração.');
+            throw new Error('Sua conta ainda não foi ativada. Aguarde a validação de um professor ou da administração para acessar o sistema.');
           }
           return {
             role: student.role || 'student',
@@ -131,7 +131,7 @@ export class AuthService {
 
   /**
    * Realiza o auto-cadastro de um novo aluno no sistema.
-   * Sempre atribui o perfil 'student' e status 'Ativo'.
+   * Sempre atribui o perfil 'student' e status 'Inativo' (aguardando validação por professor/admin).
    */
   async registerStudent(studentData: any): Promise<any> {
     const cleanEmail = studentData.email?.trim().toLowerCase();
@@ -163,11 +163,11 @@ export class AuthService {
       }
     }
 
-    // Garante obrigatoriamente a role 'student' e status 'Ativo'
+    // Garante obrigatoriamente a role 'student' e status 'Inativo' (aguardando aprovação)
     const payload = {
       ...studentData,
       role: 'student',
-      status: 'Ativo'
+      status: 'Inativo'
     };
 
     const { data, error } = await supabase

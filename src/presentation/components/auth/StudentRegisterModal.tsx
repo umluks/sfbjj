@@ -129,7 +129,7 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
         genero,
         bairro,
         senha,
-        status: 'Ativo',
+        status: 'Inativo',
         role: 'student',
         faixa: 'Branca',
         graus: 0,
@@ -140,10 +140,10 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
         contatoEmergenciaTel: contatoEmergenciaTel.trim()
       });
 
-      setSuccessMsg('Cadastro realizado com sucesso! Você já pode acessar sua conta.');
+      setSuccessMsg('Cadastro realizado com sucesso! Sua conta foi enviada para validação de um professor ou administrador. Você poderá acessar o sistema assim que ela for ativada.');
       setTimeout(() => {
         onSuccess({ identifier: email.trim().toLowerCase(), password: senha });
-      }, 1500);
+      }, 2500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao realizar cadastro.');
     } finally {

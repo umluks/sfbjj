@@ -11,7 +11,8 @@ import {
   Eye, 
   EyeOff, 
   Loader2, 
-  AlertCircle 
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { formatCPF } from '@/utils/formatters';
 import { StudentRegisterModal } from '@/presentation/components/auth/StudentRegisterModal';
@@ -25,6 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
   const { login } = useAuth();
   const [cpfInput, setCpfInput] = useState('');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const handleIdentifierChange = (value: string) => {
     const onlyNumbers = value.replace(/[.-]/g, '');
@@ -109,6 +111,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
           <h2 className="text-base font-bold text-slate-250 mb-6 text-center tracking-wide">
             Acesse sua Conta
           </h2>
+
+          {infoMsg && (
+            <div className="mb-6 flex items-start gap-2.5 p-3.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span>{infoMsg}</span>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 flex items-start gap-2.5 p-3.5 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs animate-shake">
@@ -224,19 +233,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
       <StudentRegisterModal
         isOpen={showRegisterModal}
         onClose={() => setShowRegisterModal(false)}
-        onSuccess={async (credentials) => {
+        onSuccess={(credentials) => {
           setShowRegisterModal(false);
           setCpfInput(credentials.identifier);
-          setPassword(credentials.password);
-          try {
-            setLoading(true);
-            const user = await login(credentials.identifier, credentials.password);
-            onLoginSuccess(user);
-          } catch (err: any) {
-            setError(err.message || 'Falha ao autenticar o novo aluno.');
-          } finally {
-            setLoading(false);
-          }
+          setPassword('');
+          setError(null);
+          setInfoMsg('Cadastro realizado com sucesso! Sua conta foi enviada para validação e aguarda a aprovação de um professor ou administrador para ser ativada.');
         }}
       />
     </div>
