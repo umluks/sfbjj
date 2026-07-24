@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import type { Gender } from '@/domain/models/student';
+import type { Belt, Degree, Gender } from '@/domain/models/student';
 import { BAIRROS_DF } from '@/constants';
 import { formatCPF, formatPhone } from '@/utils/formatters';
-import { getBjjAge } from '@/application/services/diplomaService';
+import { getBeltsByAge, getBjjAge } from '@/application/services/diplomaService';
 import { authService } from '@/application/services/authService';
 import { Shield, X, User, AlertCircle, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 
@@ -48,6 +48,8 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
   const [email, setEmail] = useState('');
   const [genero, setGenero] = useState<Gender>('Masculino');
   const [bairro, setBairro] = useState('');
+  const [faixa, setFaixa] = useState<Belt>('Branca');
+  const [graus, setGraus] = useState<Degree>(0);
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [showSenha, setShowSenha] = useState(false);
@@ -131,8 +133,8 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
         senha,
         status: 'Inativo',
         role: 'student',
-        faixa: 'Branca',
-        graus: 0,
+        faixa,
+        graus,
         turma: turmaCalculada,
         dataMatricula: hojeStr,
         dataUltimaGraduacao: hojeStr,
@@ -248,7 +250,16 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
                   <input
                     type="date"
                     value={dataNascimento}
-                    onChange={(e) => setDataNascimento(e.target.value)}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setDataNascimento(newDate);
+                      if (newDate) {
+                        const allowed = getBeltsByAge(newDate);
+                        if (!allowed.includes(faixa)) {
+                          setFaixa(allowed[0]);
+                        }
+                      }
+                    }}
                     className="input-premium"
                     disabled={loading}
                     required
@@ -299,6 +310,49 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {/* Seção Faixa Atual & Graus */}
+            <div className="space-y-4 pt-2">
+              <h3 className="text-xs font-bold text-gold-450 uppercase tracking-widest border-b border-obsidian-750 pb-1.5 flex items-center gap-1.5">
+                🥋 Graduação (Faixa Atual & Graus)
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                    Faixa Atual *
+                  </label>
+                  <select
+                    value={faixa}
+                    onChange={(e) => setFaixa(e.target.value as Belt)}
+                    className="input-premium bg-obsidian-950 text-slate-200"
+                    disabled={loading}
+                  >
+                    {getBeltsByAge(dataNascimento).map((b: Belt) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                    Graus (0 a 4)
+                  </label>
+                  <select
+                    value={graus}
+                    onChange={(e) => setGraus(Number(e.target.value) as Degree)}
+                    className="input-premium bg-obsidian-950 text-slate-200"
+                    disabled={loading}
+                  >
+                    <option value={0}>0 Grau</option>
+                    <option value={1}>1 Grau</option>
+                    <option value={2}>2 Graus</option>
+                    <option value={3}>3 Graus</option>
+                    <option value={4}>4 Graus</option>
+                  </select>
+                </div>
               </div>
             </div>
 
