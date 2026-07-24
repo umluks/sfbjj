@@ -38,7 +38,7 @@ export interface Aluno {
   dataUltimaGraduacao: string; // Data da última graduação
   contatoEmergenciaNome: string;
   contatoEmergenciaTel: string;
-  status: 'Ativo' | 'Inativo' | 'Graduado';
+  status: 'Ativo' | 'Inativo' | 'Pendente' | 'Aguardando' | 'Graduado';
   pagamentos: Pagamento[];
   senha?: string;
   turma: 'Kids' | 'Adulto';

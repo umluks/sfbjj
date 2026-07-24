@@ -104,7 +104,7 @@ export const StudentsPage: React.FC = () => {
     );
   };
 
-  const handleBatchStatusChange = async (newStatus: 'Ativo' | 'Inativo') => {
+  const handleBatchStatusChange = async (newStatus: 'Ativo' | 'Inativo' | 'Pendente') => {
     if (selectedStudentIds.length === 0) return;
     const confirmMessage = `Deseja realmente alterar o status de ${selectedStudentIds.length} aluno(s) para "${newStatus}"?`;
     if (!window.confirm(confirmMessage)) return;
@@ -154,7 +154,21 @@ export const StudentsPage: React.FC = () => {
         (student.email && student.email.toLowerCase().includes(cleanQuery));
 
       const matchesBelt = selectedBelt === 'Todos' || student.faixa === selectedBelt;
-      const matchesStatus = selectedStatus === 'Todos' || student.status === selectedStatus;
+
+      const studentStatusNorm = (student.status || '').toLowerCase().trim();
+      let matchesStatus = false;
+      if (selectedStatus === 'Todos') {
+        matchesStatus = true;
+      } else if (selectedStatus === 'Ativo') {
+        matchesStatus = studentStatusNorm === 'ativo';
+      } else if (selectedStatus === 'Inativo') {
+        matchesStatus = studentStatusNorm === 'inativo';
+      } else if (selectedStatus === 'Pendente' || selectedStatus === 'Aguardando' || selectedStatus === 'Aguardando Aprovação') {
+        matchesStatus = studentStatusNorm === 'pendente' || studentStatusNorm === 'aguardando' || studentStatusNorm.includes('aguardando');
+      } else {
+        matchesStatus = student.status === selectedStatus;
+      }
+
       const matchesTurma = selectedTurma === 'Todos' || student.turma === selectedTurma;
 
       return matchesSearch && matchesBelt && matchesStatus && matchesTurma;
@@ -265,6 +279,7 @@ export const StudentsPage: React.FC = () => {
               <option value="Todos">Todos os Status</option>
               <option value="Ativo">Ativo</option>
               <option value="Inativo">Inativo</option>
+              <option value="Pendente">Aguardando Aprovação / Pendentes</option>
             </select>
           </div>
         </div>
@@ -313,8 +328,8 @@ export const StudentsPage: React.FC = () => {
                 <select
                   onChange={(e) => {
                     const action = e.target.value;
-                    if (action === 'Ativo' || action === 'Inativo') {
-                      handleBatchStatusChange(action);
+                    if (action === 'Ativo' || action === 'Inativo' || action === 'Pendente') {
+                      handleBatchStatusChange(action as any);
                     } else if (action === 'delete') {
                       handleBatchDelete();
                     }
@@ -324,6 +339,7 @@ export const StudentsPage: React.FC = () => {
                 >
                   <option value="" disabled selected>Ações em Lote...</option>
                   <option value="Ativo">Marcar como Ativos</option>
+                  <option value="Pendente">Marcar como Pendentes</option>
                   <option value="Inativo">Marcar como Inativos</option>
                   {!isTeacher && <option value="delete">Excluir Alunos</option>}
                 </select>

@@ -63,35 +63,8 @@ export class AuthService {
         }
       }
 
-      // 1.3 Alunos por E-mail
-      const { data: studentByEmail, error: studError } = await supabase
-        .from('alunos')
-        .select('*')
-        .eq('email', username)
-        .maybeSingle();
-
-      if (studError) {
-        throw new Error(`Erro ao verificar aluno: ${studError.message}`);
-      }
-
-      if (studentByEmail) {
-        const studentPassword = studentByEmail.senha || '#sfbjj2026';
-        if (passwordString === studentPassword) {
-          if (studentByEmail.status === 'Inativo') {
-            throw new Error('Sua conta ainda não foi ativada. Aguarde a validação de um professor ou da administração para acessar o sistema.');
-          }
-          return {
-            role: studentByEmail.role || 'student',
-            alunoId: studentByEmail.id,
-            nome: studentByEmail.nome,
-            foto_perfil: studentByEmail.fotoPerfil
-          };
-        } else {
-          throw new Error('Senha incorreta.');
-        }
-      }
-
-      throw new Error('Usuário não encontrado com este e-mail.');
+      // Apenas Administradores e Professores acessam por E-mail
+      throw new Error('Apenas Administradores e Professores podem acessar via e-mail. Alunos devem entrar utilizando o CPF.');
     }
 
     // 2. Login via CPF (apenas para alunos)
@@ -109,8 +82,11 @@ export class AuthService {
       if (student) {
         const studentPassword = student.senha || '#sfbjj2026';
         if (passwordString === studentPassword) {
+          if (student.status === 'Pendente' || student.status === 'Aguardando' || student.status === 'Aguardando Aprovação') {
+            throw new Error('Sua conta está pendente de aprovação. Aguarde a validação de um professor ou da administração para acessar o sistema.');
+          }
           if (student.status === 'Inativo') {
-            throw new Error('Sua conta ainda não foi ativada. Aguarde a validação de um professor ou da administração para acessar o sistema.');
+            throw new Error('Sua conta está inativa. Entre em contato com a administração para reativar seu acesso.');
           }
           return {
             role: student.role || 'student',
@@ -126,29 +102,16 @@ export class AuthService {
       throw new Error('Nenhum aluno encontrado com este CPF.');
     }
 
-    throw new Error('Por favor, informe um e-mail ou CPF válido.');
+    throw new Error('Por favor, informe um e-mail (Admin/Professor) ou CPF (Aluno) válido.');
   }
 
   /**
    * Realiza o auto-cadastro de um novo aluno no sistema.
-   * Sempre atribui o perfil 'student' e status 'Inativo' (aguardando validação por professor/admin).
+   * Atribui perfil 'student' e status 'Pendente' (aguardando aprovação).
+   * Apenas o CPF é único no cadastro de alunos.
    */
   async registerStudent(studentData: any): Promise<any> {
-    const cleanEmail = studentData.email?.trim().toLowerCase();
     const cleanCpf = studentData.cpf?.replace(/\D/g, '');
-
-    // Verifica se já existe aluno cadastrado com o mesmo e-mail
-    if (cleanEmail) {
-      const { data: existingEmail } = await supabase
-        .from('alunos')
-        .select('id')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-      if (existingEmail) {
-        throw new Error('Já existe um aluno cadastrado com este e-mail.');
-      }
-    }
 
     // Verifica se já existe aluno cadastrado com o mesmo CPF
     if (cleanCpf) {
@@ -163,11 +126,11 @@ export class AuthService {
       }
     }
 
-    // Garante obrigatoriamente a role 'student' e status 'Inativo' (aguardando aprovação)
+    // Garante obrigatoriamente a role 'student' e status 'Pendente' (aguardando aprovação)
     const payload = {
       ...studentData,
       role: 'student',
-      status: 'Inativo'
+      status: 'Pendente'
     };
 
     const { data, error } = await supabase

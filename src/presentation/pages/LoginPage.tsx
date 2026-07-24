@@ -130,7 +130,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
             {/* CPF / E-mail Input */}
             <div>
               <label htmlFor="identifier" className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
-                E-mail ou CPF
+                CPF (Aluno) ou E-mail (Admin/Professor)
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-slate-300 transition-colors">
@@ -139,7 +139,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
                 <input
                   id="identifier"
                   type="text"
-                  placeholder="exemplo@email.com ou 000.000.000-00"
+                  placeholder="CPF do aluno ou e-mail de admin/professor"
                   className="w-full bg-obsidian-950/70 border border-obsidian-700 hover:border-obsidian-600 focus:border-slate-500 rounded-xl pl-11 pr-4 py-3.5 text-sm text-slate-200 placeholder:text-slate-650 focus:outline-none focus:ring-1 focus:ring-slate-500/25 transition-all"
                   value={cpfInput}
                   onChange={(e) => handleIdentifierChange(e.target.value)}
@@ -147,6 +147,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
                   required
                 />
               </div>
+              <p className="text-[10px] text-slate-500 mt-1 font-medium">
+                Alunos acessam o sistema utilizando o CPF. Administradores e Professores entram via e-mail.
+              </p>
             </div>
 
             {/* Password Input */}

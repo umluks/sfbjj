@@ -15,7 +15,7 @@ interface StudentsContextType {
   ) => Promise<Aluno>;
   updateStudent: (id: number, studentData: Partial<Aluno>) => Promise<void>;
   deleteStudent: (id: number) => Promise<void>;
-  batchUpdateStatus: (ids: number[], status: 'Ativo' | 'Inativo') => Promise<void>;
+  batchUpdateStatus: (ids: number[], status: 'Ativo' | 'Inativo' | 'Pendente') => Promise<void>;
   batchDeleteStudents: (ids: number[]) => Promise<void>;
   importStudents: (
     rows: any[],
@@ -135,7 +135,7 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  const batchUpdateStatus = useCallback(async (ids: number[], status: 'Ativo' | 'Inativo'): Promise<void> => {
+  const batchUpdateStatus = useCallback(async (ids: number[], status: 'Ativo' | 'Inativo' | 'Pendente'): Promise<void> => {
     setIsLoading(true);
     try {
       await studentService.batchUpdateStatus(ids, status);

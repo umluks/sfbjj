@@ -323,17 +323,6 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data de Matrícula</label>
-                <input
-                  type="date"
-                  value={dataMatricula}
-                  onChange={(e) => setDataMatricula(e.target.value)}
-                  className="input-premium w-full bg-obsidian-950 font-mono"
-                  disabled={submitting || !isEditingOtherStudent}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Principal</label>
                 <select
                   value={turma}

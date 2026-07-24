@@ -24,7 +24,7 @@ export class StudentService {
     return this.studentRepo.batchDeleteStudents(ids);
   }
 
-  async batchUpdateStatus(ids: number[], status: 'Ativo' | 'Inativo'): Promise<void> {
+  async batchUpdateStatus(ids: number[], status: 'Ativo' | 'Inativo' | 'Pendente'): Promise<void> {
     return this.studentRepo.batchUpdateStatus(ids, status);
   }
 

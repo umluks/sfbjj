@@ -231,7 +231,7 @@ export class StudentRepository implements IStudentRepository {
     ids.forEach(id => cache.clear(`student_${id}`));
   }
 
-  async batchUpdateStatus(ids: number[], status: 'Ativo' | 'Inativo'): Promise<void> {
+  async batchUpdateStatus(ids: number[], status: 'Ativo' | 'Inativo' | 'Pendente'): Promise<void> {
     const { error } = await supabase
       .from('alunos')
       .update({ status })

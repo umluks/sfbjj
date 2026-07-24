@@ -128,7 +128,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   const [dataUltimaGraduacao, setDataUltimaGraduacao] = useState('');
   const [contatoEmergenciaNome, setContatoEmergenciaNome] = useState('');
   const [contatoEmergenciaTel, setContatoEmergenciaTel] = useState('');
-  const [status, setStatus] = useState<'Ativo' | 'Inativo' | 'Graduado'>('Ativo');
+  const [status, setStatus] = useState<'Ativo' | 'Inativo' | 'Pendente' | 'Aguardando' | 'Graduado'>('Ativo');
   const [turma, setTurma] = useState<'Kids' | 'Adulto'>('Adulto');
   const [fotoPerfil, setFotoPerfil] = useState('');
   const [historicoGraduacoes, setHistoricoGraduacoes] = useState<any[]>([]);
@@ -652,19 +652,22 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             {/* Status Acadêmico */}
             <div className="flex items-center gap-3 pt-3">
               <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Status Acadêmico:</span>
-              <label className={`relative inline-flex items-center select-none ${isStatusDisabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
-                <input
-                  type="checkbox"
-                  checked={status === 'Ativo'}
-                  onChange={(e) => setStatus(e.target.checked ? 'Ativo' : 'Inativo')}
-                  className="sr-only peer"
-                  disabled={isStatusDisabled}
-                />
-                <div className="w-11 h-6 bg-obsidian-950 border border-obsidian-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-gold-500 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500/10 peer-checked:border-gold-500"></div>
-                <span className={`ml-3 text-sm font-semibold transition-colors ${status === 'Ativo' ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {status}
-                </span>
-              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                disabled={isStatusDisabled}
+                className={`bg-obsidian-950 border rounded-xl px-3 py-1.5 text-xs font-bold transition-all focus:outline-none cursor-pointer ${
+                  status === 'Ativo'
+                    ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
+                    : status === 'Pendente' || status === 'Aguardando'
+                    ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
+                    : 'border-red-500/50 text-red-400 bg-red-500/10'
+                }`}
+              >
+                <option value="Ativo" className="bg-obsidian-900 text-emerald-400">Ativo</option>
+                <option value="Pendente" className="bg-obsidian-900 text-orange-400">Pendente (Aguardando Aprovação)</option>
+                <option value="Inativo" className="bg-obsidian-900 text-red-400">Inativo</option>
+              </select>
             </div>
           </div>
 

@@ -102,7 +102,9 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                 <span
                   className={`w-2.5 h-2.5 rounded-full absolute top-4 right-4 ${
                     student.status === 'Ativo'
-                      ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
+                      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse'
+                      : (student.status as string) === 'Pendente' || (student.status as string) === 'Aguardando' || (student.status as string) === 'Aguardando Aprovação'
+                      ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)] animate-pulse'
                       : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
                   }`}
                   title={`Status: ${student.status}`}
@@ -283,8 +285,13 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                         )}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors">
-                          {student.nome}
+                        <div className="font-bold text-slate-200 group-hover:text-slate-100 transition-colors flex items-center gap-2">
+                          <span>{student.nome}</span>
+                          {((student.status as string) === 'Pendente' || (student.status as string) === 'Aguardando' || (student.status as string) === 'Aguardando Aprovação') && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                              Pendente
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] text-slate-500 font-medium mt-0.5">
                           CPF: {student.cpf || '—'}
@@ -295,7 +302,7 @@ export const StudentTable: React.FC<StudentTableProps> = ({
 
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5 text-slate-350">
-                      <Calendar className="w-3.5 h-3.5 text-slate-450" />
+                      <Calendar className="w-3.5 h-3.5 text-slate-455" />
                       {formatDate(student.dataNascimento)}
                     </div>
                     <div className="text-[10px] text-slate-500 font-semibold mt-1">
@@ -334,7 +341,7 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                   <td className="px-6 py-4">
                     {student.telefone ? (
                       <div className="flex items-center gap-1.5 text-slate-350 font-mono">
-                        <Phone className="w-3.5 h-3.5 text-slate-450" />
+                        <Phone className="w-3.5 h-3.5 text-slate-455" />
                         {formatPhone(student.telefone)}
                       </div>
                     ) : (
@@ -378,10 +385,10 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ml-1.5 ${
                           student.status === 'Ativo'
-                            ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
-                            : student.status === 'Inativo'
-                            ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
-                            : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
+                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse'
+                            : (student.status as string) === 'Pendente' || (student.status as string) === 'Aguardando' || (student.status as string) === 'Aguardando Aprovação'
+                            ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)] animate-pulse'
+                            : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
                         }`}
                         title={`Status: ${student.status}`}
                       />

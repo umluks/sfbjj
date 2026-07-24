@@ -6,7 +6,7 @@ export interface IStudentRepository {
   updateStudent(id: number, studentData: Partial<Aluno>): Promise<void>;
   deleteStudent(id: number): Promise<void>;
   batchDeleteStudents(ids: number[]): Promise<void>;
-  batchUpdateStatus(ids: number[], status: 'Ativo' | 'Inativo'): Promise<void>;
+  batchUpdateStatus(ids: number[], status: 'Ativo' | 'Inativo' | 'Pendente'): Promise<void>;
   insertGraduationHistory(
     alunoId: number,
     faixa: Belt,

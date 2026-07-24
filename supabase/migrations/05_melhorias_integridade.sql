@@ -3,7 +3,7 @@
 
 -- 1. Restrições CHECK na tabela Alunos
 ALTER TABLE public.alunos 
-    ADD CONSTRAINT chk_alunos_status CHECK (status IN ('Ativo', 'Inativo', 'Graduado')),
+    ADD CONSTRAINT chk_alunos_status CHECK (status IN ('Ativo', 'Inativo', 'Pendente', 'Aguardando', 'Graduado')),
     ADD CONSTRAINT chk_alunos_turma CHECK (turma IN ('Kids', 'Adulto'));
 
 -- 2. Restrições CHECK na tabela Pagamentos
@@ -11,14 +11,10 @@ ALTER TABLE public.pagamentos
     ADD CONSTRAINT chk_pagamentos_status CHECK (status IN ('Pago', 'Pendente', 'Atrasado')),
     ADD CONSTRAINT chk_pagamentos_valor CHECK (valor >= 0.00);
 
--- 3. Índices Únicos Condicionais na tabela Alunos (evita duplicados mantendo flexibilidade para registros sem contato)
+-- 3. Índices Únicos Condicionais na tabela Alunos (apenas CPF é único)
 CREATE UNIQUE INDEX IF NOT EXISTS alunos_cpf_unique_idx 
     ON public.alunos (cpf) 
     WHERE (cpf IS NOT NULL AND cpf <> '' AND cpf <> 'N/A');
-
-CREATE UNIQUE INDEX IF NOT EXISTS alunos_email_unique_idx 
-    ON public.alunos (email) 
-    WHERE (email IS NOT NULL AND email <> '' AND email <> 'N/A');
 
 -- 4. Estabelecer Chave Estrangeira entre Aulas e Professores (tabela criada na migração 01)
 ALTER TABLE public.aulas 
