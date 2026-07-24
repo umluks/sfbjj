@@ -29,7 +29,7 @@ import {
 
 export const DashboardPage: React.FC = () => {
   const { loggedUser } = useAuth();
-  const { students, updateStudent } = useStudents();
+  const { students, updateStudent, isLoading } = useStudents();
   const { 
     announcements, 
     createAnnouncement, 
@@ -281,16 +281,24 @@ export const DashboardPage: React.FC = () => {
       {/* Banner Informativo de Status de Aprovações Pendentes */}
       {(isAdmin || isTeacher) && (
         <div className={`rounded-2xl p-4.5 border transition-all duration-300 shadow-lg ${
-          totalPending > 0
+          isLoading && students.length === 0
+            ? 'bg-obsidian-900/60 border-obsidian-800 animate-pulse'
+            : totalPending > 0
             ? 'bg-gradient-to-r from-orange-500/15 via-orange-500/10 to-obsidian-900 border-orange-500/35'
             : 'bg-obsidian-900/60 border-obsidian-800'
         }`}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className={`p-2.5 rounded-xl shrink-0 ${
-                totalPending > 0 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-obsidian-800 text-emerald-400 border border-obsidian-750'
+                isLoading && students.length === 0
+                  ? 'bg-obsidian-800 text-slate-500 border border-obsidian-750'
+                  : totalPending > 0 
+                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                  : 'bg-obsidian-800 text-emerald-400 border border-obsidian-750'
               }`}>
-                {totalPending > 0 ? (
+                {isLoading && students.length === 0 ? (
+                  <Clock className="w-5 h-5 animate-spin text-slate-400" />
+                ) : totalPending > 0 ? (
                   <Clock className="w-5 h-5 animate-pulse text-orange-400" />
                 ) : (
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -298,14 +306,20 @@ export const DashboardPage: React.FC = () => {
               </div>
               <div>
                 <h3 className={`text-xs font-black uppercase tracking-wider ${
-                  totalPending > 0 ? 'text-orange-300' : 'text-slate-200'
+                  isLoading && students.length === 0 ? 'text-slate-400' : totalPending > 0 ? 'text-orange-300' : 'text-slate-200'
                 }`}>
-                  {totalPending > 0 ? 'Aprovações de Cadastro Pendentes' : 'Situação das Aprovações'}
+                  {isLoading && students.length === 0 
+                    ? 'Verificando Aprovações de Cadastro...' 
+                    : totalPending > 0 
+                    ? 'Aprovações de Cadastro Pendentes' 
+                    : 'Situação das Aprovações'}
                 </h3>
                 <p className={`text-xs mt-0.5 font-medium ${
-                  totalPending > 0 ? 'text-orange-400/90' : 'text-slate-400'
+                  isLoading && students.length === 0 ? 'text-slate-500' : totalPending > 0 ? 'text-orange-400/90' : 'text-slate-400'
                 }`}>
-                  {totalPending > 0 ? (
+                  {isLoading && students.length === 0 ? (
+                    <>Consultando banco de dados para verificar novos atletas pendentes...</>
+                  ) : totalPending > 0 ? (
                     <>
                       Há <strong className="text-orange-300 font-black text-sm">{totalPending}</strong> {totalPending === 1 ? 'aluno aguardando para aprovação' : 'alunos aguardando para aprovação'} de cadastro no sistema.
                     </>
@@ -316,7 +330,7 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {totalPending > 0 && (
+            {totalPending > 0 && !(isLoading && students.length === 0) && (
               <button
                 type="button"
                 onClick={() => setShowPendingModal(true)}

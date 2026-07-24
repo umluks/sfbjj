@@ -21,7 +21,7 @@ export class StudentRepository implements IStudentRepository {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
+        .select('*, graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
 
       if (error) {
         throw error;
@@ -253,7 +253,7 @@ export class StudentRepository implements IStudentRepository {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .select('*, pagamentos!pagamentos_alunoId_fkey(*), graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)')
+        .select('*, graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)')
         .eq('id', id)
         .maybeSingle();
 

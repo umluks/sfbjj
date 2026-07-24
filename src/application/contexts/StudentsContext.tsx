@@ -99,26 +99,28 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const updateStudent = useCallback(async (id: number, studentData: Partial<Aluno>): Promise<void> => {
-    setIsLoading(true);
+    let previousStudents: Aluno[] = [];
+    setStudents(prev => {
+      previousStudents = prev;
+      return prev.map(s => {
+        if (s.id === id) {
+          return {
+            ...s,
+            ...studentData
+          };
+        }
+        return s;
+      }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    });
+
     try {
       await studentService.updateStudent(id, studentData);
-
-      setStudents(prev =>
-        prev.map(s => {
-          if (s.id === id) {
-            return {
-              ...s,
-              ...studentData
-            };
-          }
-          return s;
-        }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-      );
     } catch (err: any) {
+      if (previousStudents.length > 0) {
+        setStudents(previousStudents);
+      }
       console.error(err);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
