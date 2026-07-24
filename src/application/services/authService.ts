@@ -128,6 +128,82 @@ export class AuthService {
 
     throw new Error('Por favor, informe um e-mail ou CPF válido.');
   }
+
+  /**
+   * Realiza o auto-cadastro de um novo aluno no sistema.
+   * Sempre atribui o perfil 'student' e status 'Ativo'.
+   */
+  async registerStudent(studentData: any): Promise<any> {
+    const cleanEmail = studentData.email?.trim().toLowerCase();
+    const cleanCpf = studentData.cpf?.replace(/\D/g, '');
+
+    // Verifica se já existe aluno cadastrado com o mesmo e-mail
+    if (cleanEmail) {
+      const { data: existingEmail } = await supabase
+        .from('alunos')
+        .select('id')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (existingEmail) {
+        throw new Error('Já existe um aluno cadastrado com este e-mail.');
+      }
+    }
+
+    // Verifica se já existe aluno cadastrado com o mesmo CPF
+    if (cleanCpf) {
+      const { data: existingCpf } = await supabase
+        .from('alunos')
+        .select('id')
+        .or(`cpf.eq."${studentData.cpf}",cpf.eq."${cleanCpf}"`)
+        .maybeSingle();
+
+      if (existingCpf) {
+        throw new Error('Já existe um aluno cadastrado com este CPF.');
+      }
+    }
+
+    // Garante obrigatoriamente a role 'student' e status 'Ativo'
+    const payload = {
+      ...studentData,
+      role: 'student',
+      status: 'Ativo'
+    };
+
+    const { data, error } = await supabase
+      .from('alunos')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Erro ao realizar cadastro de aluno: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Verifica se um aluno possui cadastro ativo no banco de dados.
+   * Retorna true se estiver ativo, false se inativo ou inexistente.
+   */
+  async checkStudentActive(alunoId: number): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('alunos')
+        .select('status')
+        .eq('id', alunoId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return false;
+      }
+
+      return data.status === 'Ativo';
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const authService = new AuthService();

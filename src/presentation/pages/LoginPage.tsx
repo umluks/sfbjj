@@ -6,6 +6,7 @@ import {
   Flame, 
   ArrowLeft, 
   User, 
+  UserPlus,
   Lock, 
   Eye, 
   EyeOff, 
@@ -13,6 +14,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { formatCPF } from '@/utils/formatters';
+import { StudentRegisterModal } from '@/presentation/components/auth/StudentRegisterModal';
 
 interface LoginPageProps {
   onLoginSuccess: (user: LoggedUser) => void;
@@ -22,6 +24,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLanding }) => {
   const { login } = useAuth();
   const [cpfInput, setCpfInput] = useState('');
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const handleIdentifierChange = (value: string) => {
     const onlyNumbers = value.replace(/[.-]/g, '');
@@ -185,6 +188,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
               )}
             </button>
           </form>
+
+          {/* Divider e Cadastro de Aluno */}
+          <div className="mt-6 pt-5 border-t border-obsidian-750/60 text-center">
+            <p className="text-xs text-slate-400 font-medium mb-3">
+              Não tem uma conta ainda?
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowRegisterModal(true)}
+              className="w-full py-2.5 px-4 rounded-xl bg-obsidian-950/80 hover:bg-obsidian-900 border border-gold-500/30 hover:border-gold-500/60 text-gold-450 hover:text-gold-400 font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-md"
+              disabled={loading}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Criar Conta de Aluno</span>
+            </button>
+          </div>
         </div>
 
         {/* Back Button */}
@@ -200,6 +219,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
           <span>Voltar para a Página Inicial</span>
         </button>
       </div>
+
+      {/* Modal de Auto-Cadastro de Aluno */}
+      <StudentRegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSuccess={async (credentials) => {
+          setShowRegisterModal(false);
+          setCpfInput(credentials.identifier);
+          setPassword(credentials.password);
+          try {
+            setLoading(true);
+            const user = await login(credentials.identifier, credentials.password);
+            onLoginSuccess(user);
+          } catch (err: any) {
+            setError(err.message || 'Falha ao autenticar o novo aluno.');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
     </div>
   );
 };

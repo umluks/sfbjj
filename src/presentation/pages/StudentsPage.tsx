@@ -307,7 +307,7 @@ export const StudentsPage: React.FC = () => {
 
           <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto shrink-0">
             {/* Ações em Lote */}
-            {selectedStudentIds.length > 0 && !isTeacher && (
+            {selectedStudentIds.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-[9px] uppercase font-black tracking-widest text-gold-450">{selectedStudentIds.length} selecionados:</span>
                 <select
@@ -325,7 +325,7 @@ export const StudentsPage: React.FC = () => {
                   <option value="" disabled selected>Ações em Lote...</option>
                   <option value="Ativo">Marcar como Ativos</option>
                   <option value="Inativo">Marcar como Inativos</option>
-                  <option value="delete">Excluir Alunos</option>
+                  {!isTeacher && <option value="delete">Excluir Alunos</option>}
                 </select>
               </div>
             )}

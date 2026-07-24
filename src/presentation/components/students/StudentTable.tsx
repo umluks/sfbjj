@@ -184,25 +184,23 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                   <Eye className="w-4 h-4 text-slate-450" />
                   Ficha
                 </button>
+                <button
+                  onClick={() => onEdit(student)}
+                  className="flex-1 py-2 px-3 rounded-lg bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-800 text-slate-300 flex items-center justify-center gap-2 font-bold text-xs transition-colors"
+                  type="button"
+                >
+                  <Edit className="w-4 h-4 text-slate-450" />
+                  {isTeacher ? 'Status' : 'Editar'}
+                </button>
                 {!isTeacher && (
-                  <>
-                    <button
-                      onClick={() => onEdit(student)}
-                      className="flex-1 py-2 px-3 rounded-lg bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-800 text-slate-300 flex items-center justify-center gap-2 font-bold text-xs transition-colors"
-                      type="button"
-                    >
-                      <Edit className="w-4 h-4 text-slate-450" />
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => onDelete(student)}
-                      className="py-2 px-3 rounded-lg bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-800 hover:border-red-500/20 text-slate-450 hover:text-red-400 flex items-center justify-center transition-colors"
-                      title="Excluir Aluno"
-                      type="button"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
+                  <button
+                    onClick={() => onDelete(student)}
+                    className="py-2 px-3 rounded-lg bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-800 hover:border-red-500/20 text-slate-455 hover:text-red-400 flex items-center justify-center transition-colors"
+                    title="Excluir Aluno"
+                    type="button"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             </div>
@@ -357,25 +355,23 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
+                      <button
+                        onClick={() => onEdit(student)}
+                        className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                        title={isTeacher ? "Alterar Status" : "Editar Aluno"}
+                        type="button"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
                       {!isTeacher && (
-                        <>
-                          <button
-                            onClick={() => onEdit(student)}
-                            className="p-2 rounded bg-obsidian-950/80 hover:bg-obsidian-900 border border-obsidian-900 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
-                            title="Editar Aluno"
-                            type="button"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onDelete(student)}
-                            className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"
-                            title="Excluir Aluno"
-                            type="button"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
+                        <button
+                          onClick={() => onDelete(student)}
+                          className="p-2 rounded bg-obsidian-950/80 hover:bg-red-500/10 border border-obsidian-900 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all"
+                          title="Excluir Aluno"
+                          type="button"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
 
                       {/* Sinalização de Status do Usuário */}

@@ -58,6 +58,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
   }, []);
 
+  // Valida se o aluno logado permanece ativo no banco de dados
+  React.useEffect(() => {
+    if (loggedUser && loggedUser.role === 'student' && loggedUser.alunoId) {
+      authService.checkStudentActive(loggedUser.alunoId).then((isActive) => {
+        if (!isActive) {
+          logout();
+          alert('Sua matrícula está inativa. O acesso ao sistema foi encerrado. Entre em contato com a administração.');
+        }
+      });
+    }
+  }, [loggedUser, logout]);
+
   return (
     <AuthContext.Provider
       value={{

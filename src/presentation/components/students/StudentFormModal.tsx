@@ -133,7 +133,9 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   const [fotoPerfil, setFotoPerfil] = useState('');
   const [historicoGraduacoes, setHistoricoGraduacoes] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const isDisabled = isTeacher || isReadOnly;
+  const isDisabled = isReadOnly || isTeacher;
+  const isStatusDisabled = isReadOnly;
+  const canSave = !isReadOnly;
 
   // Inicializa o formulário com dados do aluno ao abrir para edição
   useEffect(() => {
@@ -300,7 +302,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-obsidian-750 shrink-0 bg-obsidian-850 z-10 rounded-t-2xl">
           <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
             <Shield className="w-5 h-5 text-gold-500" />
-            {isDisabled ? 'Visualizar Cadastro de Membro' : editingStudent ? 'Editar Cadastro de Membro' : 'Cadastrar Novo Membro'}
+            {isReadOnly ? 'Visualizar Cadastro de Membro' : editingStudent ? (isTeacher ? 'Gestão de Status do Aluno' : 'Editar Cadastro de Membro') : 'Cadastrar Novo Membro'}
           </h2>
           <button
             onClick={handleClose}
@@ -650,13 +652,13 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             {/* Status Acadêmico */}
             <div className="flex items-center gap-3 pt-3">
               <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Status Acadêmico:</span>
-              <label className={`relative inline-flex items-center select-none ${isDisabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
+              <label className={`relative inline-flex items-center select-none ${isStatusDisabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox"
                   checked={status === 'Ativo'}
                   onChange={(e) => setStatus(e.target.checked ? 'Ativo' : 'Inativo')}
                   className="sr-only peer"
-                  disabled={isDisabled}
+                  disabled={isStatusDisabled}
                 />
                 <div className="w-11 h-6 bg-obsidian-950 border border-obsidian-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-gold-500 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500/10 peer-checked:border-gold-500"></div>
                 <span className={`ml-3 text-sm font-semibold transition-colors ${status === 'Ativo' ? 'text-emerald-400' : 'text-slate-500'}`}>
@@ -673,9 +675,9 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
               onClick={handleClose}
               className="btn-obsidian"
             >
-              {isDisabled ? 'Fechar' : 'Cancelar'}
+              {!canSave ? 'Fechar' : 'Cancelar'}
             </button>
-            {!isDisabled && (
+            {canSave && (
               <button
                 type="submit"
                 className="btn-gold px-6"
