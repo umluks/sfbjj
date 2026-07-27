@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, Clock, CheckCircle2, AlertCircle, RefreshCw, BarChart2, CalendarDays, Trash2 } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, RefreshCw, BarChart2, CalendarDays, Trash2, MapPin, AlertTriangle } from 'lucide-react';
 import { useClasses } from '@/application/hooks/useClasses';
 import { attendanceService } from '@/application/services/attendanceService';
 import { studentService } from '@/application/services/studentService';
@@ -7,6 +7,7 @@ import type { Aula } from '@/domain/models/class';
 import type { Aluno } from '@/domain/models/student';
 import type { Frequencia } from '@/domain/models/attendance';
 import { formatDate } from '@/utils/formatters';
+import { ExternalCheckInModal } from '@/presentation/components/attendance/ExternalCheckInModal';
 
 interface MyAttendancePageProps {
   alunoId?: number;
@@ -20,6 +21,7 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
+  const [isExternalModalOpen, setIsExternalModalOpen] = useState(false);
 
   const { classes, turmas } = useClasses();
 
@@ -80,6 +82,39 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
     loadData();
   }, [loadData]);
 
+  // Resolve a categoria efetiva da aula (via turmaId vinculada ou aula.categoria)
+  const getAulaCategory = useCallback((aula: Aula): string => {
+    if (aula.turmaId) {
+      const t = turmas.find(item => item.id === aula.turmaId);
+      if (t?.categoria) return t.categoria;
+    }
+    return aula.categoria || 'Geral';
+  }, [turmas]);
+
+  // Validação de regra de turma/categoria (Adulto só Adulto, Kids só Kids)
+  const getCategoryValidation = useCallback((aula: Aula) => {
+    if (!student?.turma) return { isAllowed: true, message: null };
+
+    const classCategory = getAulaCategory(aula);
+    const studentTurma = student.turma; // 'Kids' | 'Adulto'
+
+    if (studentTurma === 'Kids' && classCategory === 'Adulto') {
+      return {
+        isAllowed: false,
+        message: 'Você está matriculado na turma Kids e não pode fazer check-in em aulas da turma Adulto.'
+      };
+    }
+
+    if (studentTurma === 'Adulto' && classCategory === 'Kids') {
+      return {
+        isAllowed: false,
+        message: 'Você está matriculado na turma Adulto e não pode fazer check-in em aulas da turma Kids.'
+      };
+    }
+
+    return { isAllowed: true, message: null };
+  }, [student?.turma, getAulaCategory]);
+
   // Verifica se uma aula está no dia e na janela de horário permitida (entre 24h antes e 2h após a aula)
   const getAulaStatus = (aula: Aula, dateStr: string) => {
     const [startStr, endStr] = aula.hora.split(' - ');
@@ -131,12 +166,19 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
     setSuccessMessage(null);
 
     try {
+      // 1. Validação de categoria de turma
+      const categoryValidation = getCategoryValidation(aula);
+      if (!categoryValidation.isAllowed) {
+        throw new Error(categoryValidation.message || 'Check-in não permitido para sua turma.');
+      }
+
+      // 2. Validação da janela de horário
       const status = getAulaStatus(aula, selectedDate);
       if (!status.isOpen) {
         throw new Error('O check-in só pode ser feito entre 24h antes do treino e até 2h após seu encerramento.');
       }
 
-      // Validação de redundância local antes de enviar baseada na data selecionada
+      // 3. Validação de redundância local antes de enviar
       const alreadyCheckedIn = attendances.some(
         att => att.aulaId === aula.id && att.data === selectedDate
       );
@@ -158,6 +200,33 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
       setErrorMessage(err.message || 'Falha ao confirmar presença. Tente novamente.');
     } finally {
       setCheckingIn(null);
+    }
+  };
+
+  // Trata o envio do Check-in Externo
+  const handleExternalCheckInSubmit = async (data: {
+    data: string;
+    horario: string;
+    localExterno: string;
+    observacao?: string;
+  }) => {
+    if (!alunoId) return;
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      await attendanceService.checkInExternal(
+        alunoId,
+        data.data,
+        data.localExterno,
+        data.horario,
+        data.observacao
+      );
+      setSuccessMessage(`Check-in externo registrado em "${data.localExterno}" com sucesso! 🥋`);
+      await loadData();
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Falha ao registrar check-in externo.');
+      throw err;
     }
   };
 
@@ -220,26 +289,36 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
           </p>
         </div>
 
-        <button
-          onClick={loadData}
-          disabled={loading}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-obsidian-900 border border-obsidian-800 text-slate-300 hover:text-white transition-all text-xs font-black uppercase tracking-wider self-start sm:self-auto disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar dados
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={() => setIsExternalModalOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-obsidian-950 transition-all text-xs font-black uppercase tracking-wider shadow-lg shadow-amber-500/20"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            Check-in Externo
+          </button>
+
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-obsidian-900 border border-obsidian-800 text-slate-300 hover:text-white transition-all text-xs font-black uppercase tracking-wider disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar dados
+          </button>
+        </div>
       </div>
 
       {/* Mensagens de Feedback */}
       {successMessage && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center gap-3 text-sm">
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center gap-3 text-sm animate-fade-in">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
           <p className="font-semibold">{successMessage}</p>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex items-center gap-3 text-sm">
+        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex items-center gap-3 text-sm animate-fade-in">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <p className="font-semibold">{errorMessage}</p>
         </div>
@@ -331,6 +410,8 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredClasses.map(aula => {
               const status = getAulaStatus(aula, selectedDate);
+              const categoryValidation = getCategoryValidation(aula);
+              const classCategory = getAulaCategory(aula);
               
               // Verifica se o aluno já fez check-in nesta aula na data selecionada
               const confirmedAttendance = attendances.find(
@@ -341,12 +422,14 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
               let buttonText = 'Realizar Check-in';
               if (isConfirmed) {
                 buttonText = 'Presença Confirmada';
+              } else if (!categoryValidation.isAllowed) {
+                buttonText = `Restrito para ${student?.turma || 'sua turma'}`;
               } else if (checkingIn === aula.id) {
                 buttonText = 'Confirmando...';
               }
 
               // Destaca a turma recomendada do aluno
-              const isStudentTurma = student?.turma === aula.categoria || (aula.turmaId && turmas.find(t => t.id === aula.turmaId)?.categoria === student?.turma);
+              const isStudentTurma = student?.turma === classCategory;
 
               return (
                 <div 
@@ -354,9 +437,11 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
                   className={`p-4 rounded-xl border flex flex-col justify-between gap-4 transition-all relative ${
                     isConfirmed 
                       ? 'bg-emerald-950/5 border-emerald-900/30' 
-                      : isStudentTurma 
-                        ? 'bg-obsidian-900/50 border-obsidian-800 hover:border-zinc-700/40' 
-                        : 'bg-obsidian-900/30 border-obsidian-850/60 opacity-75'
+                      : !categoryValidation.isAllowed
+                        ? 'bg-obsidian-950/40 border-obsidian-850/40 opacity-60'
+                        : isStudentTurma 
+                          ? 'bg-obsidian-900/50 border-obsidian-800 hover:border-zinc-700/40' 
+                          : 'bg-obsidian-900/30 border-obsidian-850/60 opacity-75'
                   }`}
                 >
                   {isStudentTurma && !isConfirmed && (
@@ -366,12 +451,19 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-slate-300 uppercase tracking-widest bg-obsidian-850 px-2 py-0.5 border border-obsidian-800">
-                        {aula.categoria || 'Treino'}
+                        {classCategory}
                       </span>
 
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border rounded-full ${status.badgeClass}`}>
-                        {isConfirmed ? 'Confirmado' : status.label}
-                      </span>
+                      {!categoryValidation.isAllowed ? (
+                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border rounded-full bg-red-500/10 text-red-400 border-red-500/20 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Incompatível
+                        </span>
+                      ) : (
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border rounded-full ${status.badgeClass}`}>
+                          {isConfirmed ? 'Confirmado' : status.label}
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="text-sm font-black text-slate-100 flex items-center gap-1.5 mt-1">
@@ -382,10 +474,17 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
                     <p className="text-xs text-zinc-450 font-semibold">
                       Professor: <span className="text-zinc-300">{aula.professor}</span>
                     </p>
+
+                    {!categoryValidation.isAllowed && (
+                      <p className="text-[10px] text-red-400 font-semibold mt-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        {categoryValidation.message}
+                      </p>
+                    )}
                   </div>
 
                   <button
-                    disabled={!status.isOpen || checkingIn !== null}
+                    disabled={!status.isOpen || !categoryValidation.isAllowed || checkingIn !== null}
                     onClick={() => {
                       if (isConfirmed) {
                         if (confirmedAttendance) handleCancelCheckIn(confirmedAttendance.id);
@@ -398,9 +497,9 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
                         ? status.isOpen
                           ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 cursor-pointer group/btn'
                           : 'bg-emerald-900/25 border-emerald-800/40 text-emerald-400 cursor-default'
-                        : status.isOpen
-                          ? 'bg-slate-100 border-transparent text-obsidian-950 hover:bg-white hover:scale-[1.01] active:scale-95'
-                          : 'bg-obsidian-900 border-obsidian-850 text-zinc-650 cursor-not-allowed'
+                        : (!status.isOpen || !categoryValidation.isAllowed)
+                          ? 'bg-obsidian-900 border-obsidian-850 text-zinc-650 cursor-not-allowed'
+                          : 'bg-slate-100 border-transparent text-obsidian-950 hover:bg-white hover:scale-[1.01] active:scale-95'
                     }`}
                   >
                     {isConfirmed ? (
@@ -449,7 +548,7 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
                 <tr className="border-b border-obsidian-850 text-[9px] text-zinc-500 font-black uppercase tracking-wider">
                   <th className="py-3 px-4">Data</th>
                   <th className="py-3 px-4">Horário Check-in</th>
-                  <th className="py-3 px-4">Aula / Professor</th>
+                  <th className="py-3 px-4">Aula / Local</th>
                   <th className="py-3 px-4">Turma / Categoria</th>
                   <th className="py-3 px-4 text-right">Ações</th>
                 </tr>
@@ -464,15 +563,37 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
                       {att.horario.substring(0, 5)}
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-200">
-                      <div>{att.aulaHora}</div>
-                      <div className="text-[10px] text-zinc-500 font-medium mt-0.5">
-                        Prof. {att.professorNome}
-                      </div>
+                      {att.isExterno ? (
+                        <div>
+                          <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            <span>{att.localExterno || 'Academia Externa'}</span>
+                          </div>
+                          {att.observacao && (
+                            <div className="text-[10px] text-zinc-500 font-medium mt-0.5">
+                              {att.observacao}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <div>{att.aulaHora}</div>
+                          <div className="text-[10px] text-zinc-500 font-medium mt-0.5">
+                            Prof. {att.professorNome}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5">
-                        {att.aulaCategoria || att.turmaNome || 'Geral'}
-                      </span>
+                      {att.isExterno ? (
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded">
+                          EXTERNO
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5">
+                          {att.aulaCategoria || att.turmaNome || 'Geral'}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
@@ -491,6 +612,13 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
           </div>
         )}
       </div>
+
+      {/* Modal de Check-in Externo */}
+      <ExternalCheckInModal
+        isOpen={isExternalModalOpen}
+        onClose={() => setIsExternalModalOpen(false)}
+        onSubmit={handleExternalCheckInSubmit}
+      />
     </div>
   );
 };

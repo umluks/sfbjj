@@ -507,23 +507,35 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Aula / Cronograma</span>
                     <p className="text-xs font-semibold text-slate-100 flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                      {lastTrainingSession.aulaHora || 'Horário avulso'}
+                      {lastTrainingSession.isExterno 
+                        ? `Treino em ${lastTrainingSession.localExterno || 'Academia Externa'}` 
+                        : (lastTrainingSession.aulaHora || 'Horário avulso')}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Professor Ministrante</span>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">
+                      {lastTrainingSession.isExterno ? 'Local / Academia' : 'Professor Ministrante'}
+                    </span>
                     <p className="text-xs font-semibold text-slate-150 flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5 text-zinc-500" />
-                      Prof. {lastTrainingSession.professorNome || 'Não informado'}
+                      {lastTrainingSession.isExterno 
+                        ? (lastTrainingSession.localExterno || 'Academia Externa') 
+                        : `Prof. ${lastTrainingSession.professorNome || 'Não informado'}`}
                     </p>
                   </div>
 
                   <div className="space-y-1">
                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Turma / Categoria</span>
-                    <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 mt-1">
-                      {lastTrainingSession.aulaCategoria || lastTrainingSession.turmaNome || 'Geral'}
-                    </span>
+                    {lastTrainingSession.isExterno ? (
+                      <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 mt-1 rounded">
+                        EXTERNO
+                      </span>
+                    ) : (
+                      <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 mt-1">
+                        {lastTrainingSession.aulaCategoria || lastTrainingSession.turmaNome || 'Geral'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </>
@@ -554,7 +566,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
                     <tr className="border-b border-obsidian-850 text-[9.5px] text-zinc-500 font-black uppercase tracking-wider">
                       <th className="pb-3 px-3">Data</th>
                       <th className="pb-3 px-3">Entrada</th>
-                      <th className="pb-3 px-3">Aula / Professor</th>
+                      <th className="pb-3 px-3">Aula / Professor / Local</th>
                       <th className="pb-3 px-3">Turma</th>
                     </tr>
                   </thead>
@@ -568,15 +580,36 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
                           {att.horario.substring(0, 5)}
                         </td>
                         <td className="py-3 px-3 leading-relaxed">
-                          <span className="font-bold text-slate-200 block">{att.aulaHora}</span>
-                          <span className="text-[9.5px] text-zinc-500 font-medium block mt-0.5">
-                            Prof. {att.professorNome || 'Desconhecido'}
-                          </span>
+                          {att.isExterno ? (
+                            <>
+                              <span className="font-bold text-amber-400 block">
+                                Treino em {att.localExterno || 'Academia Externa'}
+                              </span>
+                              {att.observacao && (
+                                <span className="text-[9.5px] text-zinc-500 font-medium block mt-0.5">
+                                  {att.observacao}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-bold text-slate-200 block">{att.aulaHora}</span>
+                              <span className="text-[9.5px] text-zinc-500 font-medium block mt-0.5">
+                                Prof. {att.professorNome || 'Desconhecido'}
+                              </span>
+                            </>
+                          )}
                         </td>
                         <td className="py-3 px-3">
-                          <span className="text-[8.5px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/15 px-2 py-0.5">
-                            {att.aulaCategoria || att.turmaNome || 'Geral'}
-                          </span>
+                          {att.isExterno ? (
+                            <span className="text-[8.5px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
+                              EXTERNO
+                            </span>
+                          ) : (
+                            <span className="text-[8.5px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/15 px-2 py-0.5">
+                              {att.aulaCategoria || att.turmaNome || 'Geral'}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

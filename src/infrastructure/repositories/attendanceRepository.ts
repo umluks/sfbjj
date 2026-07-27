@@ -8,16 +8,19 @@ export class AttendanceRepository implements IAttendanceRepository {
     return {
       id: dbItem.id,
       alunoId: dbItem.aluno_id,
-      aulaId: dbItem.aula_id,
+      aulaId: dbItem.aula_id || undefined,
       turmaId: dbItem.turma_id || undefined,
       data: dbItem.data,
       horario: dbItem.horario,
       createdAt: dbItem.created_at,
       alunoNome: dbItem.alunos?.nome || dbItem.aluno?.nome || 'Desconhecido',
-      turmaNome: dbItem.turmas?.nome || dbItem.turma?.nome || '',
-      aulaHora: dbItem.aulas?.hora || dbItem.aula?.hora || '',
-      aulaCategoria: dbItem.aulas?.categoria || dbItem.aula?.categoria || '',
-      professorNome: dbItem.aulas?.professor || dbItem.aula?.professor || ''
+      turmaNome: dbItem.is_externo ? 'Treino Externo' : (dbItem.turmas?.nome || dbItem.turma?.nome || ''),
+      aulaHora: dbItem.is_externo ? (dbItem.local_externo ? `Treino em ${dbItem.local_externo}` : 'Treino Externo') : (dbItem.aulas?.hora || dbItem.aula?.hora || ''),
+      aulaCategoria: dbItem.is_externo ? 'Externo' : (dbItem.aulas?.categoria || dbItem.aula?.categoria || ''),
+      professorNome: dbItem.is_externo ? (dbItem.local_externo || 'Externo') : (dbItem.aulas?.professor || dbItem.aula?.professor || ''),
+      isExterno: dbItem.is_externo || false,
+      localExterno: dbItem.local_externo || undefined,
+      observacao: dbItem.observacao || undefined
     };
   }
 
@@ -36,6 +39,9 @@ export class AttendanceRepository implements IAttendanceRepository {
           turma_id,
           data,
           horario,
+          is_externo,
+          local_externo,
+          observacao,
           created_at,
           alunos (nome),
           aulas (hora, professor, categoria),
@@ -86,6 +92,9 @@ export class AttendanceRepository implements IAttendanceRepository {
         turma_id,
         data,
         horario,
+        is_externo,
+        local_externo,
+        observacao,
         created_at,
         alunos (nome),
         aulas (hora, professor, categoria),
@@ -98,7 +107,55 @@ export class AttendanceRepository implements IAttendanceRepository {
     }
 
     cache.clearByPrefix('attendance');
-    // Como a frequência altera a visualização do perfil/histórico do aluno, limpamos também o cache do aluno
+    cache.clear('students');
+    cache.clear(`student_${alunoId}`);
+
+    return this.mapDbToModel(data);
+  }
+
+  async checkInExternal(
+    alunoId: number,
+    dataStr: string,
+    localExterno: string,
+    horarioStr?: string,
+    observacao?: string
+  ): Promise<Frequencia> {
+    const defaultTime = new Date().toTimeString().split(' ')[0];
+    const payload: any = {
+      aluno_id: alunoId,
+      aula_id: null,
+      data: dataStr,
+      horario: horarioStr || defaultTime,
+      is_externo: true,
+      local_externo: localExterno,
+      observacao: observacao || null
+    };
+
+    const { data, error } = await supabase
+      .from('frequencias')
+      .insert(payload)
+      .select(`
+        id,
+        aluno_id,
+        aula_id,
+        turma_id,
+        data,
+        horario,
+        is_externo,
+        local_externo,
+        observacao,
+        created_at,
+        alunos (nome),
+        aulas (hora, professor, categoria),
+        turmas (nome)
+      `)
+      .single();
+
+    if (error) {
+      throw handleSupabaseError(error, `Erro ao realizar check-in externo: ${error.message}`);
+    }
+
+    cache.clearByPrefix('attendance');
     cache.clear('students');
     cache.clear(`student_${alunoId}`);
 
@@ -125,9 +182,12 @@ export class AttendanceRepository implements IAttendanceRepository {
           turma_id,
           data,
           horario,
+          is_externo,
+          local_externo,
+          observacao,
           created_at,
           alunos (nome),
-          aulas!inner (hora, professor, categoria),
+          aulas (hora, professor, categoria),
           turmas (nome)
         `);
 
@@ -138,7 +198,11 @@ export class AttendanceRepository implements IAttendanceRepository {
         query = query.lte('data', filters.endDate);
       }
       if (filters.categoria) {
-        query = query.eq('aulas.categoria', filters.categoria);
+        if (filters.categoria === 'Externo') {
+          query = query.eq('is_externo', true);
+        } else {
+          query = query.eq('aulas.categoria', filters.categoria);
+        }
       }
       if (filters.alunoId) {
         query = query.eq('aluno_id', filters.alunoId);

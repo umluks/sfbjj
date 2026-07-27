@@ -12,6 +12,17 @@ export class AttendanceService {
     return this.attendanceRepo.checkIn(alunoId, aulaId, turmaId, dateStr);
   }
 
+  async checkInExternal(
+    alunoId: number,
+    dataStr: string,
+    localExterno: string,
+    horarioStr?: string,
+    observacao?: string
+  ): Promise<Frequencia> {
+    return this.attendanceRepo.checkInExternal(alunoId, dataStr, localExterno, horarioStr, observacao);
+  }
+
+
   async deleteAttendance(attendanceId: number): Promise<void> {
     return this.attendanceRepo.deleteAttendance(attendanceId);
   }

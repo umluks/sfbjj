@@ -111,13 +111,13 @@ export const AttendanceReportPage: React.FC = () => {
   const handleExportCSV = () => {
     if (attendances.length === 0) return;
     
-    const headers = ['Aluno', 'Data', 'Horário', 'Professor', 'Turma/Categoria'];
+    const headers = ['Aluno', 'Data', 'Horário', 'Professor / Local', 'Turma / Categoria'];
     const rows = attendances.map(att => [
       att.alunoNome || 'Desconhecido',
       formatDate(att.data),
       att.horario.substring(0, 5),
-      att.professorNome || 'N/A',
-      att.aulaCategoria || att.turmaNome || 'Geral'
+      att.isExterno ? `Local: ${att.localExterno || 'Externo'}` : (att.professorNome ? `Prof. ${att.professorNome}` : 'N/A'),
+      att.isExterno ? 'Externo' : (att.aulaCategoria || att.turmaNome || 'Geral')
     ]);
 
     const csvContent = [
@@ -245,6 +245,7 @@ export const AttendanceReportPage: React.FC = () => {
                 <option value="Adulto">Adulto</option>
                 <option value="Kids">Kids</option>
                 <option value="Open Match">Open Match</option>
+                <option value="Externo">Treino Externo</option>
               </select>
               <div className="absolute right-3 top-3.5 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-zinc-500 pointer-events-none" />
             </div>
@@ -296,7 +297,7 @@ export const AttendanceReportPage: React.FC = () => {
                   <th className="py-3 px-4">Aluno</th>
                   <th className="py-3 px-4">Data</th>
                   <th className="py-3 px-4">Horário Check-in</th>
-                  <th className="py-3 px-4">Aula / Professor</th>
+                  <th className="py-3 px-4">Aula / Professor / Local</th>
                   <th className="py-3 px-4">Turma / Categoria</th>
                 </tr>
               </thead>
@@ -313,15 +314,36 @@ export const AttendanceReportPage: React.FC = () => {
                       {att.horario.substring(0, 5)}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-300">{att.aulaHora}</div>
-                      <div className="text-[10px] text-zinc-500 mt-0.5">
-                        Prof. {att.professorNome}
-                      </div>
+                      {att.isExterno ? (
+                        <div>
+                          <div className="font-bold text-amber-400">
+                            Treino em {att.localExterno || 'Academia Externa'}
+                          </div>
+                          {att.observacao && (
+                            <div className="text-[10px] text-zinc-500 mt-0.5">
+                              {att.observacao}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="font-semibold text-slate-300">{att.aulaHora}</div>
+                          <div className="text-[10px] text-zinc-500 mt-0.5">
+                            Prof. {att.professorNome}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5">
-                        {att.aulaCategoria || att.turmaNome || 'Geral'}
-                      </span>
+                      {att.isExterno ? (
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded">
+                          EXTERNO
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5">
+                          {att.aulaCategoria || att.turmaNome || 'Geral'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

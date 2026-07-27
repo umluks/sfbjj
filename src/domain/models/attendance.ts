@@ -1,7 +1,7 @@
 export interface Frequencia {
   id: number;
   alunoId: number;
-  aulaId: number;
+  aulaId?: number | null;
   turmaId?: number;
   data: string; // YYYY-MM-DD
   horario: string; // HH:MM:SS
@@ -12,4 +12,8 @@ export interface Frequencia {
   aulaHora?: string;
   aulaCategoria?: string;
   professorNome?: string;
+  isExterno?: boolean;
+  localExterno?: string;
+  observacao?: string;
 }
+
