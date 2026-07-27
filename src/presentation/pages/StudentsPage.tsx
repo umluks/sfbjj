@@ -216,16 +216,16 @@ export const StudentsPage: React.FC = () => {
         </div>
 
         {!isTeacher && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowImportModal(true)}
-              className="btn-obsidian py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-lg"
+              className="btn-obsidian py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-lg flex-1 sm:flex-initial"
             >
               Importar Planilha
             </button>
             <button
               onClick={handleOpenCreate}
-              className="btn-gold py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2"
+              className="btn-gold py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
               <UserPlus className="w-4.5 h-4.5" />
               Novo Aluno

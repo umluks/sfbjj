@@ -4,21 +4,18 @@ import {
   Users,
   DollarSign,
   Calendar,
-  Menu,
-  X,
-  Flame,
   User,
   LogOut,
   Shield,
   Award,
   BookOpen,
-  Download,
   Mail,
   ClipboardCheck,
   Trophy,
   ChevronLeft,
   ChevronRight,
-  Globe
+  Globe,
+  Download
 } from 'lucide-react';
 import type { LoggedUser } from '@/domain/models/auth';
 import logoSFBJJ from '@/assets/logo-sfbjj.png';
@@ -42,7 +39,6 @@ const getShortName = (fullName: string) => {
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, loggedUser, onLogout }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem('sfbjj_sidebar_collapsed');
@@ -114,48 +110,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
 
   const handleTabChange = (tabId: string) => {
     setCurrentTab(tabId);
-    setIsOpen(false);
   };
 
   const shortName = getShortName(loggedUser.nome);
 
   return (
     <>
-      {/* Mobile Header */}
-      <header className="md:hidden flex items-center justify-between bg-obsidian-950 border-b border-obsidian-900 px-4 py-3.5 sticky top-0 z-40">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1 bg-gradient-to-br from-zinc-200 to-zinc-400 rounded-none text-obsidian-950 font-bold">
-            <Flame className="w-4.5 h-4.5 text-obsidian-950" />
-          </div>
-          <span className="font-extrabold text-sm tracking-wider text-zinc-100 uppercase">
-            Sagrada Família <span className="text-zinc-400 font-black">BJJ</span>
-          </span>
-        </div>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="text-zinc-400 hover:text-zinc-100 transition-colors p-1"
-          aria-label="Toggle Menu"
-        >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </header>
-
-      {/* Mobile Drawer Backdrop */}
-      {isOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity duration-300"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar Container (Desktop & Mobile Drawer) */}
+      {/* Sidebar Container (Apenas Desktop: md:flex) */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 bg-obsidian-950 border-r border-obsidian-900
-        flex flex-col transform transition-transform duration-300 ease-in-out h-full
-        md:translate-x-0 md:static md:h-screen md:relative
-        ${isCollapsed ? 'md:w-20' : 'md:w-64'}
-        w-64
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        hidden md:flex inset-y-0 left-0 z-50 bg-obsidian-950 border-r border-obsidian-900
+        flex-col transform transition-all duration-300 ease-in-out h-screen sticky top-0
+        ${isCollapsed ? 'w-20' : 'w-64'}
       `}>
         {/* Botão de colapsar (apenas desktop) */}
         <button
@@ -258,10 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
           )}
 
           <button
-            onClick={() => {
-              onLogout();
-              setIsOpen(false);
-            }}
+            onClick={onLogout}
             title={isCollapsed ? "Sair da Conta" : undefined}
             className={`flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-950/10 transition-all duration-200 font-bold uppercase border border-obsidian-900 hover:border-red-950/20 ${isCollapsed ? 'p-2.5 rounded-none' : 'w-full gap-2 px-4 py-2.5 rounded-none text-[9px] tracking-widest'}`}
           >

@@ -80,40 +80,35 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
     loadData();
   }, [loadData]);
 
-  // Verifica se uma aula está no dia e na janela de horário atuais ou no futuro
+  // Verifica se uma aula está no dia e na janela de horário permitida (entre 24h antes e 2h após a aula)
   const getAulaStatus = (aula: Aula, dateStr: string) => {
-    const todayStr = now.toISOString().split('T')[0];
-    
-    // Se for no futuro (data selecionada > hoje)
-    if (dateStr > todayStr) {
-      return { 
-        isOpen: true, 
-        badgeClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse', 
-        label: 'Reserva Disponível' 
-      };
-    }
-    
-    // Se for no passado (data selecionada < hoje)
-    if (dateStr < todayStr) {
-      return { 
-        isOpen: false, 
-        badgeClass: 'bg-zinc-850 text-zinc-500 border-zinc-800', 
-        label: 'Encerrada (Histórico)' 
-      };
-    }
-
-    // Se for hoje (dateStr === todayStr)
     const [startStr, endStr] = aula.hora.split(' - ');
     if (!startStr || !endStr) {
       return { isOpen: false, badgeClass: 'bg-red-955/20 text-red-400 border-red-900/30', label: 'Horário inválido' };
     }
 
-    const [endH, endM] = endStr.split(':').map(Number);
-    const endMin = endH * 60 + endM;
-    const currentMin = now.getHours() * 60 + now.getMinutes();
+    const classStart = new Date(`${dateStr}T${startStr.trim()}:00`);
+    const classEnd = new Date(`${dateStr}T${endStr.trim()}:00`);
 
-    // Se a aula de hoje já terminou
-    if (currentMin > endMin) {
+    if (isNaN(classStart.getTime()) || isNaN(classEnd.getTime())) {
+      return { isOpen: false, badgeClass: 'bg-red-955/20 text-red-400 border-red-900/30', label: 'Horário inválido' };
+    }
+
+    // Janela de abertura: 24 horas antes do início da aula
+    const windowOpenTime = classStart.getTime() - (24 * 60 * 60 * 1000);
+    // Janela de encerramento: 2 horas após o término da aula
+    const windowCloseTime = classEnd.getTime() + (2 * 60 * 60 * 1000);
+    const currentTime = now.getTime();
+
+    if (currentTime < windowOpenTime) {
+      return { 
+        isOpen: false, 
+        badgeClass: 'bg-zinc-850 text-zinc-500 border-zinc-800', 
+        label: 'Abre 24h antes' 
+      };
+    }
+
+    if (currentTime > windowCloseTime) {
       return { 
         isOpen: false, 
         badgeClass: 'bg-zinc-900/80 text-zinc-650 border-zinc-850', 
@@ -121,7 +116,6 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
       };
     }
 
-    // Se a aula de hoje ainda não terminou (permitindo check-in antecipado no mesmo dia)
     return { 
       isOpen: true, 
       badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 animate-pulse', 
@@ -137,6 +131,11 @@ export const MyAttendancePage: React.FC<MyAttendancePageProps> = ({ alunoId }) =
     setSuccessMessage(null);
 
     try {
+      const status = getAulaStatus(aula, selectedDate);
+      if (!status.isOpen) {
+        throw new Error('O check-in só pode ser feito entre 24h antes do treino e até 2h após seu encerramento.');
+      }
+
       // Validação de redundância local antes de enviar baseada na data selecionada
       const alreadyCheckedIn = attendances.some(
         att => att.aulaId === aula.id && att.data === selectedDate

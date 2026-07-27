@@ -164,9 +164,28 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
   };
 
   // Handlers para o histórico de graduação do aluno
+  const formatGradDateStr = (data: string): string => {
+    if (!data) return new Date().toISOString().substring(0, 10);
+    if (data.length === 7) return `${data}-01`;
+    return data;
+  };
+
+  const syncStudentCurrentBelt = async (studentId: number) => {
+    const updated = await studentService.getStudentById(studentId);
+    if (updated) {
+      setLocalStudent(updated);
+      if (updated.historicoGraduacoes && updated.historicoGraduacoes.length > 0) {
+        const sorted = [...updated.historicoGraduacoes].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        const latest = sorted[0];
+        await updateStudent(studentId, { faixa: latest.faixa, graus: latest.graus, dataUltimaGraduacao: latest.data });
+      }
+    }
+    await loadStudents();
+  };
+
   const handleAddGraduacao = async (faixa: Belt, graus: Degree, data: string) => {
     if (!student) return;
-    const dateStr = `${data}-01`;
+    const dateStr = formatGradDateStr(data);
     const avaliador = loggedUser?.nome || 'Avaliador';
     
     await studentService.addGraduation(student.id, {
@@ -176,49 +195,45 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
       avaliador
     });
 
-    // Atualiza a faixa atual do aluno no perfil
-    await updateStudent(student.id, { faixa, graus, dataUltimaGraduacao: dateStr });
-
-    // Recarrega informações do aluno para atualizar a UI
-    const updated = await studentService.getStudentById(student.id);
-    if (updated) setLocalStudent(updated);
-    await loadStudents();
-
+    await syncStudentCurrentBelt(student.id);
     alert('Graduação registrada com sucesso!');
   };
 
   const handleUpdateGraduacao = async (gradId: number, faixa: Belt, graus: Degree, data: string) => {
     if (!student) return;
-    const dateStr = `${data}-01`;
-    
-    await studentService.updateGraduation(gradId, {
-      faixa,
-      graus,
-      data_graduacao: dateStr
-    });
+    const dateStr = formatGradDateStr(data);
 
-    // Atualiza a faixa atual do aluno no perfil
-    await updateStudent(student.id, { faixa, graus });
+    if (gradId < 0) {
+      // Se for um registro sintético (-999), insere no banco como nova graduação
+      const avaliador = loggedUser?.nome || 'Avaliador';
+      await studentService.addGraduation(student.id, {
+        faixa,
+        graus,
+        data_graduacao: dateStr,
+        avaliador
+      });
+    } else {
+      await studentService.updateGraduation(gradId, {
+        faixa,
+        graus,
+        data_graduacao: dateStr
+      });
+    }
 
-    const updated = await studentService.getStudentById(student.id);
-    if (updated) setLocalStudent(updated);
-    await loadStudents();
-
+    await syncStudentCurrentBelt(student.id);
     alert('Graduação atualizada com sucesso!');
   };
 
   const handleDeleteGraduacao = async (gradId: number) => {
     if (!student) return;
+    if (gradId < 0) return;
+
     await studentService.deleteGraduation(gradId);
-
-    const updated = await studentService.getStudentById(student.id);
-    if (updated) setLocalStudent(updated);
-    await loadStudents();
-
+    await syncStudentCurrentBelt(student.id);
     alert('Graduação removida com sucesso!');
   };
 
-  const isProfileOfStudent = isStudent || isEditingOtherStudent;
+  const isProfileOfStudent = isStudent || isEditingOtherStudent || loggedUser?.role === 'admin';
 
   if (loading) {
     return <div className="text-center py-12 text-slate-500 font-bold uppercase tracking-wider text-xs">Carregando perfil...</div>;
@@ -245,48 +260,46 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Menu Lateral de Sub-abas */}
+        {/* Menu Lateral/Horizontal de Sub-abas */}
         {!hideSidebarMenu && (
-          <div className="lg:col-span-3 bg-obsidian-900 border border-obsidian-850 p-4 space-y-1 rounded-2xl shadow-lg">
+          <div className="lg:col-span-3 bg-obsidian-900 border border-obsidian-850 p-2 sm:p-4 rounded-2xl shadow-lg flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2 lg:gap-1 no-scrollbar shrink-0">
             <button
               onClick={() => setActiveSubTab('profile')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+              className={`w-auto lg:w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 rounded-xl ${
                 activeSubTab === 'profile'
-                  ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
-                  : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
+                  ? 'bg-zinc-100/10 text-zinc-100 border border-zinc-200/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
               }`}
             >
               <User className="w-4 h-4 shrink-0" />
-              Dados Pessoais
+              <span>Dados Cadastrais</span>
             </button>
 
-            {isProfileOfStudent && student && (
+            {isProfileOfStudent && (
               <button
                 onClick={() => setActiveSubTab('graduacoes')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                className={`w-auto lg:w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 rounded-xl ${
                   activeSubTab === 'graduacoes'
-                    ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
-                    : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
+                    ? 'bg-zinc-100/10 text-zinc-100 border border-zinc-200/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
                 }`}
               >
                 <Award className="w-4 h-4 shrink-0" />
-                Histórico de Graduações
+                <span>Histórico de Graduações</span>
               </button>
             )}
 
-            {!isEditingOtherStudent && (
-              <button
-                onClick={() => setActiveSubTab('password')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-                  activeSubTab === 'password'
-                    ? 'bg-slate-100 text-obsidian-950 shadow-md shadow-black/10'
-                    : 'text-slate-400 hover:bg-obsidian-800 hover:text-slate-200'
-                }`}
-              >
-                <Lock className="w-4 h-4 shrink-0" />
-                Alterar Senha
-              </button>
-            )}
+            <button
+              onClick={() => setActiveSubTab('password')}
+              className={`w-auto lg:w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 rounded-xl ${
+                activeSubTab === 'password'
+                  ? 'bg-zinc-100/10 text-zinc-100 border border-zinc-200/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
+              }`}
+            >
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>Segurança / Senha</span>
+            </button>
           </div>
         )}
 
