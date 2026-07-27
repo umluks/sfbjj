@@ -138,6 +138,20 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
   };
 
   const handleSavePassword = async (currentPass: string, newPass: string) => {
+    // Se o usuário logado é Administrador, ele tem permissão para alterar diretamente a senha sem necessitar da senha atual
+    if (loggedUser?.role === 'admin') {
+      if (student) {
+        await studentService.updateStudent(student.id, { senha: newPass });
+      } else if (isEditingAdmin && loggedUser?.adminId) {
+        await adminService.updateAdmin(loggedUser.adminId, { senha: newPass });
+      } else if (isEditingTeacher && loggedUser?.professorId) {
+        await teacherService.updateTeacher(loggedUser.professorId, { senha: newPass });
+      } else {
+        throw new Error('Usuário não encontrado para redefinição de senha.');
+      }
+      return;
+    }
+
     if (isEditingAdmin && loggedUser?.adminId) {
       await adminService.changePassword(loggedUser.adminId, currentPass, newPass);
     } else if (isEditingTeacher && loggedUser?.professorId) {
@@ -162,15 +176,14 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
       avaliador
     });
 
+    // Atualiza a faixa atual do aluno no perfil
+    await updateStudent(student.id, { faixa, graus, dataUltimaGraduacao: dateStr });
+
     // Recarrega informações do aluno para atualizar a UI
-    if (alunoId) {
-      const updated = await studentService.getStudentById(student.id);
-      if (updated) setLocalStudent(updated);
-      await loadStudents();
-    } else if (isStudent) {
-      const updated = await studentService.getStudentById(student.id);
-      if (updated) setLocalStudent(updated);
-    }
+    const updated = await studentService.getStudentById(student.id);
+    if (updated) setLocalStudent(updated);
+    await loadStudents();
+
     alert('Graduação registrada com sucesso!');
   };
 
@@ -184,14 +197,13 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
       data_graduacao: dateStr
     });
 
-    if (alunoId) {
-      const updated = await studentService.getStudentById(student.id);
-      if (updated) setLocalStudent(updated);
-      await loadStudents();
-    } else if (isStudent) {
-      const updated = await studentService.getStudentById(student.id);
-      if (updated) setLocalStudent(updated);
-    }
+    // Atualiza a faixa atual do aluno no perfil
+    await updateStudent(student.id, { faixa, graus });
+
+    const updated = await studentService.getStudentById(student.id);
+    if (updated) setLocalStudent(updated);
+    await loadStudents();
+
     alert('Graduação atualizada com sucesso!');
   };
 
@@ -199,14 +211,10 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
     if (!student) return;
     await studentService.deleteGraduation(gradId);
 
-    if (alunoId) {
-      const updated = await studentService.getStudentById(student.id);
-      if (updated) setLocalStudent(updated);
-      await loadStudents();
-    } else if (isStudent) {
-      const updated = await studentService.getStudentById(student.id);
-      if (updated) setLocalStudent(updated);
-    }
+    const updated = await studentService.getStudentById(student.id);
+    if (updated) setLocalStudent(updated);
+    await loadStudents();
+
     alert('Graduação removida com sucesso!');
   };
 
@@ -252,7 +260,7 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
               Dados Pessoais
             </button>
 
-            {isProfileOfStudent && student && !isStudent && (
+            {isProfileOfStudent && student && (
               <button
                 onClick={() => setActiveSubTab('graduacoes')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
@@ -295,14 +303,15 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
 
           {activeSubTab === 'password' && (
             <ChangePasswordForm 
-              onSavePassword={handleSavePassword} 
+              onSavePassword={handleSavePassword}
+              isAdminOverride={loggedUser?.role === 'admin'}
             />
           )}
 
           {activeSubTab === 'graduacoes' && student && (
             <GraduationHistoryTable
               student={student}
-              canEdit={isStudent} // No original, apenas o próprio aluno logado na sua conta gerenciava seu histórico diretamente da tela de perfil (ou o admin edita na ficha dele)
+              canEdit={isProfileOfStudent}
               onAddGraduacao={handleAddGraduacao}
               onUpdateGraduacao={handleUpdateGraduacao}
               onDeleteGraduacao={handleDeleteGraduacao}

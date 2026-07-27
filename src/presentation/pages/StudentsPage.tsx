@@ -6,6 +6,7 @@ import { StudentTable } from '@/presentation/components/students/StudentTable';
 import { StudentFormModal } from '@/presentation/components/students/StudentFormModal';
 import { StudentImportModal } from '@/presentation/components/students/StudentImportModal';
 import { StudentExportDropdown } from '@/presentation/components/students/StudentExportDropdown';
+import { AdminResetPasswordModal } from '@/presentation/components/students/AdminResetPasswordModal';
 import { Search, UserPlus } from 'lucide-react';
 
 export const StudentsPage: React.FC = () => {
@@ -22,6 +23,7 @@ export const StudentsPage: React.FC = () => {
   } = useStudents();
 
   const isTeacher = loggedUser?.role === 'teacher';
+  const isAdmin = loggedUser?.role === 'admin';
 
   // Seleção múltipla
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
@@ -46,6 +48,15 @@ export const StudentsPage: React.FC = () => {
   const [isReadOnlyModal, setIsReadOnlyModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Aluno | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Redefinição de Senha por Admin
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<{ id: number; name: string; type: 'student' | 'teacher' | 'admin' } | null>(null);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+
+  const handleOpenResetPassword = (student: Aluno) => {
+    setResetPasswordTarget({ id: student.id, name: student.nome, type: 'student' });
+    setShowResetPasswordModal(true);
+  };
 
   // Abertura de Modais
   const handleOpenCreate = () => {
@@ -386,8 +397,10 @@ export const StudentsPage: React.FC = () => {
           onView={handleOpenView}
           onEdit={handleOpenEdit}
           onDelete={handleOpenDelete}
+          onResetPassword={handleOpenResetPassword}
           isLoading={isLoading}
           isTeacher={isTeacher}
+          isAdmin={isAdmin}
         />
 
         {/* Paginação */}
@@ -482,6 +495,16 @@ export const StudentsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Redefinição de Senha por Admin */}
+      <AdminResetPasswordModal
+        isOpen={showResetPasswordModal}
+        onClose={() => {
+          setShowResetPasswordModal(false);
+          setResetPasswordTarget(null);
+        }}
+        targetUser={resetPasswordTarget}
+      />
     </div>
   );
 };

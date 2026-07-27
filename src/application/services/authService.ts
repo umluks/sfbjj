@@ -167,6 +167,120 @@ export class AuthService {
       return false;
     }
   }
+
+  /**
+   * Realiza a redefinição de senha com validação de identidade (CPF/E-mail + Dado de confirmação).
+   */
+  async resetPassword(params: {
+    identifier: string;
+    confirmationData: string;
+    newPasswordString: string;
+  }): Promise<{ message: string }> {
+    const username = params.identifier.trim().toLowerCase();
+    const cleanedCpfInput = username.replace(/\D/g, '');
+    const confirmVal = params.confirmationData.trim().toLowerCase();
+    const cleanConfirmDigits = confirmVal.replace(/\D/g, '');
+
+    if (!params.newPasswordString || params.newPasswordString.length < 6) {
+      throw new Error('A nova senha deve possuir no mínimo 6 caracteres.');
+    }
+
+    // 1. Tenta buscar em Alunos por CPF ou E-mail
+    let { data: student } = await supabase
+      .from('alunos')
+      .select('*')
+      .or(
+        username.includes('@')
+          ? `email.eq."${username}"`
+          : `cpf.eq."${username}",cpf.eq."${cleanedCpfInput}"`
+      )
+      .maybeSingle();
+
+    if (student) {
+      const studentEmail = (student.email || '').trim().toLowerCase();
+      const studentPhoneDigits = (student.telefone || '').replace(/\D/g, '');
+      const studentCpfDigits = (student.cpf || '').replace(/\D/g, '');
+
+      // Confirma se e-mail ou telefone informado bate com o aluno
+      const matchesEmail = studentEmail && studentEmail === confirmVal;
+      const matchesPhone = studentPhoneDigits && cleanConfirmDigits && studentPhoneDigits.endsWith(cleanConfirmDigits);
+      const matchesCpf = studentCpfDigits && cleanConfirmDigits && studentCpfDigits === cleanConfirmDigits;
+
+      if (!matchesEmail && !matchesPhone && !matchesCpf) {
+        throw new Error('Os dados de confirmação (e-mail ou telefone) não conferem com o cadastro deste aluno.');
+      }
+
+      const { error: updateErr } = await supabase
+        .from('alunos')
+        .update({ senha: params.newPasswordString })
+        .eq('id', student.id);
+
+      if (updateErr) {
+        throw new Error(`Erro ao redefinir senha do aluno: ${updateErr.message}`);
+      }
+
+      return { message: 'Senha do aluno redefinida com sucesso!' };
+    }
+
+    // 2. Tenta buscar em Professores por E-mail
+    if (username.includes('@')) {
+      const { data: prof } = await supabase
+        .from('professores')
+        .select('*')
+        .eq('email', username)
+        .maybeSingle();
+
+      if (prof) {
+        const profEmail = (prof.email || '').trim().toLowerCase();
+        const profPhoneDigits = (prof.telefone || '').replace(/\D/g, '');
+
+        const matchesEmail = profEmail && profEmail === confirmVal;
+        const matchesPhone = profPhoneDigits && cleanConfirmDigits && profPhoneDigits.endsWith(cleanConfirmDigits);
+
+        if (!matchesEmail && !matchesPhone) {
+          throw new Error('Os dados de confirmação não conferem com o cadastro deste professor.');
+        }
+
+        const { error: updateErr } = await supabase
+          .from('professores')
+          .update({ senha: params.newPasswordString })
+          .eq('id', prof.id);
+
+        if (updateErr) {
+          throw new Error(`Erro ao redefinir senha do professor: ${updateErr.message}`);
+        }
+
+        return { message: 'Senha do professor redefinida com sucesso!' };
+      }
+
+      // 3. Tenta buscar em Administradores por E-mail
+      const { data: admin } = await supabase
+        .from('administradores')
+        .select('*')
+        .eq('email', username)
+        .maybeSingle();
+
+      if (admin) {
+        const adminEmail = (admin.email || '').trim().toLowerCase();
+        if (adminEmail !== confirmVal) {
+          throw new Error('O e-mail de confirmação não confere com o administrador.');
+        }
+
+        const { error: updateErr } = await supabase
+          .from('administradores')
+          .update({ senha: params.newPasswordString })
+          .eq('id', admin.id);
+
+        if (updateErr) {
+          throw new Error(`Erro ao redefinir senha do administrador: ${updateErr.message}`);
+        }
+
+        return { message: 'Senha de administrador redefinida com sucesso!' };
+      }
+    }
+
+    throw new Error('Usuário não encontrado. Verifique o CPF ou E-mail informado.');
+  }
 }
 
 export const authService = new AuthService();

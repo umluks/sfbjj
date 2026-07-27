@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Belt, Degree, Gender } from '@/domain/models/student';
+import { getTurmaByAge } from '@/application/services/diplomaService';
 import { formatDate } from '@/utils/formatters';
 import { FileSpreadsheet, X, Upload } from 'lucide-react';
 
@@ -169,10 +170,7 @@ export const StudentImportModal: React.FC<StudentImportModalProps> = ({
       } else if (rawTurma.includes('adult') || rawTurma.includes('adul')) {
         classType = 'Adulto';
       } else {
-        const birthYear = parseInt(dataNasc.split('-')[0], 10);
-        if (birthYear >= 2010) {
-          classType = 'Kids';
-        }
+        classType = getTurmaByAge(dataNasc);
       }
 
       const dataMatr = parseCSVDate(getValue('dataMatricula')) || new Date().toISOString().split('T')[0];

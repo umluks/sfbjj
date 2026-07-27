@@ -168,30 +168,29 @@ export const GraduationHistoryTable: React.FC<GraduationHistoryTableProps> = ({
                     </td>
                     {canEdit && (
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        {grad.faixa === student.faixa && grad.graus === student.graus ? (
-                          <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 select-none font-sans">
-                            Faixa Atual
-                          </span>
-                        ) : (
-                          <div className="flex justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2">
+                          {grad.faixa === student.faixa && grad.graus === student.graus && (
+                            <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 select-none font-sans">
+                              Faixa Atual
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleOpenEdit(grad)}
+                            className="p-1.5 rounded-lg bg-obsidian-750 text-slate-300 hover:bg-slate-200/10 hover:text-slate-100 transition-all border border-obsidian-700"
+                            title="Editar"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          {grad.id !== -999 && (
                             <button
-                              onClick={() => handleOpenEdit(grad)}
-                              className="p-1.5 rounded-lg bg-obsidian-750 text-slate-300 hover:bg-slate-200/10 hover:text-slate-100 transition-all border border-obsidian-700"
-                              title="Editar"
+                              onClick={() => handleDelete(grad.id)}
+                              className="p-1.5 rounded-lg bg-obsidian-750 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all border border-obsidian-700"
+                              title="Excluir"
                             >
-                              <Edit className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                            {grad.id !== -999 && (
-                              <button
-                                onClick={() => handleDelete(grad.id)}
-                                className="p-1.5 rounded-lg bg-obsidian-750 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all border border-obsidian-700"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>

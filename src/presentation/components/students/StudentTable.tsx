@@ -9,7 +9,8 @@ import {
   Edit,
   Trash2,
   Square,
-  CheckSquare
+  CheckSquare,
+  KeyRound
 } from 'lucide-react';
 
 interface StudentTableProps {
@@ -20,8 +21,10 @@ interface StudentTableProps {
   onView: (student: Aluno) => void;
   onEdit: (student: Aluno) => void;
   onDelete: (student: Aluno) => void;
+  onResetPassword?: (student: Aluno) => void;
   isLoading?: boolean;
   isTeacher: boolean;
+  isAdmin?: boolean;
 }
 
 export const StudentTable: React.FC<StudentTableProps> = ({
@@ -32,8 +35,10 @@ export const StudentTable: React.FC<StudentTableProps> = ({
   onView,
   onEdit,
   onDelete,
+  onResetPassword,
   isLoading = false,
-  isTeacher
+  isTeacher,
+  isAdmin
 }) => {
   const isAllSelected = students.length > 0 && students.every(s => selectedIds.includes(s.id));
 
@@ -194,6 +199,16 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                   <Edit className="w-4 h-4 text-slate-450" />
                   {isTeacher ? 'Status' : 'Editar'}
                 </button>
+                {onResetPassword && (isAdmin || !isTeacher) && (
+                  <button
+                    onClick={() => onResetPassword(student)}
+                    className="py-2 px-3 rounded-lg bg-obsidian-950/80 hover:bg-amber-500/10 border border-obsidian-800 hover:border-amber-500/20 text-slate-455 hover:text-amber-400 flex items-center justify-center transition-colors"
+                    title="Redefinir Senha"
+                    type="button"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
+                )}
                 {!isTeacher && (
                   <button
                     onClick={() => onDelete(student)}
@@ -370,6 +385,16 @@ export const StudentTable: React.FC<StudentTableProps> = ({
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
+                      {onResetPassword && (isAdmin || !isTeacher) && (
+                        <button
+                          onClick={() => onResetPassword(student)}
+                          className="p-2 rounded bg-obsidian-950/80 hover:bg-amber-500/10 border border-obsidian-900 hover:border-amber-500/20 text-slate-400 hover:text-amber-400 transition-all"
+                          title="Redefinir Senha do Aluno"
+                          type="button"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {!isTeacher && (
                         <button
                           onClick={() => onDelete(student)}

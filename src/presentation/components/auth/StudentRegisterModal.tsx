@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Belt, Degree, Gender } from '@/domain/models/student';
 import { BAIRROS_DF } from '@/constants';
 import { formatCPF, formatPhone } from '@/utils/formatters';
-import { getBeltsByAge, getBjjAge } from '@/application/services/diplomaService';
+import { getBeltsByAge, getBjjAge, getTurmaByAge } from '@/application/services/diplomaService';
 import { authService } from '@/application/services/authService';
 import { compressImage } from '@/utils/imageCompressor';
 import { Shield, X, User, Heart, Lock, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -242,12 +242,7 @@ export const StudentRegisterModal: React.FC<StudentRegisterModalProps> = ({
                         if (!allowed.includes(faixa)) {
                           setFaixa(allowed[0]);
                         }
-                        const calcAge = getBjjAge(newDate);
-                        if (calcAge >= 4 && calcAge <= 12) {
-                          setTurma('Kids');
-                        } else if (calcAge >= 13) {
-                          setTurma('Adulto');
-                        }
+                        setTurma(getTurmaByAge(newDate));
                       }
                     }}
                     className="input-premium"

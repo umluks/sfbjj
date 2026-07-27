@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatCPF } from '@/utils/formatters';
 import { StudentRegisterModal } from '@/presentation/components/auth/StudentRegisterModal';
+import { ForgotPasswordModal } from '@/presentation/components/auth/ForgotPasswordModal';
 
 interface LoginPageProps {
   onLoginSuccess: (user: LoggedUser) => void;
@@ -26,6 +27,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
   const { login } = useAuth();
   const [cpfInput, setCpfInput] = useState('');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const handleIdentifierChange = (value: string) => {
@@ -158,6 +160,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
                 <label htmlFor="password" className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
                   Senha
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPasswordModal(true)}
+                  className="text-[11px] font-bold text-gold-450 hover:text-gold-400 hover:underline transition-colors focus:outline-none"
+                  disabled={loading}
+                >
+                  Esqueceu sua senha?
+                </button>
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-slate-300 transition-colors">
@@ -242,6 +252,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLa
           setPassword('');
           setError(null);
           setInfoMsg('Cadastro realizado com sucesso! Sua conta foi enviada para validação e aguarda a aprovação de um professor ou administrador para ser ativada.');
+        }}
+      />
+
+      {/* Modal de Esqueceu a Senha */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onSuccess={(identifier) => {
+          setShowForgotPasswordModal(false);
+          setCpfInput(identifier);
+          setPassword('');
+          setError(null);
+          setInfoMsg('Senha redefinida com sucesso! Agora você já pode entrar no sistema utilizando a sua nova senha.');
         }}
       />
     </div>

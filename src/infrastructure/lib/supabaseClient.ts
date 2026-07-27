@@ -40,24 +40,58 @@ export const cache = {
   },
   set: <T>(key: string, data: T): void => {
     try {
+      // Sanitiza dados antes de salvar no cache se forem listas grandes com base64
+      let cleanData = data;
+      if (Array.isArray(data)) {
+        cleanData = data.map((item: any) => {
+          if (item && typeof item === 'object') {
+            const copy = { ...item };
+            if (typeof copy.fotoPerfil === 'string' && (copy.fotoPerfil.startsWith('data:') || copy.fotoPerfil.length > 500)) {
+              delete copy.fotoPerfil;
+            }
+            if (typeof copy.foto_perfil === 'string' && (copy.foto_perfil.startsWith('data:') || copy.foto_perfil.length > 500)) {
+              delete copy.foto_perfil;
+            }
+            if (typeof copy.assinatura === 'string' && (copy.assinatura.startsWith('data:') || copy.assinatura.length > 500)) {
+              delete copy.assinatura;
+            }
+            return copy;
+          }
+          return item;
+        }) as any;
+      }
+
       localStorage.setItem(`sfbjj_cache_${key}`, JSON.stringify({
-        data,
+        data: cleanData,
         timestamp: Date.now()
       }));
     } catch (e) {
-      console.warn('Erro ao salvar no cache local:', e);
+      console.warn('Erro ao salvar no cache local. Limpando caches antigos...', e);
+      try {
+        cache.clearByPrefix('');
+        localStorage.setItem(`sfbjj_cache_${key}`, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+      } catch (err2) {
+        console.warn('Não foi possível gravar no cache local devido à cota de armazenamento.', err2);
+      }
     }
   },
   clear: (key: string): void => {
-    localStorage.removeItem(`sfbjj_cache_${key}`);
+    try {
+      localStorage.removeItem(`sfbjj_cache_${key}`);
+    } catch {}
   },
-  clearByPrefix: (prefix: string): void => {
+  clearByPrefix: (prefix: string = ''): void => {
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith(`sfbjj_cache_${prefix}`)) {
-          keysToRemove.push(key);
+        if (key && (prefix === '' || key.startsWith(`sfbjj_cache_${prefix}`))) {
+          if (key.startsWith('sfbjj_cache_')) {
+            keysToRemove.push(key);
+          }
         }
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));

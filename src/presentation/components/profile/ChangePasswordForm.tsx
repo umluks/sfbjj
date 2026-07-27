@@ -3,9 +3,10 @@ import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ChangePasswordFormProps {
   onSavePassword: (currentPass: string, newPass: string) => Promise<void>;
+  isAdminOverride?: boolean;
 }
 
-export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onSavePassword }) => {
+export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onSavePassword, isAdminOverride = false }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,7 +53,9 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onSavePa
       <div>
         <h2 className="text-xl font-bold text-slate-100">Alterar Senha de Acesso</h2>
         <p className="text-slate-400 text-xs mt-1">
-          Proteja sua conta alterando sua senha de acesso ao portal. A nova senha deve ter no mínimo 6 caracteres.
+          {isAdminOverride
+            ? 'Modo Administrador: Defina diretamente a nova senha para este usuário sem necessidade da senha atual.'
+            : 'Proteja sua conta alterando sua senha de acesso ao portal. A nova senha deve ter no mínimo 6 caracteres.'}
         </p>
       </div>
 
@@ -71,27 +74,29 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onSavePa
       )}
 
       <form onSubmit={handleFormSubmit} className="space-y-4 max-w-md">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Senha Atual</label>
-          <div className="relative">
-            <input
-              type={showCurrentPass ? 'text' : 'password'}
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="input-premium w-full pr-11"
-              required
-              disabled={submitting}
-            />
-            <button
-              type="button"
-              onClick={() => setShowCurrentPass(!showCurrentPass)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-330"
-              disabled={submitting}
-            >
-              {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+        {!isAdminOverride && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Senha Atual</label>
+            <div className="relative">
+              <input
+                type={showCurrentPass ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="input-premium w-full pr-11"
+                required={!isAdminOverride}
+                disabled={submitting}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPass(!showCurrentPass)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-330"
+                disabled={submitting}
+              >
+                {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nova Senha</label>

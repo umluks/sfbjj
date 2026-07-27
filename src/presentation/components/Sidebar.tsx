@@ -55,7 +55,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, log
   const toggleCollapse = () => {
     setIsCollapsed((prev: boolean) => {
       const next = !prev;
-      localStorage.setItem('sfbjj_sidebar_collapsed', JSON.stringify(next));
+      try {
+        localStorage.setItem('sfbjj_sidebar_collapsed', JSON.stringify(next));
+      } catch (e) {
+        console.warn('Erro ao salvar estado da barra lateral:', e);
+      }
       return next;
     });
   };

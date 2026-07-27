@@ -339,6 +339,11 @@ export const getBeltsByAge = (birthDateStr: string): Belt[] => {
   return ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'];
 };
 
+export const getTurmaByAge = (birthDateStr: string): 'Kids' | 'Adulto' => {
+  const age = getBjjAge(birthDateStr);
+  return age <= 14 ? 'Kids' : 'Adulto';
+};
+
 export const diplomaService = new DiplomaService();
 
 export default diplomaService;

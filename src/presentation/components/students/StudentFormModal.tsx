@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Aluno, Belt, Degree, Gender } from '@/domain/models/student';
 import { BAIRROS_DF, BELT_RANKS } from '@/constants';
-import { getBeltsByAge, getBjjAge } from '@/application/services/diplomaService';
+import { getBeltsByAge, getBjjAge, getTurmaByAge } from '@/application/services/diplomaService';
 import { formatCPF, formatPhone, formatMonthYear } from '@/utils/formatters';
 import { compressImage } from '@/utils/imageCompressor';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
@@ -356,12 +356,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                         setFaixa(allowed[0]);
                       }
                       if (newDate) {
-                        const age = getBjjAge(newDate);
-                        if (age >= 4 && age <= 12) {
-                          setTurma('Kids');
-                        } else if (age >= 13) {
-                          setTurma('Adulto');
-                        }
+                        setTurma(getTurmaByAge(newDate));
                       }
                     }}
                     className="input-premium"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Belt, Degree, Gender } from '@/domain/models/student';
 import { BAIRROS_DF } from '@/constants';
+import { getBeltsByAge, getTurmaByAge } from '@/application/services/diplomaService';
 
 interface PersonalInfoFormProps {
   initialData: {
@@ -256,7 +257,17 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                 <input
                   type="date"
                   value={dataNascimento}
-                  onChange={(e) => setDataNascimento(e.target.value)}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setDataNascimento(newDate);
+                    if (newDate) {
+                      setTurma(getTurmaByAge(newDate));
+                      const allowed = getBeltsByAge(newDate);
+                      if (!allowed.includes(faixa)) {
+                        setFaixa(allowed[0]);
+                      }
+                    }
+                  }}
                   className="input-premium w-full bg-obsidian-950 font-mono"
                   required
                   disabled={submitting || !isEditingOtherStudent}
@@ -319,6 +330,36 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                   {BAIRROS_DF.map(b => (
                     <option key={b} value={b}>{b}</option>
                   ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Faixa Atual</label>
+                <select
+                  value={faixa}
+                  onChange={(e) => setFaixa(e.target.value as Belt)}
+                  className="input-premium w-full bg-obsidian-950 text-gold-450 font-bold"
+                  disabled={submitting}
+                >
+                  {getBeltsByAge(dataNascimento).map((b: Belt) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Graus na Faixa</label>
+                <select
+                  value={graus}
+                  onChange={(e) => setGraus(Number(e.target.value) as Degree)}
+                  className="input-premium w-full bg-obsidian-950 text-gold-450 font-bold"
+                  disabled={submitting}
+                >
+                  <option value={0}>0 Grau</option>
+                  <option value={1}>1 Grau</option>
+                  <option value={2}>2 Graus</option>
+                  <option value={3}>3 Graus</option>
+                  <option value={4}>4 Graus</option>
                 </select>
               </div>
 
