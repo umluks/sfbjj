@@ -63,7 +63,7 @@ export const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     };
   };
 
-  const filteredPays = [...student.pagamentos]
+  const filteredPays = [...(student.pagamentos || [])]
     .filter(p => historyViewTab === 'all' || p.mesRef === selectedHistoryMonth)
     .sort((a, b) => {
       const valA = parseMesRef(a.mesRef);
@@ -122,7 +122,7 @@ export const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
               onChange={(e) => setSelectedHistoryMonth(e.target.value)}
               className="input-premium py-1 px-2 text-xs bg-obsidian-950 text-slate-205 font-semibold w-36"
             >
-              {Array.from(new Set(student.pagamentos.map(p => p.mesRef))).map(m => (
+              {Array.from(new Set((student.pagamentos || []).map(p => p.mesRef))).map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>

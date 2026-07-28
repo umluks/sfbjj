@@ -219,10 +219,18 @@ export const TechniquesPage: React.FC = () => {
       setSubmitting(true);
       if (editingTechnique) {
         // Atualização
-        await techniqueService.updateTechnique(editingTechnique.id, formData);
+        const isStudentEdit = !isEditor && loggedUser?.role === 'student';
+        const updatedPayload: Partial<Technique> = {
+          ...formData,
+          ...(isStudentEdit ? { status: 'pendente' as const } : {})
+        };
+        await techniqueService.updateTechnique(editingTechnique.id, updatedPayload);
         setTechniques(prev =>
-          prev.map(t => (t.id === editingTechnique.id ? { ...t, ...formData } : t))
+          prev.map(t => (t.id === editingTechnique.id ? { ...t, ...updatedPayload } : t))
         );
+        if (isStudentEdit) {
+          alert('Sua posição foi atualizada e reenviada para análise da administração!');
+        }
       } else {
         // Criação ou Sugestão
         const isStudentSubmit = !isEditor && loggedUser?.role === 'student';
@@ -303,7 +311,7 @@ export const TechniquesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 animate-fade-in text-left">
+    <div className="space-y-6 max-w-7xl w-full max-w-full min-w-0 mx-auto p-3 sm:p-4 md:p-6 animate-fade-in text-left overflow-x-hidden">
       {/* Header Principal */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-obsidian-850 pb-5">
         <div>
@@ -516,18 +524,18 @@ export const TechniquesPage: React.FC = () => {
                       </h3>
                     </div>
 
-                    {isEditor && (
+                    {(isEditor || (loggedUser?.role === 'student' && loggedUser?.alunoId && tech.aluno_id === loggedUser.alunoId)) && (
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => handleOpenEditModal(tech)}
-                          title="Editar técnica"
+                          title="Editar posição"
                           className="p-1.5 rounded bg-obsidian-900 hover:bg-obsidian-850 border border-obsidian-800 text-zinc-400 hover:text-white transition-colors"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(tech.id)}
-                          title="Excluir técnica"
+                          title="Excluir posição"
                           className="p-1.5 rounded bg-obsidian-900 hover:bg-red-950/20 border border-obsidian-800 hover:border-red-900/30 text-zinc-400 hover:text-red-400 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

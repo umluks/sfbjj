@@ -406,18 +406,18 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               </div>
 
               {/* Card de Categoria e Divisão Calculada do Aluno */}
-              <div className="col-span-1 sm:col-span-2 mt-2 p-5 bg-obsidian-950 border border-obsidian-850 rounded-2xl space-y-4 shadow-inner">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-obsidian-850 pb-3">
-                  <div>
-                    <span className="text-[10px] font-black text-gold-500 uppercase tracking-widest block">
+              <div className="col-span-1 sm:col-span-2 mt-2 p-4 sm:p-5 bg-obsidian-950 border border-obsidian-850 rounded-2xl space-y-4 shadow-inner w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-obsidian-850 pb-3 w-full min-w-0">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <span className="text-[10px] font-black text-gold-500 uppercase tracking-widest block leading-snug">
                       Resultado IBJJF Calculado (Ano de Referência: {ibjjfResult.currentYear})
                     </span>
-                    <span className="text-[11px] text-zinc-400 block mt-0.5">
+                    <span className="text-[11px] text-zinc-400 block leading-snug">
                       Categorias e tempo de luta oficiais baseados em seus dados cadastrais.
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 self-start sm:self-auto bg-obsidian-900 border border-obsidian-800 p-1 rounded-xl">
+                  <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto bg-obsidian-900 border border-obsidian-800 p-1 rounded-xl">
                     <button
                       type="button"
                       onClick={() => setModality('gi')}
@@ -443,14 +443,14 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
+                  <div className="space-y-1 min-w-0">
                     <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Idade</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-150 block">{ibjjfResult.category}</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-150 block truncate">{ibjjfResult.category}</span>
                     <span className="text-[10px] text-zinc-450 font-bold block">{ibjjfResult.calculatedAge} anos de idade</span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Tempo Reg. de Luta</span>
                     <span className="text-xs sm:text-sm font-black text-slate-150 block">{ibjjfResult.fightTime}</span>
                     <span className="text-[10px] text-zinc-450 font-semibold block">
@@ -458,7 +458,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                     </span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Peso</span>
                     <span className="text-xs sm:text-sm font-black text-slate-150 block">Peso {ibjjfResult.weightClass.name}</span>
                     <span className="text-[10px] text-zinc-450 font-semibold block">
@@ -466,7 +466,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                     </span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Limite Divisão</span>
                     <span className="text-xs sm:text-sm font-black text-gold-450 block">{ibjjfResult.weightClass.limit}</span>
                     <span className="text-[10px] text-zinc-450 font-semibold block">

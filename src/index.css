@@ -5,11 +5,16 @@
 @tailwind utilities;
 
 @layer base {
-  html, body, #root {
-    max-width: 100vw;
-    overflow-x: hidden;
-    width: 100%;
+  *, ::before, ::after {
     box-sizing: border-box;
+  }
+
+  html, body, #root {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    margin: 0;
+    padding: 0;
   }
 
   html {
@@ -20,6 +25,12 @@
   body {
     @apply bg-obsidian-900 text-slate-100 font-sans antialiased overflow-x-hidden;
     color-scheme: dark;
+    position: relative;
+  }
+
+  img, video, canvas, iframe, svg {
+    max-width: 100%;
+    height: auto;
   }
 
   /* Custom scrollbar */
@@ -39,27 +50,42 @@
 
 @layer components {
   .btn-gold {
-    @apply bg-zinc-100 hover:bg-white text-zinc-950 font-bold px-5 py-2.5 rounded-none transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2 active:scale-[0.97] border border-zinc-200 hover:shadow-gold-glow;
+    @apply bg-zinc-100 hover:bg-white text-zinc-950 font-bold px-5 py-2.5 rounded-none transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2 active:scale-[0.97] border border-zinc-200 hover:shadow-gold-glow max-w-full;
   }
 
   .btn-obsidian {
-    @apply bg-obsidian-900/60 border border-obsidian-800 hover:border-obsidian-600 hover:bg-obsidian-850 text-slate-200 px-5 py-2.5 rounded-none transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] backdrop-blur-sm;
+    @apply bg-obsidian-900/60 border border-obsidian-800 hover:border-obsidian-600 hover:bg-obsidian-850 text-slate-200 px-5 py-2.5 rounded-none transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.97] backdrop-blur-sm max-w-full;
   }
 
   .card-premium {
-    @apply bg-obsidian-850/80 border border-obsidian-800 rounded-none p-6 shadow-2xl backdrop-blur-lg transition-all duration-300 hover:border-zinc-500/20 hover:shadow-gold-glow;
+    @apply bg-obsidian-850/80 border border-obsidian-800 rounded-none p-4 sm:p-6 shadow-2xl backdrop-blur-lg transition-all duration-300 hover:border-zinc-500/20 hover:shadow-gold-glow max-w-full min-w-0;
   }
 
   .bg-glass {
-    @apply bg-obsidian-900/50 backdrop-blur-md border border-obsidian-850;
+    @apply bg-obsidian-900/50 backdrop-blur-md border border-obsidian-850 max-w-full min-w-0;
   }
 
   .bg-glass-premium {
-    @apply bg-obsidian-850/45 backdrop-blur-xl border border-obsidian-800/60 shadow-2xl;
+    @apply bg-obsidian-850/45 backdrop-blur-xl border border-obsidian-800/60 shadow-2xl max-w-full min-w-0;
   }
 
   .input-premium {
-    @apply bg-obsidian-950/80 border border-obsidian-800 rounded-none px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 focus:ring-0 transition-all duration-300;
+    @apply bg-obsidian-950/80 border border-obsidian-800 rounded-none px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 focus:ring-0 transition-all duration-300 max-w-full;
+  }
+
+  /* Previne overflow de tabelas e flexboxes no container pai */
+  .table-responsive-wrapper {
+    @apply w-full max-w-full overflow-x-auto min-w-0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Oculta scrollbar mantendo funcionalidade */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   /* Belt colors representation */

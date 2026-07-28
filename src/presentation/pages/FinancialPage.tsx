@@ -31,7 +31,7 @@ export const FinancialPage: React.FC = () => {
   const currentYear = new Date().getFullYear().toString();
 
   // Anos de histórico disponíveis
-  const yearsFromRecords = students.flatMap(s => s.pagamentos.map(p => p.mesRef.split('/')[1]));
+  const yearsFromRecords = students.flatMap(s => (s.pagamentos || []).map(p => p.mesRef ? p.mesRef.split('/')[1] : ''));
   const availableYears = Array.from(new Set([currentYear, ...yearsFromRecords.filter(Boolean)])).sort((a, b) => Number(b) - Number(a));
 
   const [yearFilter, setYearFilter] = useState<string>(currentYear);
@@ -56,7 +56,7 @@ export const FinancialPage: React.FC = () => {
   // Totalizadores Financeiros
   const getFaturamento = (refFilter: string, targetYearVal: string, filterByMonth = true) => {
     return students.reduce((acc, student) => {
-      const paid = student.pagamentos.filter(p => {
+      const paid = (student.pagamentos || []).filter(p => {
         const isPaid = p.status === 'Pago';
         if (filterByMonth) {
           return p.mesRef === refFilter && isPaid;
@@ -71,7 +71,7 @@ export const FinancialPage: React.FC = () => {
   const getFaturamentoPorTurma = (refFilter: string, targetYearVal: string, filterByMonth: boolean, targetTurma: 'Adulto' | 'Kids') => {
     return students.reduce((acc, student) => {
       if (student.turma !== targetTurma) return acc;
-      const paid = student.pagamentos.filter(p => {
+      const paid = (student.pagamentos || []).filter(p => {
         const isPaid = p.status === 'Pago';
         if (filterByMonth) {
           return p.mesRef === refFilter && isPaid;
@@ -111,7 +111,7 @@ export const FinancialPage: React.FC = () => {
     const rows: string[][] = filteredStudents.map(student => {
       const monthValues = ALL_MONTHS.map(monthName => {
         const mesRef = `${monthName}/${yearFilter}`;
-        const hasFatura = student.pagamentos.some(p => p.mesRef === mesRef);
+        const hasFatura = (student.pagamentos || []).some(p => p.mesRef === mesRef);
         return hasFatura ? 'SIM' : 'NÃO';
       });
 
@@ -199,7 +199,7 @@ export const FinancialPage: React.FC = () => {
           if (!cols) return;
 
           const anoRef = cols[colIndex('ano_ref')];
-          let pagamentos = student.pagamentos.filter(p => !p.mesRef.endsWith(`/${anoRef}`));
+          let pagamentos = (student.pagamentos || []).filter(p => !p.mesRef.endsWith(`/${anoRef}`));
           let modified = false;
 
           MONTH_SLUGS.forEach((slug, idx) => {
@@ -259,7 +259,7 @@ export const FinancialPage: React.FC = () => {
 
       setStudents(prev => prev.map(s => {
         if (s.id === alunoId) {
-          const updated = s.pagamentos.map(p => {
+          const updated = (s.pagamentos || []).map(p => {
             if (p.id === paymentId) {
               return { ...p, valor: VALOR_MENSALIDADE, status: 'Pago' as PaymentStatus, dataPagamento: dateStr };
             }
@@ -287,7 +287,7 @@ export const FinancialPage: React.FC = () => {
           if (s.id === alunoId) {
             return {
               ...s,
-              pagamentos: [...s.pagamentos, inserted]
+              pagamentos: [...(s.pagamentos || []), inserted]
             };
           }
           return s;
@@ -312,7 +312,7 @@ export const FinancialPage: React.FC = () => {
         if (s.id === alunoId) {
           return {
             ...s,
-            pagamentos: s.pagamentos.filter(p => p.id !== paymentId)
+            pagamentos: (s.pagamentos || []).filter(p => p.id !== paymentId)
           };
         }
         return s;
@@ -345,7 +345,7 @@ export const FinancialPage: React.FC = () => {
   };
 
   const getCurrentPayment = (student: Aluno) => {
-    return student.pagamentos.find(p => p.mesRef === monthFilter);
+    return (student.pagamentos || []).find(p => p.mesRef === monthFilter);
   };
 
   const handleOpenHistory = (student: Aluno) => {
