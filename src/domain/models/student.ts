@@ -46,6 +46,7 @@ export interface Aluno {
   fotoPerfil?: string; // Base64 ou nome avatar
   modalidadePagamento?: string;
   historicoGraduacoes?: GraduacaoHistorico[];
+  peso?: number; // Peso atual do aluno em kg
 }
 
 export interface Graduacao {

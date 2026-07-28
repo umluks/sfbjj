@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Belt, Degree, Gender } from '@/domain/models/student';
 import { BAIRROS_DF } from '@/constants';
 import { getBeltsByAge, getTurmaByAge } from '@/application/services/diplomaService';
+import { calculateIbjjfCategory } from '@/utils/ibjjfCalculator';
 
 interface PersonalInfoFormProps {
   initialData: {
@@ -20,6 +21,7 @@ interface PersonalInfoFormProps {
     contatoEmergenciaTel?: string;
     fotoPerfil?: string;
     assinatura?: string;
+    peso?: number;
   };
   role: 'admin' | 'teacher' | 'student';
   isEditingOtherStudent: boolean; // Se o admin/professor está editando a ficha de outro aluno
@@ -47,6 +49,8 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [contatoEmergenciaTel, setContatoEmergenciaTel] = useState('');
   const [fotoPerfil, setFotoPerfil] = useState('');
   const [assinatura, setAssinatura] = useState('');
+  const [peso, setPeso] = useState<string | number>('');
+  const [modality, setModality] = useState<'gi' | 'nogi'>('gi');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -65,6 +69,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     setContatoEmergenciaTel(initialData.contatoEmergenciaTel || '');
     setFotoPerfil(initialData.fotoPerfil || '');
     setAssinatura(initialData.assinatura || '');
+    setPeso(initialData.peso !== undefined && initialData.peso !== null ? initialData.peso : '');
   }, [initialData]);
 
   const handlePhoneMask = (val: string) => {
@@ -107,6 +112,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         payload.contatoEmergenciaNome = contatoEmergenciaNome;
         payload.contatoEmergenciaTel = contatoEmergenciaTel;
         payload.fotoPerfil = fotoPerfil;
+        payload.peso = peso !== '' ? parseFloat(String(peso)) : null;
       } else if (role === 'teacher') {
         payload.email = email;
         payload.telefone = telefone;
@@ -125,6 +131,14 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   };
 
   const isStudentType = role === 'student' || isEditingOtherStudent;
+
+  const ibjjfResult = calculateIbjjfCategory({
+    dataNascimento,
+    gender: genero,
+    modality,
+    weightKg: peso !== '' ? peso : 70,
+    beltColor: faixa
+  });
 
   return (
     <form onSubmit={handleSave} className="space-y-6 text-left">
@@ -319,6 +333,21 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               </div>
 
               <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Peso Atual (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="10"
+                  max="250"
+                  value={peso}
+                  onChange={(e) => setPeso(e.target.value)}
+                  placeholder="Ex: 75.5"
+                  className="input-premium w-full bg-obsidian-950 font-mono"
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Bairro do DF</label>
                 <select
                   value={bairro}
@@ -374,6 +403,77 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                   <option value="Kids">Kids</option>
                   <option value="Adulto">Adulto</option>
                 </select>
+              </div>
+
+              {/* Card de Categoria e Divisão Calculada do Aluno */}
+              <div className="col-span-1 sm:col-span-2 mt-2 p-5 bg-obsidian-950 border border-obsidian-850 rounded-2xl space-y-4 shadow-inner">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-obsidian-850 pb-3">
+                  <div>
+                    <span className="text-[10px] font-black text-gold-500 uppercase tracking-widest block">
+                      Resultado IBJJF Calculado (Ano de Referência: {ibjjfResult.currentYear})
+                    </span>
+                    <span className="text-[11px] text-zinc-400 block mt-0.5">
+                      Categorias e tempo de luta oficiais baseados em seus dados cadastrais.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto bg-obsidian-900 border border-obsidian-800 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setModality('gi')}
+                      className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-all ${
+                        modality === 'gi' 
+                          ? 'bg-gold-550/20 text-gold-400 border border-gold-550/30' 
+                          : 'text-zinc-500 hover:text-slate-300'
+                      }`}
+                    >
+                      De Kimono (Gi)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModality('nogi')}
+                      className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-all ${
+                        modality === 'nogi' 
+                          ? 'bg-gold-550/20 text-gold-400 border border-gold-550/30' 
+                          : 'text-zinc-500 hover:text-slate-300'
+                      }`}
+                    >
+                      Sem Kimono (No-Gi)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Idade</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-150 block">{ibjjfResult.category}</span>
+                    <span className="text-[10px] text-zinc-450 font-bold block">{ibjjfResult.calculatedAge} anos de idade</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Tempo Reg. de Luta</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-150 block">{ibjjfResult.fightTime}</span>
+                    <span className="text-[10px] text-zinc-450 font-semibold block">
+                      Final: {ibjjfResult.category.startsWith('MASTER') || ibjjfResult.category.startsWith('ADULTO') ? 'Mesmo tempo' : 'Dobro'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Peso</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-150 block">Peso {ibjjfResult.weightClass.name}</span>
+                    <span className="text-[10px] text-zinc-450 font-semibold block">
+                      {peso !== '' ? `${peso} kg informado` : 'Peso não informado'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Limite Divisão</span>
+                    <span className="text-xs sm:text-sm font-black text-gold-450 block">{ibjjfResult.weightClass.limit}</span>
+                    <span className="text-[10px] text-zinc-450 font-semibold block">
+                      {modality === 'gi' ? 'Modalidade Kimono' : 'Modalidade No-Gi'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5 col-span-2 pt-2 border-t border-obsidian-850">

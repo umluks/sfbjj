@@ -91,7 +91,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
         turma: student.turma,
         contatoEmergenciaNome: student.contatoEmergenciaNome,
         contatoEmergenciaTel: student.contatoEmergenciaTel,
-        fotoPerfil: student.fotoPerfil
+        fotoPerfil: student.fotoPerfil,
+        peso: student.peso
       };
     }
     return { nome: '' };
@@ -236,101 +237,201 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
   const isProfileOfStudent = isStudent || isEditingOtherStudent || loggedUser?.role === 'admin';
 
   if (loading) {
-    return <div className="text-center py-12 text-slate-500 font-bold uppercase tracking-wider text-xs">Carregando perfil...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-3">
+        <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Carregando perfil...</p>
+      </div>
+    );
   }
 
+  // Dados para exibição do Header Banner
+  const profileName = isEditingAdmin 
+    ? (loggedUser?.nome || 'Administrador') 
+    : isEditingTeacher 
+      ? (loggedUser?.nome || 'Professor') 
+      : (student?.nome || loggedUser?.nome || 'Usuário');
+
+  const profileAvatar = isEditingAdmin 
+    ? loggedUser?.foto_perfil 
+    : isEditingTeacher 
+      ? loggedUser?.foto_perfil 
+      : student?.fotoPerfil;
+
+  const profileRole = isEditingAdmin 
+    ? 'Administrador' 
+    : isEditingTeacher 
+      ? 'Professor' 
+      : 'Aluno';
+
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight flex items-center gap-3 justify-start">
-          {hideSidebarMenu && activeSubTab === 'graduacoes' 
-            ? 'Histórico de Graduações' 
-            : isEditingOtherStudent 
-              ? 'Ficha do Aluno' 
-              : 'Meu Perfil'}
-        </h1>
-        <p className="text-slate-455 text-sm mt-1 uppercase tracking-wider font-bold">
-          {hideSidebarMenu && activeSubTab === 'graduacoes'
-            ? 'Acompanhe todas as suas promoções de faixas e graus'
-            : isEditingOtherStudent 
-              ? `Visualizando Perfil de ${student?.nome || ''}` 
-              : 'Gerencie seus dados e senha de acesso'}
-        </p>
+    <div className="space-y-8 animate-fade-in pb-12 text-left">
+      {/* Header Titular */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight flex items-center gap-3">
+            <User className="w-8 h-8 text-gold-500" />
+            {hideSidebarMenu && activeSubTab === 'graduacoes' 
+              ? 'Histórico de Graduações' 
+              : isEditingOtherStudent 
+                ? 'Ficha do Aluno' 
+                : 'Meu Perfil'}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            {hideSidebarMenu && activeSubTab === 'graduacoes'
+              ? 'Acompanhe todas as suas promoções de faixas e graus'
+              : isEditingOtherStudent 
+                ? `Gerenciando a ficha completa de ${student?.nome || ''}` 
+                : 'Gerencie seus dados cadastrais, informações de treino e segurança'}
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Menu Lateral/Horizontal de Sub-abas */}
-        {!hideSidebarMenu && (
-          <div className="lg:col-span-3 bg-obsidian-900 border border-obsidian-850 p-2 sm:p-4 rounded-2xl shadow-lg flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2 lg:gap-1 no-scrollbar shrink-0">
-            <button
-              onClick={() => setActiveSubTab('profile')}
-              className={`w-auto lg:w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 rounded-xl ${
-                activeSubTab === 'profile'
-                  ? 'bg-zinc-100/10 text-zinc-100 border border-zinc-200/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
-              }`}
-            >
-              <User className="w-4 h-4 shrink-0" />
-              <span>Dados Cadastrais</span>
-            </button>
+      {/* Hero Banner de Perfil */}
+      {student && !isEditingAdmin && !isEditingTeacher && (
+        <div className="card-premium p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-gold-550/5 to-transparent blur-3xl rounded-full pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row items-center gap-5 z-10 text-center sm:text-left w-full md:w-auto">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gold-550/30 bg-obsidian-950 flex items-center justify-center text-4xl shadow-inner shrink-0 relative group">
+              {profileAvatar ? (
+                profileAvatar.length <= 2 ? (
+                  <span>{profileAvatar}</span>
+                ) : (
+                  <img src={profileAvatar} alt={profileName} className="w-full h-full object-cover" />
+                )
+              ) : (
+                <span className="text-slate-500">🥋</span>
+              )}
+              <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-obsidian-950 rounded-full" />
+            </div>
 
-            {isProfileOfStudent && (
-              <button
-                onClick={() => setActiveSubTab('graduacoes')}
-                className={`w-auto lg:w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 rounded-xl ${
-                  activeSubTab === 'graduacoes'
-                    ? 'bg-zinc-100/10 text-zinc-100 border border-zinc-200/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
-                }`}
-              >
-                <Award className="w-4 h-4 shrink-0" />
-                <span>Histórico de Graduações</span>
-              </button>
-            )}
+            <div className="space-y-2 flex-1">
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-100 uppercase tracking-wide">
+                  {profileName}
+                </h2>
+                <span className="text-[9.5px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                  {profileRole}
+                </span>
+                {student.status && (
+                  <span className={`text-[9.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                    student.status === 'Ativo' 
+                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                      : 'text-orange-400 bg-orange-500/10 border-orange-500/20'
+                  }`}>
+                    {student.status}
+                  </span>
+                )}
+              </div>
 
-            <button
-              onClick={() => setActiveSubTab('password')}
-              className={`w-auto lg:w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 rounded-xl ${
-                activeSubTab === 'password'
-                  ? 'bg-zinc-100/10 text-zinc-100 border border-zinc-200/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
-              }`}
-            >
-              <Lock className="w-4 h-4 shrink-0" />
-              <span>Segurança / Senha</span>
-            </button>
+              <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start text-xs text-slate-350 font-medium">
+                {student.faixa && (
+                  <div className="flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-gold-500" />
+                    <span className="font-bold text-slate-200">{student.faixa}</span>
+                    <span className="text-zinc-500">({student.graus} {student.graus === 1 ? 'grau' : 'graus'})</span>
+                  </div>
+                )}
+                {student.turma && (
+                  <span className="text-zinc-500 font-semibold">• Turma: <strong className="text-slate-200">{student.turma}</strong></span>
+                )}
+                {student.bairro && (
+                  <span className="text-zinc-500 font-semibold">• Bairro: <strong className="text-slate-200">{student.bairro}</strong></span>
+                )}
+              </div>
+            </div>
           </div>
+
+          <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto justify-center md:justify-end border-t md:border-t-0 md:border-l border-obsidian-800 pt-4 md:pt-0 md:pl-6">
+            <div className="text-center md:text-right space-y-1">
+              <span className="text-[9.5px] font-bold text-zinc-500 uppercase tracking-widest block">Matrícula</span>
+              <span className="text-xs font-black text-slate-200 block font-mono">
+                {student.dataMatricula ? student.dataMatricula.substring(0, 4) : '2026'}
+              </span>
+            </div>
+            {student.peso && (
+              <div className="text-center md:text-right space-y-1 border-l border-obsidian-800 pl-3">
+                <span className="text-[9.5px] font-bold text-zinc-500 uppercase tracking-widest block">Peso Atual</span>
+                <span className="text-xs font-black text-gold-450 block font-mono">
+                  {student.peso} kg
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sub-Abas de Navegação */}
+      {!hideSidebarMenu && (
+        <div className="flex items-center gap-2 p-1.5 bg-obsidian-900 border border-obsidian-850 rounded-2xl overflow-x-auto no-scrollbar shadow-inner">
+          <button
+            onClick={() => setActiveSubTab('profile')}
+            className={`flex items-center gap-2.5 px-5 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-xl ${
+              activeSubTab === 'profile'
+                ? 'bg-gold-550/15 text-gold-400 border border-gold-550/30 shadow-md'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>Dados Cadastrais</span>
+          </button>
+
+          {isProfileOfStudent && (
+            <button
+              onClick={() => setActiveSubTab('graduacoes')}
+              className={`flex items-center gap-2.5 px-5 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-xl ${
+                activeSubTab === 'graduacoes'
+                  ? 'bg-gold-550/15 text-gold-400 border border-gold-550/30 shadow-md'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span>Histórico de Graduações</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveSubTab('password')}
+            className={`flex items-center gap-2.5 px-5 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-xl ${
+              activeSubTab === 'password'
+                ? 'bg-gold-550/15 text-gold-400 border border-gold-550/30 shadow-md'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-obsidian-850 border border-transparent'
+            }`}
+          >
+            <Lock className="w-4 h-4" />
+            <span>Segurança / Senha</span>
+          </button>
+        </div>
+      )}
+
+      {/* Conteúdo Central */}
+      <div className="bg-obsidian-900 border border-obsidian-850 p-6 md:p-8 rounded-2xl shadow-xl">
+        {activeSubTab === 'profile' && (
+          <PersonalInfoForm
+            initialData={getInitialFormData()}
+            role={loggedUser?.role || 'student'}
+            isEditingOtherStudent={isEditingOtherStudent}
+            onSave={handleSaveInfo}
+          />
         )}
 
-        {/* Workspace Central */}
-        <div className={`${hideSidebarMenu ? 'lg:col-span-12' : 'lg:col-span-9'} bg-obsidian-900 border border-obsidian-850 p-6 md:p-8 rounded-2xl shadow-lg`}>
-          {activeSubTab === 'profile' && (
-            <PersonalInfoForm
-              initialData={getInitialFormData()}
-              role={loggedUser?.role || 'student'}
-              isEditingOtherStudent={isEditingOtherStudent}
-              onSave={handleSaveInfo}
-            />
-          )}
+        {activeSubTab === 'password' && (
+          <ChangePasswordForm 
+            onSavePassword={handleSavePassword}
+            isAdminOverride={loggedUser?.role === 'admin'}
+          />
+        )}
 
-          {activeSubTab === 'password' && (
-            <ChangePasswordForm 
-              onSavePassword={handleSavePassword}
-              isAdminOverride={loggedUser?.role === 'admin'}
-            />
-          )}
-
-          {activeSubTab === 'graduacoes' && student && (
-            <GraduationHistoryTable
-              student={student}
-              canEdit={isProfileOfStudent}
-              onAddGraduacao={handleAddGraduacao}
-              onUpdateGraduacao={handleUpdateGraduacao}
-              onDeleteGraduacao={handleDeleteGraduacao}
-            />
-          )}
-        </div>
+        {activeSubTab === 'graduacoes' && student && (
+          <GraduationHistoryTable
+            student={student}
+            canEdit={isProfileOfStudent}
+            onAddGraduacao={handleAddGraduacao}
+            onUpdateGraduacao={handleUpdateGraduacao}
+            onDeleteGraduacao={handleDeleteGraduacao}
+          />
+        )}
       </div>
     </div>
   );

@@ -131,6 +131,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   const [status, setStatus] = useState<'Ativo' | 'Inativo' | 'Pendente' | 'Aguardando' | 'Graduado'>('Ativo');
   const [turma, setTurma] = useState<'Kids' | 'Adulto'>('Adulto');
   const [fotoPerfil, setFotoPerfil] = useState('');
+  const [peso, setPeso] = useState<string | number>('');
   const [historicoGraduacoes, setHistoricoGraduacoes] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const isDisabled = isReadOnly || isTeacher;
@@ -169,6 +170,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       setStatus(editingStudent.status || 'Ativo');
       setTurma(editingStudent.turma || 'Adulto');
       setFotoPerfil(editingStudent.fotoPerfil || '');
+      setPeso(editingStudent.peso !== undefined && editingStudent.peso !== null ? editingStudent.peso : '');
       setHistoricoGraduacoes(editingStudent.historicoGraduacoes || []);
     } else {
       setNome('');
@@ -188,6 +190,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       setStatus('Ativo');
       setTurma('Adulto');
       setFotoPerfil('');
+      setPeso('');
       setHistoricoGraduacoes([]);
     }
   }, [editingStudent, isOpen]);
@@ -265,6 +268,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         status,
         turma,
         fotoPerfil,
+        peso: peso !== '' ? parseFloat(String(peso)) : undefined,
         historicoGraduacoes
       });
     } catch (err: any) {
@@ -432,6 +436,20 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     <option value="Masculino">Masculino</option>
                     <option value="Feminino">Feminino</option>
                   </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Peso Atual (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="10"
+                    max="250"
+                    value={peso}
+                    onChange={(e) => setPeso(e.target.value)}
+                    placeholder="Ex: 75.5"
+                    className="input-premium font-mono"
+                    disabled={isDisabled}
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Turma (Automática)</label>

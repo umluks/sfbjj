@@ -1,152 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  weightsMascGi, 
-  weightsMascNoGi, 
-  weightsFemGi, 
-  weightsFemNoGi, 
-  type WeightDivision 
-} from '@/constants/ibjjfRules';
+import { calculateIbjjfCategory } from '@/utils/ibjjfCalculator';
 
 export const WeightCalculator: React.FC = () => {
   const currentYear = new Date().getFullYear();
-  const [birthYear, setBirthYear] = useState<number>(currentYear - 25);
+  const [birthYearStr, setBirthYearStr] = useState<string>(String(currentYear - 25));
   const [gender, setGender] = useState<'masculino' | 'feminino'>('masculino');
   const [modality, setModality] = useState<'gi' | 'nogi'>('gi');
-  const [weightKg, setWeightKg] = useState<number>(75);
+  const [weightKgStr, setWeightKgStr] = useState<string>('75');
   const [beltColor, setBeltColor] = useState<string>('Branca');
 
-  const calculatedAge = currentYear - birthYear;
-
-  const getCategoryAndFightTime = (age: number, belt: string) => {
-    let category = '';
-    let fightTime = '';
-
-    if (age === 4) {
-      category = 'PRÉ-MIRIM I';
-      fightTime = '02 minutos';
-    } else if (age === 5) {
-      category = 'PRÉ-MIRIM II';
-      fightTime = '02 minutos';
-    } else if (age === 6) {
-      category = 'PRÉ-MIRIM III';
-      fightTime = '02 minutos';
-    } else if (age === 7) {
-      category = 'MIRIM I';
-      fightTime = '03 minutos';
-    } else if (age === 8) {
-      category = 'MIRIM II';
-      fightTime = '03 minutos';
-    } else if (age === 9) {
-      category = 'MIRIM III';
-      fightTime = '03 minutos';
-    } else if (age === 10) {
-      category = 'INFANTIL I';
-      fightTime = '04 minutos';
-    } else if (age === 11) {
-      category = 'INFANTIL II';
-      fightTime = '04 minutos';
-    } else if (age === 12) {
-      category = 'INFANTIL III';
-      fightTime = '04 minutos';
-    } else if (age === 13) {
-      category = 'INFANTO-JUVENIL I';
-      fightTime = '04 minutos';
-    } else if (age === 14) {
-      category = 'INFANTO-JUVENIL II';
-      fightTime = '04 minutos';
-    } else if (age === 15) {
-      category = 'INFANTO-JUVENIL III';
-      fightTime = '04 minutos';
-    } else if (age === 16) {
-      category = 'JUVENIL I';
-      fightTime = '05 minutos';
-    } else if (age === 17) {
-      category = 'JUVENIL II';
-      fightTime = '05 minutos';
-    } else if (age >= 18 && age < 30) {
-      category = 'ADULTO';
-      if (belt === 'Branca') fightTime = '05 minutos';
-      else if (belt === 'Azul') fightTime = '06 minutos';
-      else if (belt === 'Roxa') fightTime = '07 minutos';
-      else if (belt === 'Marrom') fightTime = '08 minutos';
-      else fightTime = '10 minutos'; // Preta
-    } else if (age >= 30 && age < 36) {
-      category = 'MASTER 1';
-      if (belt === 'Branca' || belt === 'Azul') fightTime = '05 minutos';
-      else fightTime = '06 minutos'; // Roxa, Marrom, Preta
-    } else if (age >= 36 && age < 41) {
-      category = 'MASTER 2';
-      fightTime = '05 minutos';
-    } else if (age >= 41 && age < 46) {
-      category = 'MASTER 3';
-      fightTime = '05 minutos';
-    } else if (age >= 46 && age < 51) {
-      category = 'MASTER 4';
-      fightTime = '05 minutos';
-    } else if (age >= 51 && age < 56) {
-      category = 'MASTER 5';
-      fightTime = '05 minutos';
-    } else if (age >= 56 && age < 61) {
-      category = 'MASTER 6';
-      fightTime = '05 minutos';
-    } else if (age >= 61) {
-      category = 'MASTER 7';
-      fightTime = '05 minutos';
-    } else {
-      category = 'Não elegível (Idade inferior a 4 anos)';
-      fightTime = '0 minutos';
-    }
-
-    return { category, fightTime };
-  };
-
-  const { category: finalCategory, fightTime: finalFightTime } = getCategoryAndFightTime(calculatedAge, beltColor);
-
-  const getWeightClass = () => {
-    let activeList: WeightDivision[] = [];
-    if (gender === 'masculino') {
-      activeList = modality === 'gi' ? weightsMascGi : weightsMascNoGi;
-    } else {
-      activeList = modality === 'gi' ? weightsFemGi : weightsFemNoGi;
-    }
-
-    const parseLimit = (limitStr: string): number => {
-      if (limitStr.includes('Sem limite') || limitStr.includes('Sem limite de peso')) return 999;
-      const match = limitStr.match(/[\d.]+/);
-      return match ? parseFloat(match[0]) : 999;
-    };
-
-    let divisionFound = activeList[activeList.length - 1]; // Padrão: Pesadíssimo/Ultra-pesado
-    
-    for (const div of activeList) {
-      let limitStr = div.adultLimit;
-      if (calculatedAge >= 30) {
-        limitStr = div.masterLimit;
-      } else if (calculatedAge === 16 || calculatedAge === 17) {
-        limitStr = div.juvenilLimit || div.adultLimit;
-      }
-      
-      const limitVal = parseLimit(limitStr);
-      if (weightKg <= limitVal) {
-        divisionFound = div;
-        break;
-      }
-    }
-
-    let limitText = divisionFound.adultLimit;
-    if (calculatedAge >= 30) {
-      limitText = divisionFound.masterLimit;
-    } else if (calculatedAge === 16 || calculatedAge === 17) {
-      limitText = divisionFound.juvenilLimit || divisionFound.adultLimit;
-    }
-
-    return {
-      name: divisionFound.class,
-      limit: limitText
-    };
-  };
-
-  const weightClass = getWeightClass();
+  const {
+    calculatedAge,
+    category: finalCategory,
+    fightTime: finalFightTime,
+    weightClass
+  } = calculateIbjjfCategory({
+    birthYear: birthYearStr,
+    gender,
+    modality,
+    weightKg: weightKgStr,
+    beltColor
+  });
 
   return (
     <div className="space-y-6">
@@ -172,9 +46,15 @@ export const WeightCalculator: React.FC = () => {
                 type="number"
                 min={currentYear - 90}
                 max={currentYear}
-                value={birthYear}
-                onChange={(e) => setBirthYear(parseInt(e.target.value) || currentYear)}
-                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-100 px-3 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+                value={birthYearStr}
+                onChange={(e) => setBirthYearStr(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseInt(birthYearStr, 10);
+                  if (isNaN(parsed) || parsed < currentYear - 100 || parsed > currentYear) {
+                    setBirthYearStr(String(currentYear - 25));
+                  }
+                }}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-100 px-3 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none font-mono"
               />
             </div>
 
@@ -187,9 +67,15 @@ export const WeightCalculator: React.FC = () => {
                 step="0.1"
                 min="10"
                 max="250"
-                value={weightKg}
-                onChange={(e) => setWeightKg(parseFloat(e.target.value) || 70)}
-                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-100 px-3 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none"
+                value={weightKgStr}
+                onChange={(e) => setWeightKgStr(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseFloat(weightKgStr);
+                  if (isNaN(parsed) || parsed <= 0) {
+                    setWeightKgStr('70');
+                  }
+                }}
+                className="w-full bg-obsidian-900 border border-obsidian-800 text-slate-100 px-3 py-2 text-xs font-bold focus:border-zinc-500 focus:outline-none font-mono"
               />
             </div>
           </div>

@@ -64,6 +64,20 @@ export class StudentRepository implements IStudentRepository {
       .single();
 
     if (error) {
+      if (error.message?.includes('peso') || error.details?.includes('peso')) {
+        const { peso: _peso, ...dataWithoutPeso } = studentData as any;
+        const { data: retryData, error: retryError } = await supabase
+          .from('alunos')
+          .insert(dataWithoutPeso)
+          .select()
+          .single();
+
+        if (retryError) {
+          throw handleSupabaseError(retryError, `Erro ao criar aluno: ${retryError.message}`);
+        }
+        this.clearCache();
+        return retryData;
+      }
       throw handleSupabaseError(error, `Erro ao criar aluno: ${error.message}`);
     }
     
@@ -80,6 +94,19 @@ export class StudentRepository implements IStudentRepository {
       .eq('id', id);
 
     if (error) {
+      if (error.message?.includes('peso') || error.details?.includes('peso')) {
+        const { peso: _peso, ...payloadWithoutPeso } = payload;
+        const { error: retryError } = await supabase
+          .from('alunos')
+          .update(payloadWithoutPeso)
+          .eq('id', id);
+
+        if (retryError) {
+          throw handleSupabaseError(retryError, `Erro ao atualizar aluno: ${retryError.message}`);
+        }
+        this.clearCache(id);
+        return;
+      }
       throw handleSupabaseError(error, `Erro ao atualizar aluno: ${error.message}`);
     }
 
