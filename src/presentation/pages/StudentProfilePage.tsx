@@ -8,6 +8,7 @@ import type { Aluno, Belt, Degree } from '@/domain/models/student';
 import { PersonalInfoForm } from '@/presentation/components/profile/PersonalInfoForm';
 import { ChangePasswordForm } from '@/presentation/components/profile/ChangePasswordForm';
 import { GraduationHistoryTable } from '@/presentation/components/profile/GraduationHistoryTable';
+import { calculateIbjjfCategory } from '@/utils/ibjjfCalculator';
 import { User, Lock, Award } from 'lucide-react';
 
 interface StudentProfilePageProps {
@@ -28,6 +29,21 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
   const [localStudent, setLocalStudent] = useState<Aluno | null>(null);
 
   const student = contextStudent || localStudent;
+
+  const ibjjfCategory = React.useMemo(() => {
+    if (!student || !student.peso) return null;
+    try {
+      return calculateIbjjfCategory({
+        dataNascimento: student.dataNascimento,
+        gender: student.genero || 'Masculino',
+        modality: 'gi',
+        weightKg: student.peso,
+        beltColor: student.faixa || 'Branca'
+      });
+    } catch {
+      return null;
+    }
+  }, [student]);
 
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'graduacoes'>(initialSubTab || 'profile');
   const [loading, setLoading] = useState(false);
@@ -343,22 +359,24 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({ alunoId,
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto justify-center md:justify-end border-t md:border-t-0 md:border-l border-obsidian-800 pt-4 md:pt-0 md:pl-6">
-            <div className="text-center md:text-right space-y-1">
-              <span className="text-[9.5px] font-bold text-zinc-500 uppercase tracking-widest block">Matrícula</span>
-              <span className="text-xs font-black text-slate-200 block font-mono">
-                {student.dataMatricula ? student.dataMatricula.substring(0, 4) : '2026'}
-              </span>
-            </div>
-            {student.peso && (
-              <div className="text-center md:text-right space-y-1 border-l border-obsidian-800 pl-3">
+          {student && student.peso ? (
+            <div className="flex flex-wrap items-center gap-4 z-10 w-full md:w-auto justify-center md:justify-end border-t md:border-t-0 md:border-l border-obsidian-800 pt-4 md:pt-0 md:pl-6">
+              <div className="text-center md:text-right space-y-1">
                 <span className="text-[9.5px] font-bold text-zinc-500 uppercase tracking-widest block">Peso Atual</span>
                 <span className="text-xs font-black text-gold-450 block font-mono">
                   {student.peso} kg
                 </span>
               </div>
-            )}
-          </div>
+              {ibjjfCategory && (
+                <div className="text-center md:text-right space-y-1 border-l border-obsidian-800 pl-4">
+                  <span className="text-[9.5px] font-bold text-zinc-500 uppercase tracking-widest block">Categoria Oficial</span>
+                  <span className="text-xs font-black text-slate-100 block uppercase tracking-wide">
+                    {ibjjfCategory.category} • {ibjjfCategory.weightClass.name}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 
