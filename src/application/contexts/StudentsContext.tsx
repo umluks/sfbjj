@@ -2,6 +2,13 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { Aluno, Belt, Degree } from '@/domain/models/student';
 import type { LoggedUser } from '@/domain/models/auth';
 import { studentService } from '@/application/services/studentService';
+import { emailService } from '@/application/services/emailService';
+
+const isPendingStatus = (statusStr?: string): boolean => {
+  if (!statusStr) return false;
+  const norm = statusStr.toLowerCase().trim();
+  return norm === 'pendente' || norm === 'aguardando' || norm.includes('aguardando');
+};
 
 interface StudentsContextType {
   students: Aluno[];
@@ -100,8 +107,11 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateStudent = useCallback(async (id: number, studentData: Partial<Aluno>): Promise<void> => {
     let previousStudents: Aluno[] = [];
+    let targetStudent: Aluno | undefined;
+
     setStudents(prev => {
       previousStudents = prev;
+      targetStudent = prev.find(s => s.id === id);
       return prev.map(s => {
         if (s.id === id) {
           return {
@@ -115,6 +125,18 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       await studentService.updateStudent(id, studentData);
+
+      // Disparar e-mail de aprovação se o status transicionar de Pendente -> Ativo
+      if (targetStudent && isPendingStatus(targetStudent.status) && studentData.status === 'Ativo') {
+        const studentToNotify = {
+          id,
+          nome: studentData.nome || targetStudent.nome,
+          email: studentData.email || targetStudent.email
+        };
+        emailService.sendApprovalEmail(studentToNotify).catch(err => {
+          console.error('[StudentsContext] Falha ao enviar e-mail de aprovação:', err);
+        });
+      }
     } catch (err: any) {
       if (previousStudents.length > 0) {
         setStudents(previousStudents);
@@ -139,18 +161,37 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const batchUpdateStatus = useCallback(async (ids: number[], status: 'Ativo' | 'Inativo' | 'Pendente'): Promise<void> => {
     setIsLoading(true);
+
+    // Identificar alunos pendentes que serão ativados nesta ação em lote
+    const pendingStudentsToApprove = status === 'Ativo'
+      ? students.filter(s => ids.includes(s.id) && isPendingStatus(s.status))
+      : [];
+
     try {
       await studentService.batchUpdateStatus(ids, status);
       setStudents(prev =>
         prev.map(s => (ids.includes(s.id) ? { ...s, status } : s))
       );
+
+      // Disparar e-mails de aprovação em lote para alunos ativados
+      if (pendingStudentsToApprove.length > 0) {
+        for (const student of pendingStudentsToApprove) {
+          emailService.sendApprovalEmail({
+            id: student.id,
+            nome: student.nome,
+            email: student.email
+          }).catch(err => {
+            console.error(`[StudentsContext] Falha no e-mail em lote (ID ${student.id}):`, err);
+          });
+        }
+      }
     } catch (err: any) {
       console.error(err);
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [students]);
 
   const batchDeleteStudents = useCallback(async (ids: number[]): Promise<void> => {
     setIsLoading(true);
