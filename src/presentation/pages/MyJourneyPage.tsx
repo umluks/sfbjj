@@ -16,7 +16,7 @@ import { studentService } from '@/application/services/studentService';
 import { attendanceService } from '@/application/services/attendanceService';
 import type { Aluno } from '@/domain/models/student';
 import type { Frequencia } from '@/domain/models/attendance';
-import { formatDate, getDurationFriendly } from '@/utils/formatters';
+import { formatDate, getDurationFriendly, parseSafeDate } from '@/utils/formatters';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 import { AchievementsList } from '@/presentation/components/profile/AchievementsList';
 
@@ -56,15 +56,37 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
     loadData();
   }, [loadData]);
 
-  // 1. Calcular tempo de prática
+  // 1. Data inicial de prática (data mais antiga entre matrícula e histórico de graduações)
+  const practiceStartDate = useMemo(() => {
+    if (!student) return null;
+    const dates: string[] = [];
+    if (student.dataMatricula) dates.push(student.dataMatricula);
+    if (student.historicoGraduacoes && student.historicoGraduacoes.length > 0) {
+      student.historicoGraduacoes.forEach(g => {
+        if (g.data) dates.push(g.data);
+      });
+    }
+    if (dates.length === 0) return null;
+
+    // Ordena por timestamp para obter a data da primeira faixa / início de treino
+    dates.sort((a, b) => parseSafeDate(a).getTime() - parseSafeDate(b).getTime());
+    return dates[0];
+  }, [student]);
+
+  // 2. Calcular tempo de prática total (da primeira faixa até a data atual)
   const practiceTime = useMemo(() => {
-    if (!student?.dataMatricula) return 'Não informado';
+    if (!practiceStartDate) return 'Não informado';
     
-    const start = new Date(student.dataMatricula + 'T00:00:00');
+    const start = parseSafeDate(practiceStartDate);
     const now = new Date();
     
     let years = now.getFullYear() - start.getFullYear();
     let months = now.getMonth() - start.getMonth();
+    const days = now.getDate() - start.getDate();
+
+    if (days < 0) {
+      months--;
+    }
     
     if (months < 0) {
       years--;
@@ -81,7 +103,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
     }
     
     return months === 0 ? yearsText : `${yearsText} e ${monthsText}`;
-  }, [student?.dataMatricula]);
+  }, [practiceStartDate]);
 
 
 
@@ -418,7 +440,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
             <span className="text-zinc-500 text-[10px] uppercase font-black tracking-widest block">Tempo de Prática</span>
             <span className="text-xl font-black text-slate-200 block truncate">{practiceTime}</span>
             <span className="text-[10px] text-zinc-450 font-bold block">
-              Ingresso: {formatDate(student.dataMatricula)}
+              Ingresso: {formatDate(practiceStartDate || student.dataMatricula)}
             </span>
           </div>
         </div>
@@ -692,7 +714,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
           <AchievementsList
             totalAulas={attendances.length}
             streak={currentStreak}
-            dataMatricula={student.dataMatricula || ''}
+            dataMatricula={practiceStartDate || student.dataMatricula || ''}
             metaMensalProgresso={monthlyStats.percentage}
           />
         </div>

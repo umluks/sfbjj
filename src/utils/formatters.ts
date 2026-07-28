@@ -103,7 +103,6 @@ export const getDurationFriendly = (startDateStr: string, endDateStr: string): s
   if (years < 0 || (years === 0 && months === 0)) {
     const diffTime = end.getTime() - start.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return '0 meses';
     if (diffDays < 30) return 'Menos de 1 mês';
     return '1 mês';
   }
