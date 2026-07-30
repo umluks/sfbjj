@@ -490,7 +490,7 @@ export const FinancialPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="table-responsive-wrapper overflow-x-auto min-w-0 max-w-full border border-obsidian-850/60">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-450 bg-obsidian-950/40">

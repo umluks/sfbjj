@@ -312,14 +312,14 @@ export const StaffPage: React.FC = () => {
         />
       </div>
 
-      {/* Tabela */}
-      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
+      {/* Tabela com suporte a rolagem horizontal interna */}
+      <div className="bg-obsidian-900/20 border border-obsidian-900/60 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md min-w-0 max-w-full">
         {isLoading ? (
           <div className="text-center py-12 text-slate-500 font-bold uppercase text-xs tracking-wider">
             Carregando dados da equipe...
           </div>
         ) : activeTab === 'teachers' ? (
-          <>
+          <div className="overflow-x-auto min-w-0 max-w-full">
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-455 bg-obsidian-950/40">
@@ -396,9 +396,9 @@ export const StaffPage: React.FC = () => {
                 </div>
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <>
+          <div className="overflow-x-auto min-w-0 max-w-full">
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-obsidian-850/80 text-[10px] font-bold uppercase tracking-widest text-slate-455 bg-obsidian-950/40">
@@ -481,7 +481,7 @@ export const StaffPage: React.FC = () => {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 

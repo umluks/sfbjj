@@ -582,7 +582,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
                 Nenhuma sessão registrada em seu histórico.
               </div>
             ) : (
-              <div className="overflow-x-auto scrollbar-thin">
+              <div className="table-responsive-wrapper overflow-x-auto min-w-0 max-w-full border border-obsidian-850">
                 <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead>
                     <tr className="border-b border-obsidian-850 text-[9.5px] text-zinc-500 font-black uppercase tracking-wider">

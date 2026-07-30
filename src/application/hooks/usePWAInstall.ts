@@ -9,16 +9,18 @@ export function usePWAInstall() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // 1. Detecta se o aplicativo já está rodando em modo independente (instalado)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
-      || (window.navigator as any).standalone 
-      || document.referrer.includes('android-app://');
-    
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone ||
+      document.referrer.includes('android-app://');
+
     setIsInstalled(isStandalone);
 
-    // 2. Escuta o evento beforeinstallprompt (Android, Chrome, Edge)
+    // 2. Escuta o evento beforeinstallprompt (Android, Chrome, Edge, etc)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -33,7 +35,7 @@ export function usePWAInstall() {
       setIsInstallable(false);
       setInstallPrompt(null);
       setShowIOSPrompt(false);
-      console.log('SFBJJ PWA instalado com sucesso!');
+      setFeedbackMessage('Aplicativo instalado com sucesso!');
     };
 
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -49,35 +51,54 @@ export function usePWAInstall() {
    */
   const handleInstallClick = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    
-    if (isIOS && !isInstalled) {
+
+    if (isInstalled) {
+      setFeedbackMessage('O aplicativo já está instalado no seu dispositivo.');
+      return;
+    }
+
+    if (isIOS) {
       setShowIOSPrompt(true);
       return;
     }
 
-    if (!installPrompt) return;
-    
-    installPrompt.prompt();
-    
-    const { outcome } = await installPrompt.userChoice;
-    console.log(`PWA install prompt outcome: ${outcome}`);
-    
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
-      setInstallPrompt(null);
+    if (installPrompt) {
+      try {
+        installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsInstallable(false);
+          setInstallPrompt(null);
+        }
+      } catch (err) {
+        console.error('Erro ao acionar prompt de instalação PWA:', err);
+      }
+      return;
     }
+
+    // Caso o navegador não ofereça o evento de instalação automática (ex: Firefox em desktop ou navegador sem suporte a PWA)
+    setFeedbackMessage(
+      'Para instalar, abra este site no Google Chrome, Microsoft Edge ou Safari (iOS) e selecione "Instalar" ou "Adicionar à Tela de Início".'
+    );
   };
 
   const closeIOSPrompt = () => {
     setShowIOSPrompt(false);
   };
 
-  return { 
-    isInstallable, 
-    isInstalled, 
-    showIOSPrompt, 
-    handleInstallClick, 
-    closeIOSPrompt 
+  const clearFeedbackMessage = () => {
+    setFeedbackMessage(null);
+  };
+
+  return {
+    isInstallable,
+    isInstalled,
+    showIOSPrompt,
+    feedbackMessage,
+    handleInstallClick,
+    closeIOSPrompt,
+    clearFeedbackMessage,
   };
 }
+
 export default usePWAInstall;

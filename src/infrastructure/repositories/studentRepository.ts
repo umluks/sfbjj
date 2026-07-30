@@ -21,7 +21,7 @@ export class StudentRepository implements IStudentRepository {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .select('*, graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)');
+        .select('*, graduacoes_historico!graduacoes_historico_aluno_id_fkey(*), pagamentos(*)');
 
       if (error) {
         throw error;
@@ -40,7 +40,16 @@ export class StudentRepository implements IStudentRepository {
             graus: g.graus,
             avaliador: g.avaliador
           }))
-          .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime())
+          .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+        pagamentos: (student.pagamentos || []).map((p: any) => ({
+          id: p.id,
+          alunoId: p.alunoId ?? p.aluno_id,
+          mesRef: p.mesRef,
+          valor: Number(p.valor || 0),
+          status: p.status,
+          dataVencimento: p.dataVencimento,
+          dataPagamento: p.dataPagamento
+        }))
       }));
 
       const results = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -280,7 +289,7 @@ export class StudentRepository implements IStudentRepository {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .select('*, graduacoes_historico!graduacoes_historico_aluno_id_fkey(*)')
+        .select('*, graduacoes_historico!graduacoes_historico_aluno_id_fkey(*), pagamentos(*)')
         .eq('id', id)
         .maybeSingle();
 
@@ -300,7 +309,16 @@ export class StudentRepository implements IStudentRepository {
             graus: g.graus,
             avaliador: g.avaliador
           }))
-          .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime())
+          .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+        pagamentos: (data.pagamentos || []).map((p: any) => ({
+          id: p.id,
+          alunoId: p.alunoId ?? p.aluno_id,
+          mesRef: p.mesRef,
+          valor: Number(p.valor || 0),
+          status: p.status,
+          dataVencimento: p.dataVencimento,
+          dataPagamento: p.dataPagamento
+        }))
       };
 
       cache.set(cacheKey, result);

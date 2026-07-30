@@ -1,24 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { AuthProvider, useAuthContext } from '@/application/contexts/AuthContext';
 import { StudentsProvider, useStudents } from '@/application/contexts/StudentsContext';
 import { MainLayout } from '@/presentation/layouts/MainLayout';
 
-// Páginas refatoradas sob Clean Architecture
-import { LoginPage } from '@/presentation/pages/LoginPage';
-import { LandingPage } from '@/presentation/pages/LandingPage';
-import { DashboardPage } from '@/presentation/pages/DashboardPage';
-import { StudentsPage } from '@/presentation/pages/StudentsPage';
-import { BatchGraduationPage } from '@/presentation/pages/BatchGraduationPage';
-import { StaffPage } from '@/presentation/pages/StaffPage';
-import { FinancialPage } from '@/presentation/pages/FinancialPage';
-import { GraduationSystemPage } from '@/presentation/pages/GraduationSystemPage';
-import { ContactPage } from '@/presentation/pages/ContactPage';
-import { SchedulePage } from '@/presentation/pages/SchedulePage';
-import { StudentProfilePage } from '@/presentation/pages/StudentProfilePage';
-import { MyAttendancePage } from '@/presentation/pages/MyAttendancePage';
-import { AttendanceReportPage } from '@/presentation/pages/AttendanceReportPage';
-import { MyJourneyPage } from '@/presentation/pages/MyJourneyPage';
-import { TechniquesPage } from '@/presentation/pages/TechniquesPage';
+// Componente de fallback durante o carregamento de cada chunk
+const PageFallback = () => (
+  <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 text-center">
+    <div className="w-10 h-10 border-4 border-obsidian-800 border-t-zinc-200 rounded-full animate-spin" />
+    <span className="text-xs text-slate-400 font-bold uppercase tracking-widest animate-pulse">
+      Carregando SFBJJ...
+    </span>
+  </div>
+);
+
+// Páginas carregadas dinamicamente via Code Splitting (React.lazy)
+const LoginPage = lazy(() => import('@/presentation/pages/LoginPage'));
+const LandingPage = lazy(() => import('@/presentation/pages/LandingPage'));
+const DashboardPage = lazy(() => import('@/presentation/pages/DashboardPage'));
+const StudentsPage = lazy(() => import('@/presentation/pages/StudentsPage'));
+const BatchGraduationPage = lazy(() => import('@/presentation/pages/BatchGraduationPage'));
+const StaffPage = lazy(() => import('@/presentation/pages/StaffPage'));
+const FinancialPage = lazy(() => import('@/presentation/pages/FinancialPage'));
+const GraduationSystemPage = lazy(() => import('@/presentation/pages/GraduationSystemPage'));
+const ContactPage = lazy(() => import('@/presentation/pages/ContactPage'));
+const SchedulePage = lazy(() => import('@/presentation/pages/SchedulePage'));
+const StudentProfilePage = lazy(() => import('@/presentation/pages/StudentProfilePage'));
+const MyAttendancePage = lazy(() => import('@/presentation/pages/MyAttendancePage'));
+const AttendanceReportPage = lazy(() => import('@/presentation/pages/AttendanceReportPage'));
+const MyJourneyPage = lazy(() => import('@/presentation/pages/MyJourneyPage'));
+const TechniquesPage = lazy(() => import('@/presentation/pages/TechniquesPage'));
 
 import type { Aviso } from '@/domain/models/announcement';
 import { announcementService } from '@/application/services/announcementService';
@@ -239,10 +249,12 @@ function AppContent() {
           </button>
         </div>
         <div className="pt-8">
-          <LandingPage
-            announcements={announcements}
-            onAccessLogin={() => setCurrentTab(returnTab)}
-          />
+          <Suspense fallback={<PageFallback />}>
+            <LandingPage
+              announcements={announcements}
+              onAccessLogin={() => setCurrentTab(returnTab)}
+            />
+          </Suspense>
         </div>
       </div>
     );
@@ -260,10 +272,12 @@ function AppContent() {
             </div>
           )}
           <div className="flex-1 flex flex-col justify-center">
-            <LoginPage 
-              onLoginSuccess={() => setShowLogin(false)}
-              onBackToLanding={() => setShowLogin(false)} 
-            />
+            <Suspense fallback={<PageFallback />}>
+              <LoginPage 
+                onLoginSuccess={() => setShowLogin(false)}
+                onBackToLanding={() => setShowLogin(false)} 
+              />
+            </Suspense>
           </div>
         </div>
       );
@@ -277,7 +291,9 @@ function AppContent() {
           </div>
         )}
         <div className={isOffline ? 'pt-8' : ''}>
-          <LandingPage announcements={announcements} onAccessLogin={() => setShowLogin(true)} />
+          <Suspense fallback={<PageFallback />}>
+            <LandingPage announcements={announcements} onAccessLogin={() => setShowLogin(true)} />
+          </Suspense>
         </div>
       </div>
     );
@@ -291,7 +307,9 @@ function AppContent() {
       onLogout={handleLogout}
       isOffline={isOffline}
     >
-      {renderContent()}
+      <Suspense fallback={<PageFallback />}>
+        {renderContent()}
+      </Suspense>
     </MainLayout>
   );
 }

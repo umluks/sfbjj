@@ -1,9 +1,18 @@
-import { supabase } from '@/infrastructure/lib/supabaseClient';
+import { supabase, cache } from '@/infrastructure/lib/supabaseClient';
 import type { IPaymentRepository } from '@/domain/repositories/paymentRepository';
 import type { Pagamento } from '@/domain/models/payment';
 import { handleSupabaseError } from './errorHelper';
 
 export class PaymentRepository implements IPaymentRepository {
+  private clearCache(studentId?: number): void {
+    cache.clear('students');
+    if (studentId) {
+      cache.clear(`student_${studentId}`);
+    } else {
+      cache.clearByPrefix('student_');
+    }
+  }
+
   async registerPaymentWithDate(paymentId: number, dateStr: string, valor: number): Promise<void> {
     const { error } = await supabase
       .from('pagamentos')
@@ -17,6 +26,7 @@ export class PaymentRepository implements IPaymentRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao registrar quitação no banco: ${error.message}`);
     }
+    this.clearCache();
   }
 
   async registerPaidDirectly(alunoId: number, mesRef: string, valor: number, dateStr: string): Promise<Pagamento> {
@@ -38,6 +48,7 @@ export class PaymentRepository implements IPaymentRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao criar pagamento direto no banco: ${error.message}`);
     }
+    this.clearCache(alunoId);
     return data;
   }
 
@@ -50,6 +61,7 @@ export class PaymentRepository implements IPaymentRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao remover pagamento do banco: ${error.message}`);
     }
+    this.clearCache();
   }
 
   async clearPaymentsByYear(year: string): Promise<void> {
@@ -61,6 +73,7 @@ export class PaymentRepository implements IPaymentRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao limpar pagamentos do ano ${year} no banco: ${error.message}`);
     }
+    this.clearCache();
   }
 
   async savePaymentsBatch(payments: any[]): Promise<void> {
@@ -71,5 +84,6 @@ export class PaymentRepository implements IPaymentRepository {
     if (error) {
       throw handleSupabaseError(error, `Erro ao salvar pagamentos em lote no banco: ${error.message}`);
     }
+    this.clearCache();
   }
 }

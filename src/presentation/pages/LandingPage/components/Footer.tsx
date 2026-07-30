@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Aviso } from '@/domain/models/announcement';
+import { PWAInstallSection } from '@/presentation/components/shared/PWAInstallSection';
 
 interface FooterProps {
   logoSFBJJ: string;
@@ -17,8 +18,12 @@ export const Footer: React.FC<FooterProps> = ({
   onAccessLogin
 }) => {
   return (
-    <footer className="bg-obsidian-950 border-t border-obsidian-900 py-16 px-4">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+    <footer className="bg-obsidian-950 border-t border-obsidian-900">
+      {/* Seção de Destaque da Instalação do PWA */}
+      <PWAInstallSection />
+
+      <div className="py-16 px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
         {/* Descrição Institucional */}
         <div className="space-y-4">
           <button
@@ -118,6 +123,7 @@ export const Footer: React.FC<FooterProps> = ({
         <span className="tracking-widest">
           Brasília, DF • Orgulho e Tradição • #myfaithismyshield
         </span>
+      </div>
       </div>
     </footer>
   );

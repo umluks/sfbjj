@@ -290,7 +290,7 @@ export const AttendanceReportPage: React.FC = () => {
             <p className="text-xs text-zinc-650 mt-1">Ajuste os filtros de busca para visualizar as presenças.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="table-responsive-wrapper overflow-x-auto min-w-0 max-w-full border border-obsidian-850">
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-obsidian-850 text-[9px] text-zinc-500 font-black uppercase tracking-wider">

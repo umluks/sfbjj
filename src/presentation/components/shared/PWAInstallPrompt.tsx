@@ -29,8 +29,12 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ isOpen, onCl
       role="dialog"
       aria-modal="true"
       aria-labelledby="ios-prompt-title"
+      onClick={onClose}
     >
-      <div className="relative w-full max-w-md bg-obsidian-900 border border-obsidian-800 p-6 md:p-8 shadow-2xl rounded-none text-left">
+      <div 
+        className="relative w-full max-w-md bg-obsidian-900 border border-obsidian-800 p-6 md:p-8 shadow-2xl rounded-none text-left"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-zinc-450 hover:text-zinc-200 transition-colors p-2 bg-obsidian-950 border border-obsidian-800"

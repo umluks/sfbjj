@@ -1,0 +1,1 @@
+import{c as e}from"./index-iMfag5Kc.js";function t(){return e()}export{t};
