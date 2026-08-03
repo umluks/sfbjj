@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import type { Belt, Degree, Gender } from '@/domain/models/student';
-import { BAIRROS_DF } from '@/constants';
+import type { Aluno, Belt, Degree, Gender } from '@/domain/models/student';
+import type { GraduationEligibility } from '@/domain/models/graduation';
+import { getBeltRank, BAIRROS_DF } from '@/constants';
 import { getBeltsByAge, getTurmaByAge } from '@/application/services/diplomaService';
-import { calculateIbjjfCategory } from '@/utils/ibjjfCalculator';
+import { maskCpf, maskPhone, validateCpf } from '@/utils/maskUtils';
+import { User, CheckCircle2, AlertCircle, Save, Camera, MapPin, School, UserCheck, Award, AlertTriangle } from 'lucide-react';
 
 interface PersonalInfoFormProps {
   initialData: {
@@ -24,15 +26,23 @@ interface PersonalInfoFormProps {
     peso?: number;
   };
   role: 'admin' | 'teacher' | 'student';
-  isEditingOtherStudent: boolean; // Se o admin/professor está editando a ficha de outro aluno
+  isEditingOtherStudent: boolean;
   onSave: (data: any) => Promise<void>;
+  student?: Aluno;
+  eligibility?: GraduationEligibility | null;
+  lastTeacherName?: string;
+  ibjjfCategoryText?: string | null;
 }
 
 export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   initialData,
   role,
   isEditingOtherStudent,
-  onSave
+  onSave,
+  student,
+  eligibility,
+  lastTeacherName,
+  ibjjfCategoryText
 }) => {
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
@@ -41,6 +51,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [email, setEmail] = useState('');
   const [genero, setGenero] = useState<Gender>('Masculino');
   const [bairro, setBairro] = useState('');
+
   const [dataMatricula, setDataMatricula] = useState('');
   const [faixa, setFaixa] = useState<Belt>('Branca');
   const [graus, setGraus] = useState<Degree>(0);
@@ -50,55 +61,59 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [fotoPerfil, setFotoPerfil] = useState('');
   const [assinatura, setAssinatura] = useState('');
   const [peso, setPeso] = useState<string | number>('');
-  const [modality, setModality] = useState<'gi' | 'nogi'>('gi');
+
   const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setNome(initialData.nome || '');
-    setCpf(initialData.cpf || '');
+    setCpf(initialData.cpf ? maskCpf(initialData.cpf) : '');
     setDataNascimento(initialData.dataNascimento || '');
-    setTelefone(initialData.telefone || '');
+    setTelefone(initialData.telefone ? maskPhone(initialData.telefone) : '');
     setEmail(initialData.email || '');
     setGenero(initialData.genero || 'Masculino');
     setBairro(initialData.bairro || '');
+
     setDataMatricula(initialData.dataMatricula || '');
     setFaixa(initialData.faixa || 'Branca');
     setGraus(initialData.graus || 0);
     setTurma(initialData.turma || 'Adulto');
     setContatoEmergenciaNome(initialData.contatoEmergenciaNome || '');
-    setContatoEmergenciaTel(initialData.contatoEmergenciaTel || '');
+    setContatoEmergenciaTel(initialData.contatoEmergenciaTel ? maskPhone(initialData.contatoEmergenciaTel) : '');
     setFotoPerfil(initialData.fotoPerfil || '');
     setAssinatura(initialData.assinatura || '');
     setPeso(initialData.peso !== undefined && initialData.peso !== null ? initialData.peso : '');
   }, [initialData]);
 
-  const handlePhoneMask = (val: string) => {
-    let raw = val.replace(/\D/g, '');
-    if (raw.length > 11) raw = raw.substring(0, 11);
-    if (raw.length > 2) raw = `(${raw.substring(0, 2)}) ${raw.substring(2)}`;
-    if (raw.length > 9) raw = `${raw.substring(0, 10)}-${raw.substring(10)}`;
-    return raw;
-  };
-
-  const handleCpfMask = (val: string) => {
-    let raw = val.replace(/\D/g, '');
-    if (raw.length > 11) raw = raw.substring(0, 11);
-    if (raw.length > 9) {
-      raw = `${raw.substring(0, 3)}.${raw.substring(3, 6)}.${raw.substring(6, 9)}-${raw.substring(9)}`;
-    } else if (raw.length > 6) {
-      raw = `${raw.substring(0, 3)}.${raw.substring(3, 6)}.${raw.substring(6)}`;
-    } else if (raw.length > 3) {
-      raw = `${raw.substring(0, 3)}.${raw.substring(3)}`;
-    }
-    return raw;
-  };
+  const isStudentType = role === 'student' || isEditingOtherStudent;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessMsg(null);
+    setErrorMsg(null);
+
+    if (isStudentType && cpf && !validateCpf(cpf)) {
+      setErrorMsg('O CPF informado é inválido. Verifique os números digitados.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload: any = { nome };
-      if (role === 'student' || isEditingOtherStudent) {
+
+      if (isStudentType) {
+        const initialRank = getBeltRank(initialData.faixa);
+        const selectedRank = getBeltRank(faixa);
+        const initialGrau = Number(initialData.graus) || 0;
+        const selectedGrau = Number(graus) || 0;
+
+        if (selectedRank < initialRank || (selectedRank === initialRank && selectedGrau < initialGrau)) {
+          setErrorMsg('Não é possível rebaixar a faixa ou grau atual nas Informações Pessoais.');
+          setSubmitting(false);
+          return;
+        }
+
         payload.cpf = cpf;
         payload.dataNascimento = dataNascimento;
         payload.telefone = telefone;
@@ -123,90 +138,77 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       }
 
       await onSave(payload);
-    } catch (err) {
-      console.error(err);
+      setSuccessMsg('Informações atualizadas com sucesso!');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao salvar informações.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isStudentType = role === 'student' || isEditingOtherStudent;
-
-  const ibjjfResult = calculateIbjjfCategory({
-    dataNascimento,
-    gender: genero,
-    modality,
-    weightKg: peso !== '' ? peso : 70,
-    beltColor: faixa
-  });
-
   return (
-    <form onSubmit={handleSave} className="space-y-6 text-left">
-      <div>
-        <h2 className="text-xl font-bold text-slate-100">Informações Pessoais</h2>
-        <p className="text-slate-400 text-xs mt-1">
-          Visualize ou atualize seus dados de cadastro no sistema.
-        </p>
-      </div>
+    <form onSubmit={handleSave} className="space-y-6 text-left w-full max-w-full min-w-0">
+      
+      {/* Mensagens de Feedback */}
+      {successMsg && (
+        <div className="flex items-center gap-2.5 p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-sm">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Avatar & Signature Upload (for teacher) */}
-        <div className="md:col-span-3 flex flex-col gap-6">
-          {/* Avatar Upload Card */}
-          <div className="flex flex-col items-center justify-center bg-obsidian-900 border border-obsidian-850 p-6 rounded-2xl relative shadow-md">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gold-550/20 bg-obsidian-950 flex items-center justify-center text-4xl shadow-inner select-none mb-4 shrink-0">
+      {errorMsg && (
+        <div className="flex items-center gap-2.5 p-4 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* Card 1: Informações Pessoais (Nome, CPF, Data Nasc, Sexo, Telefone, Email) */}
+      <div className="bg-obsidian-900/60 border border-obsidian-850 p-4 sm:p-6 rounded-2xl shadow-xl space-y-5">
+        <div className="flex items-center gap-2.5 border-b border-obsidian-850 pb-3">
+          <User className="w-5 h-5 text-gold-500 shrink-0" />
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-100">Informações Pessoais</h2>
+            <p className="text-slate-400 text-xs mt-0.5">Seus dados cadastrais básicos de identificação.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          
+          {/* Avatar Upload */}
+          <div className="md:col-span-4 lg:col-span-3 flex flex-col items-center justify-center bg-obsidian-950 border border-obsidian-800 p-5 rounded-2xl shadow-inner">
+            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gold-550/40 bg-obsidian-900 flex items-center justify-center text-4xl shadow-md shrink-0 mb-3 relative">
               {fotoPerfil ? (
                 fotoPerfil.length <= 2 ? (
                   <span>{fotoPerfil}</span>
                 ) : (
-                  <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+                  <img src={fotoPerfil} alt="Perfil" loading="lazy" className="w-full h-full object-cover" />
                 )
               ) : (
                 <span className="text-slate-500">🥋</span>
               )}
             </div>
+
             <div className="flex gap-1.5 mb-3">
               {['🥋', '🥇', '🦁', '🛡️'].map(emoji => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => setFotoPerfil(emoji)}
-                  className={`p-1.5 border rounded hover:bg-obsidian-750 text-sm ${fotoPerfil === emoji ? 'border-gold-550 bg-gold-550/10' : 'border-obsidian-700'}`}
+                  className={`p-2 border rounded-lg text-sm transition-all min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    fotoPerfil === emoji ? 'border-gold-550 bg-gold-550/15' : 'border-obsidian-800 hover:bg-obsidian-800'
+                  }`}
+                  aria-label={`Selecionar avatar ${emoji}`}
                 >
                   {emoji}
                 </button>
               ))}
             </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    if (event.target?.result) {
-                      setFotoPerfil(event.target.result as string);
-                    }
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-              className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer w-full"
-            />
-          </div>
 
-          {/* Signature Upload Card */}
-          {role === 'teacher' && (
-            <div className="flex flex-col items-center justify-center bg-obsidian-900 border border-obsidian-850 p-6 rounded-2xl relative shadow-md">
-              <span className="text-xs font-bold text-slate-350 mb-2 uppercase tracking-wider">Assinatura Digital</span>
-              <div className="w-full h-16 rounded border border-obsidian-800 bg-white flex items-center justify-center p-2 mb-3 overflow-hidden shadow-inner">
-                {assinatura ? (
-                  <img src={assinatura} alt="Assinatura Digital" className="max-w-full max-h-full object-contain" />
-                ) : (
-                  <span className="text-slate-400 text-[10px] italic">Sem assinatura</span>
-                )}
-              </div>
+            <label className="btn-secondary w-full text-center py-2 px-3 text-xs font-bold uppercase rounded-xl cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px]">
+              <Camera className="w-4 h-4 text-gold-500" />
+              <span>Enviar Foto</span>
               <input
                 type="file"
                 accept="image/*"
@@ -216,308 +218,348 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                     const reader = new FileReader();
                     reader.onload = (event) => {
                       if (event.target?.result) {
-                        setAssinatura(event.target.result as string);
+                        setFotoPerfil(event.target.result as string);
                       }
                     };
                     reader.readAsDataURL(file);
                   }
                 }}
-                className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:bg-obsidian-800 file:text-slate-205 hover:file:bg-obsidian-750 file:cursor-pointer w-full"
+                className="hidden"
               />
-              {assinatura && (
-                <button
-                  type="button"
-                  onClick={() => setAssinatura('')}
-                  className="text-[10px] text-red-400 hover:underline mt-2 font-semibold"
-                >
-                  Remover Assinatura
-                </button>
-              )}
+            </label>
+          </div>
+
+          {/* Form Fields */}
+          <div className="md:col-span-8 lg:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            {/* Nome Completo */}
+            <div className="flex flex-col gap-1.5 col-span-1 sm:col-span-2">
+              <label htmlFor="field-nome" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                Nome Completo <span className="text-gold-500">*</span>
+              </label>
+              <input
+                id="field-nome"
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30"
+                required
+                disabled={submitting}
+              />
+            </div>
+
+            {isStudentType && (
+              <>
+                {/* CPF */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-cpf" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    CPF <span className="text-gold-500">*</span>
+                  </label>
+                  <input
+                    id="field-cpf"
+                    type="text"
+                    inputMode="numeric"
+                    value={cpf}
+                    onChange={(e) => setCpf(maskCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 font-mono text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30"
+                    required
+                    disabled={submitting || !isEditingOtherStudent}
+                  />
+                </div>
+
+                {/* Data de Nascimento */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-nascimento" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    Data de Nascimento <span className="text-gold-500">*</span>
+                  </label>
+                  <input
+                    id="field-nascimento"
+                    type="date"
+                    value={dataNascimento}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setDataNascimento(newDate);
+                      if (newDate) {
+                        setTurma(getTurmaByAge(newDate));
+                        const allowed = getBeltsByAge(newDate);
+                        if (!allowed.includes(faixa)) {
+                          setFaixa(allowed[0]);
+                        }
+                      }
+                    }}
+                    className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 font-mono text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30"
+                    required
+                    disabled={submitting || !isEditingOtherStudent}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Telefone & Email */}
+            {(role === 'teacher' || isStudentType) && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-telefone" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    Telefone / WhatsApp
+                  </label>
+                  <input
+                    id="field-telefone"
+                    type="text"
+                    inputMode="tel"
+                    value={telefone}
+                    onChange={(e) => setTelefone(maskPhone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 font-mono text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30"
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-email" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    E-mail
+                  </label>
+                  <input
+                    id="field-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="exemplo@email.com"
+                    className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30"
+                    disabled={submitting}
+                  />
+                </div>
+              </>
+            )}
+
+            {isStudentType && (
+              <>
+                {/* Sexo / Gênero */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-genero" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    Sexo / Gênero
+                  </label>
+                  <select
+                    id="field-genero"
+                    value={genero}
+                    onChange={(e) => setGenero(e.target.value as Gender)}
+                    className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30 cursor-pointer"
+                    disabled={submitting || !isEditingOtherStudent}
+                  >
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                  </select>
+                </div>
+
+                {/* Peso Atual */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-peso" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    Peso Atual (kg)
+                  </label>
+                  <input
+                    id="field-peso"
+                    type="number"
+                    step="0.1"
+                    min="10"
+                    max="250"
+                    value={peso}
+                    onChange={(e) => setPeso(e.target.value)}
+                    placeholder="Ex: 75.5"
+                    className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 font-mono text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30"
+                    disabled={submitting}
+                  />
+                </div>
+
+                {/* Bairro / Região */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="field-bairro" className="text-xs text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-gold-500 shrink-0" />
+                    <span>Bairro / Região</span>
+                  </label>
+                  {BAIRROS_DF.includes(bairro) || !bairro ? (
+                    <select
+                      id="field-bairro"
+                      value={bairro}
+                      onChange={(e) => setBairro(e.target.value)}
+                      className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30 cursor-pointer text-sm"
+                      disabled={submitting}
+                    >
+                      <option value="">Selecione um bairro...</option>
+                      {BAIRROS_DF.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id="field-bairro"
+                      type="text"
+                      value={bairro}
+                      onChange={(e) => setBairro(e.target.value)}
+                      placeholder="Ex: Asa Sul, Taguatinga..."
+                      className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 placeholder-slate-600 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30 text-sm"
+                      disabled={submitting}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+      </div>
+
+      {/* Card 2: Informações da Academia (agrupado em Dados Pessoais) */}
+      {isStudentType && (
+        <div className="bg-obsidian-900/60 border border-obsidian-850 p-4 sm:p-6 rounded-2xl shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-obsidian-850 pb-3 gap-2">
+            <div className="flex items-center gap-2.5">
+              <School className="w-5 h-5 text-gold-500 shrink-0" />
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-100">Informações da Academia</h3>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Turma, professor responsável e categoria oficial de jiu-jitsu.
+                </p>
+              </div>
+            </div>
+
+            {student?.status && (
+              <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border shrink-0 ${
+                student.status === 'Ativo'
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-orange-400 bg-orange-500/10 border-orange-500/20'
+              }`}>
+                {student.status}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Turma Principal */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="field-turma" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                Turma Principal
+              </label>
+              <select
+                id="field-turma"
+                value={turma}
+                onChange={(e) => setTurma(e.target.value as 'Kids' | 'Adulto')}
+                className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500 focus-visible:ring-2 focus-visible:ring-gold-500/30 cursor-pointer text-sm"
+                disabled={submitting || !isEditingOtherStudent}
+              >
+                <option value="Adulto">Adulto</option>
+                <option value="Kids">Kids</option>
+              </select>
+            </div>
+
+            {/* Professor Responsável */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1">
+                <UserCheck className="w-3.5 h-3.5 text-gold-500 shrink-0" />
+                <span>Professor Responsável</span>
+              </label>
+              <div className="min-h-[48px] px-4 py-3 bg-obsidian-950/80 text-slate-200 font-bold rounded-xl border border-obsidian-800/80 flex items-center text-sm truncate">
+                {lastTeacherName || 'Professor Master'}
+              </div>
+            </div>
+
+            {/* Categoria Oficial IBJJF */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Award className="w-3.5 h-3.5 text-gold-500 shrink-0" />
+                <span>Categoria Oficial IBJJF</span>
+              </label>
+              <div className="min-h-[48px] px-4 py-3 bg-obsidian-950/80 text-slate-200 font-bold rounded-xl border border-obsidian-800/80 flex items-center text-xs uppercase truncate">
+                {ibjjfCategoryText || 'Configure peso e data de nascimento'}
+              </div>
+            </div>
+          </div>
+
+          {/* Elegibilidade de Graduação */}
+          {eligibility && (
+            <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-2 ${
+              eligibility.status === 'Apto' 
+                ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' 
+                : 'bg-obsidian-950 border-obsidian-800 text-slate-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                {eligibility.status === 'Apto' ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                )}
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider block">
+                    {eligibility.status === 'Apto' ? 'Elegível para Graduação!' : `Elegibilidade: ${eligibility.status}`}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                    {eligibility.tempoFaixaAtualMeses} meses cumpridos na faixa atual • {eligibility.percentualEvolucao}% de evolução
+                  </span>
+                </div>
+              </div>
+              
+              <div className="text-left sm:text-right shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Previsão</span>
+                <span className="text-xs font-black text-gold-450">{eligibility.dataEstimadaProximaGraduacao || 'Em breve'}</span>
+              </div>
             </div>
           )}
         </div>
+      )}
 
-        {/* Inputs */}
-        <div className="md:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5 col-span-2">
-            <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nome Completo</label>
-            <input
-              type="text"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="input-premium w-full bg-obsidian-950"
-              required
-              disabled={submitting}
-            />
+      {/* Card 3: Contato de Emergência (se aluno) */}
+      {isStudentType && (
+        <div className="bg-obsidian-900/60 border border-obsidian-850 p-4 sm:p-6 rounded-2xl shadow-xl space-y-4">
+          <h3 className="text-xs sm:text-sm font-extrabold text-slate-200 uppercase tracking-wider">
+            Contato de Emergência
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="field-emergencia-nome" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                Nome do Contato
+              </label>
+              <input
+                id="field-emergencia-nome"
+                type="text"
+                value={contatoEmergenciaNome}
+                onChange={(e) => setContatoEmergenciaNome(e.target.value)}
+                placeholder="Ex: Mãe, Cônjuge"
+                className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500"
+                disabled={submitting}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="field-emergencia-tel" className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                Telefone de Emergência
+              </label>
+              <input
+                id="field-emergencia-tel"
+                type="text"
+                inputMode="tel"
+                value={contatoEmergenciaTel}
+                onChange={(e) => setContatoEmergenciaTel(maskPhone(e.target.value))}
+                placeholder="(00) 00000-0000"
+                className="input-premium w-full min-h-[48px] px-4 py-3 bg-obsidian-950 font-mono text-slate-100 rounded-xl border border-obsidian-800 focus:border-gold-500"
+                disabled={submitting}
+              />
+            </div>
           </div>
-
-          {isStudentType && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">CPF</label>
-                <input
-                  type="text"
-                  value={cpf}
-                  onChange={(e) => setCpf(handleCpfMask(e.target.value))}
-                  placeholder="000.000.000-00"
-                  className="input-premium w-full bg-obsidian-950 font-mono"
-                  required
-                  disabled={submitting || !isEditingOtherStudent} // Aluno comum não altera CPF por segurança
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Data de Nascimento</label>
-                <input
-                  type="date"
-                  value={dataNascimento}
-                  onChange={(e) => {
-                    const newDate = e.target.value;
-                    setDataNascimento(newDate);
-                    if (newDate) {
-                      setTurma(getTurmaByAge(newDate));
-                      const allowed = getBeltsByAge(newDate);
-                      if (!allowed.includes(faixa)) {
-                        setFaixa(allowed[0]);
-                      }
-                    }
-                  }}
-                  className="input-premium w-full bg-obsidian-950 font-mono"
-                  required
-                  disabled={submitting || !isEditingOtherStudent}
-                />
-              </div>
-            </>
-          )}
-
-          {(role === 'teacher' || isStudentType) && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Telefone</label>
-                <input
-                  type="text"
-                  value={telefone}
-                  onChange={(e) => setTelefone(handlePhoneMask(e.target.value))}
-                  placeholder="(00) 00000-0000"
-                  className="input-premium w-full bg-obsidian-950 font-mono"
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">E-mail</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-premium w-full bg-obsidian-950 font-mono"
-                  disabled={submitting}
-                />
-              </div>
-            </>
-          )}
-
-          {isStudentType && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Gênero</label>
-                <select
-                  value={genero}
-                  onChange={(e) => setGenero(e.target.value as Gender)}
-                  className="input-premium w-full bg-obsidian-950"
-                  disabled={submitting || !isEditingOtherStudent}
-                >
-                  <option value="Masculino">Masculino</option>
-                  <option value="Feminino">Feminino</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Peso Atual (kg)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="10"
-                  max="250"
-                  value={peso}
-                  onChange={(e) => setPeso(e.target.value)}
-                  placeholder="Ex: 75.5"
-                  className="input-premium w-full bg-obsidian-950 font-mono"
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Bairro do DF</label>
-                <select
-                  value={bairro}
-                  onChange={(e) => setBairro(e.target.value)}
-                  className="input-premium w-full bg-obsidian-950"
-                  disabled={submitting}
-                >
-                  <option value="" disabled>Selecione um bairro...</option>
-                  {BAIRROS_DF.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Faixa Atual</label>
-                <select
-                  value={faixa}
-                  onChange={(e) => setFaixa(e.target.value as Belt)}
-                  className="input-premium w-full bg-obsidian-950 text-gold-450 font-bold"
-                  disabled={submitting}
-                >
-                  {getBeltsByAge(dataNascimento).map((b: Belt) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Graus na Faixa</label>
-                <select
-                  value={graus}
-                  onChange={(e) => setGraus(Number(e.target.value) as Degree)}
-                  className="input-premium w-full bg-obsidian-950 text-gold-450 font-bold"
-                  disabled={submitting}
-                >
-                  <option value={0}>0 Grau</option>
-                  <option value={1}>1 Grau</option>
-                  <option value={2}>2 Graus</option>
-                  <option value={3}>3 Graus</option>
-                  <option value={4}>4 Graus</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Turma Principal</label>
-                <select
-                  value={turma}
-                  onChange={(e) => setTurma(e.target.value as 'Kids' | 'Adulto')}
-                  className="input-premium w-full bg-obsidian-950"
-                  disabled={submitting || !isEditingOtherStudent}
-                >
-                  <option value="Kids">Kids</option>
-                  <option value="Adulto">Adulto</option>
-                </select>
-              </div>
-
-              {/* Card de Categoria e Divisão Calculada do Aluno */}
-              <div className="col-span-1 sm:col-span-2 mt-2 p-4 sm:p-5 bg-obsidian-950 border border-obsidian-850 rounded-2xl space-y-4 shadow-inner w-full min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-obsidian-850 pb-3 w-full min-w-0">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <span className="text-[10px] font-black text-gold-500 uppercase tracking-widest block leading-snug">
-                      Resultado IBJJF Calculado (Ano de Referência: {ibjjfResult.currentYear})
-                    </span>
-                    <span className="text-[11px] text-zinc-400 block leading-snug">
-                      Categorias e tempo de luta oficiais baseados em seus dados cadastrais.
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto bg-obsidian-900 border border-obsidian-800 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setModality('gi')}
-                      className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-all ${
-                        modality === 'gi' 
-                          ? 'bg-gold-550/20 text-gold-400 border border-gold-550/30' 
-                          : 'text-zinc-500 hover:text-slate-300'
-                      }`}
-                    >
-                      De Kimono (Gi)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModality('nogi')}
-                      className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-all ${
-                        modality === 'nogi' 
-                          ? 'bg-gold-550/20 text-gold-400 border border-gold-550/30' 
-                          : 'text-zinc-500 hover:text-slate-300'
-                      }`}
-                    >
-                      Sem Kimono (No-Gi)
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Idade</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-150 block truncate">{ibjjfResult.category}</span>
-                    <span className="text-[10px] text-zinc-450 font-bold block">{ibjjfResult.calculatedAge} anos de idade</span>
-                  </div>
-
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Tempo Reg. de Luta</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-150 block">{ibjjfResult.fightTime}</span>
-                    <span className="text-[10px] text-zinc-450 font-semibold block">
-                      Final: {ibjjfResult.category.startsWith('MASTER') || ibjjfResult.category.startsWith('ADULTO') ? 'Mesmo tempo' : 'Dobro'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Categoria de Peso</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-150 block">Peso {ibjjfResult.weightClass.name}</span>
-                    <span className="text-[10px] text-zinc-450 font-semibold block">
-                      {peso !== '' ? `${peso} kg informado` : 'Peso não informado'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">Limite Divisão</span>
-                    <span className="text-xs sm:text-sm font-black text-gold-450 block">{ibjjfResult.weightClass.limit}</span>
-                    <span className="text-[10px] text-zinc-450 font-semibold block">
-                      {modality === 'gi' ? 'Modalidade Kimono' : 'Modalidade No-Gi'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5 col-span-2 pt-2 border-t border-obsidian-850">
-                <span className="text-[10px] text-zinc-555 font-bold uppercase tracking-wider block mb-1">Contato de Emergência</span>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-slate-400 font-bold uppercase">Nome do Contato</label>
-                    <input
-                      type="text"
-                      value={contatoEmergenciaNome}
-                      onChange={(e) => setContatoEmergenciaNome(e.target.value)}
-                      placeholder="Ex: Mãe, Cônjuge"
-                      className="input-premium w-full bg-obsidian-950"
-                      disabled={submitting}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-slate-400 font-bold uppercase">Telefone de Emergência</label>
-                    <input
-                      type="text"
-                      value={contatoEmergenciaTel}
-                      onChange={(e) => setContatoEmergenciaTel(handlePhoneMask(e.target.value))}
-                      placeholder="(00) 00000-0000"
-                      className="input-premium w-full bg-obsidian-950 font-mono"
-                      disabled={submitting}
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
         </div>
-      </div>
+      )}
 
-      <div className="flex justify-end pt-4 border-t border-obsidian-850">
+      {/* Botão de Salvar Alterações (Full width no mobile min-h-[48px]) */}
+      <div className="flex justify-end pt-2">
         <button
           type="submit"
           disabled={submitting}
-          className="btn-gold px-8 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
+          className="btn-gold w-full sm:w-auto min-h-[48px] px-8 py-3 text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 rounded-xl shadow-lg transition-all active:scale-98"
         >
-          {submitting ? 'Salvando...' : 'Salvar Alterações'}
+          <Save className="w-4 h-4 shrink-0" />
+          <span>{submitting ? 'Salvando Alterações...' : 'Salvar Alterações'}</span>
         </button>
       </div>
+
     </form>
   );
 };
+
 export default PersonalInfoForm;

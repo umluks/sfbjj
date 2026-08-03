@@ -2,6 +2,7 @@ import { supabase, cache } from '@/infrastructure/lib/supabaseClient';
 import type { IStudentRepository } from '@/domain/repositories/studentRepository';
 import type { Aluno, Belt, Degree } from '@/domain/models/student';
 import { handleSupabaseError } from './errorHelper';
+import { sortGraduacoesDesc } from '@/constants';
 
 export class StudentRepository implements IStudentRepository {
   private clearCache(studentId?: number): void {
@@ -30,27 +31,37 @@ export class StudentRepository implements IStudentRepository {
       if (!data) return [];
 
       // Mapeia a estrutura do banco para o tipo do frontend
-      const mapped: Aluno[] = data.map((student: any) => ({
-        ...student,
-        historicoGraduacoes: (student.graduacoes_historico || [])
+      const mapped: Aluno[] = data.map((student: any) => {
+        const activeHistory = (student.graduacoes_historico || [])
+          .filter((g: any) => !g.is_deleted)
           .map((g: any) => ({
             id: g.id,
             data: g.data_graduacao,
-            faixa: g.faixa,
-            graus: g.graus,
+            faixa: g.faixa as Belt,
+            graus: g.graus as Degree,
             avaliador: g.avaliador
           }))
-          .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
-        pagamentos: (student.pagamentos || []).map((p: any) => ({
-          id: p.id,
-          alunoId: p.alunoId ?? p.aluno_id,
-          mesRef: p.mesRef,
-          valor: Number(p.valor || 0),
-          status: p.status,
-          dataVencimento: p.dataVencimento,
-          dataPagamento: p.dataPagamento
-        }))
-      }));
+          .sort(sortGraduacoesDesc);
+
+        const highest = activeHistory.length > 0 ? activeHistory[0] : null;
+
+        return {
+          ...student,
+          faixa: highest ? highest.faixa : student.faixa,
+          graus: highest ? highest.graus : student.graus,
+          dataUltimaGraduacao: highest ? highest.data : student.dataUltimaGraduacao,
+          historicoGraduacoes: activeHistory,
+          pagamentos: (student.pagamentos || []).map((p: any) => ({
+            id: p.id,
+            alunoId: p.alunoId ?? p.aluno_id,
+            mesRef: p.mesRef,
+            valor: Number(p.valor || 0),
+            status: p.status,
+            dataVencimento: p.dataVencimento,
+            dataPagamento: p.dataPagamento
+          }))
+        };
+      });
 
       const results = mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
       cache.set(cacheKey, results);
@@ -299,17 +310,25 @@ export class StudentRepository implements IStudentRepository {
 
       if (!data) return null;
 
+      const activeHistory = (data.graduacoes_historico || [])
+        .filter((g: any) => !g.is_deleted)
+        .map((g: any) => ({
+          id: g.id,
+          data: g.data_graduacao,
+          faixa: g.faixa as Belt,
+          graus: g.graus as Degree,
+          avaliador: g.avaliador
+        }))
+        .sort(sortGraduacoesDesc);
+
+      const highest = activeHistory.length > 0 ? activeHistory[0] : null;
+
       const result = {
         ...data,
-        historicoGraduacoes: (data.graduacoes_historico || [])
-          .map((g: any) => ({
-            id: g.id,
-            data: g.data_graduacao,
-            faixa: g.faixa,
-            graus: g.graus,
-            avaliador: g.avaliador
-          }))
-          .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+        faixa: highest ? highest.faixa : data.faixa,
+        graus: highest ? highest.graus : data.graus,
+        dataUltimaGraduacao: highest ? highest.data : data.dataUltimaGraduacao,
+        historicoGraduacoes: activeHistory,
         pagamentos: (data.pagamentos || []).map((p: any) => ({
           id: p.id,
           alunoId: p.alunoId ?? p.aluno_id,

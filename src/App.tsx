@@ -34,7 +34,7 @@ import type { Aviso } from '@/domain/models/announcement';
 import { announcementService } from '@/application/services/announcementService';
 
 function AppContent() {
-  const { loggedUser, logout } = useAuthContext();
+  const { loggedUser, logout, isInitializing } = useAuthContext();
   const [showLogin, setShowLogin] = useState(false);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -133,6 +133,18 @@ function AppContent() {
     logout();
     setShowLogin(false);
   };
+
+  // Se estiver restaurando a sessão inicial (Refresh Token), exibe a tela de carregamento suave
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-obsidian-950 gap-4 p-8 text-center">
+        <div className="w-12 h-12 border-4 border-obsidian-800 border-t-amber-500 rounded-full animate-spin" />
+        <span className="text-xs text-amber-500 font-bold uppercase tracking-widest animate-pulse">
+          Restaurando Sessão SFBJJ...
+        </span>
+      </div>
+    );
+  }
 
   // Renderização baseada na aba ativa
   const renderContent = () => {

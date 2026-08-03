@@ -33,6 +33,12 @@ export interface Aluno {
   genero: Gender;
   dataMatricula: string; // YYYY-MM-DD
   bairro: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  cidade?: string;
+  uf?: string;
   faixa: Belt;
   graus: Degree;
   dataUltimaGraduacao: string; // Data da última graduação

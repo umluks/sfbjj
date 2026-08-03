@@ -73,6 +73,11 @@ export const parseSafeDate = (dateStr: string): Date => {
     return new Date(year, month - 1, day);
   }
 
+  if (/^\d{2}\/\d{4}$/.test(dateStr)) {
+    const [month, year] = dateStr.split('/').map(Number);
+    return new Date(year, month - 1, 1);
+  }
+
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
     const [day, month, year] = dateStr.split('/').map(Number);
     return new Date(year, month - 1, day);

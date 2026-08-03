@@ -3,6 +3,7 @@ import type { Aluno, Belt, Degree } from '@/domain/models/student';
 import type { LoggedUser } from '@/domain/models/auth';
 import { studentService } from '@/application/services/studentService';
 import { emailService } from '@/application/services/emailService';
+import { sortGraduacoesAsc } from '@/constants';
 
 const isPendingStatus = (statusStr?: string): boolean => {
   if (!statusStr) return false;
@@ -225,7 +226,7 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 graus: g.graus as Degree,
                 avaliador: g.avaliador
               }))
-              .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+              .sort(sortGraduacoesAsc),
             pagamentos: []
           };
         });

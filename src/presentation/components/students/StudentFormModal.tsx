@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Aluno, Belt, Degree, Gender } from '@/domain/models/student';
-import { BAIRROS_DF, BELT_RANKS } from '@/constants';
+import { BAIRROS_DF, BELT_RANKS, sortGraduacoesDesc } from '@/constants';
 import { getBeltsByAge, getBjjAge, getTurmaByAge } from '@/application/services/diplomaService';
 import { formatCPF, formatPhone, formatMonthYear } from '@/utils/formatters';
 import { compressImage } from '@/utils/imageCompressor';
@@ -294,7 +294,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
     });
   }
 
-  const sortedHistory = displayHistory.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const sortedHistory = [...displayHistory].sort(sortGraduacoesDesc);
   const todayStr = getLocalTodayStr();
 
   if (!isOpen) return null;

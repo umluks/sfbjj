@@ -55,7 +55,7 @@ export class AttendanceRepository implements IAttendanceRepository {
         throw error;
       }
 
-      const result = (data || []).map(item => this.mapDbToModel(item));
+      const result = (data || []).map((item: any) => this.mapDbToModel(item));
       cache.set(cacheKey, result);
       return result;
     } catch (error: any) {
@@ -216,7 +216,7 @@ export class AttendanceRepository implements IAttendanceRepository {
         throw error;
       }
 
-      const result = (data || []).map(item => this.mapDbToModel(item));
+      const result = (data || []).map((item: any) => this.mapDbToModel(item));
       cache.set(cacheKey, result);
       return result;
     } catch (error: any) {

@@ -19,6 +19,7 @@ import type { Frequencia } from '@/domain/models/attendance';
 import { formatDate, getDurationFriendly, parseSafeDate } from '@/utils/formatters';
 import { BeltBadge } from '@/presentation/components/shared/BeltBadge';
 import { AchievementsList } from '@/presentation/components/profile/AchievementsList';
+import { sortGraduacoesDesc } from '@/constants';
 
 interface MyJourneyPageProps {
   alunoId?: number;
@@ -222,7 +223,7 @@ export const MyJourneyPage: React.FC<MyJourneyPageProps> = ({ alunoId }) => {
         avaliador: 'Sistema'
       });
     }
-    return history.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    return history.sort(sortGraduacoesDesc);
   }, [student]);
 
   // Renderização visual da faixa

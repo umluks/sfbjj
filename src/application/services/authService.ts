@@ -1,5 +1,6 @@
 import { supabase } from '@/infrastructure/lib/supabaseClient';
 import type { LoggedUser } from '@/domain/models/auth';
+import { tokenService } from '@/infrastructure/auth/tokenService';
 
 export class AuthService {
   /**
@@ -9,6 +10,8 @@ export class AuthService {
   async login(identifier: string, passwordString: string): Promise<LoggedUser> {
     const username = identifier.trim().toLowerCase();
     const cleanedCpfInput = username.replace(/\D/g, '');
+
+    let authenticatedUser: LoggedUser | null = null;
 
     // 1. Login via e-mail
     if (username.includes('@')) {
@@ -25,7 +28,7 @@ export class AuthService {
 
       if (adminData) {
         if (adminData.senha === passwordString) {
-          return {
+          authenticatedUser = {
             role: 'admin',
             adminId: adminData.id,
             nome: adminData.nome,
@@ -36,39 +39,41 @@ export class AuthService {
         }
       }
 
-      // 1.2 Professores
-      const { data: profData, error: profError } = await supabase
-        .from('professores')
-        .select('*')
-        .eq('email', username)
-        .maybeSingle();
+      if (!authenticatedUser) {
+        // 1.2 Professores
+        const { data: profData, error: profError } = await supabase
+          .from('professores')
+          .select('*')
+          .eq('email', username)
+          .maybeSingle();
 
-      if (profError) {
-        throw new Error(`Erro ao verificar professor: ${profError.message}`);
-      }
+        if (profError) {
+          throw new Error(`Erro ao verificar professor: ${profError.message}`);
+        }
 
-      if (profData) {
-        if (profData.senha === passwordString) {
-          return {
-            role: 'teacher',
-            professorId: profData.id,
-            nome: profData.nome,
-            email: profData.email,
-            telefone: profData.telefone,
-            foto_perfil: profData.foto_perfil,
-            assinatura: profData.assinatura
-          };
-        } else {
-          throw new Error('Senha incorreta para o professor.');
+        if (profData) {
+          if (profData.senha === passwordString) {
+            authenticatedUser = {
+              role: 'teacher',
+              professorId: profData.id,
+              nome: profData.nome,
+              email: profData.email,
+              telefone: profData.telefone,
+              foto_perfil: profData.foto_perfil,
+              assinatura: profData.assinatura
+            };
+          } else {
+            throw new Error('Senha incorreta para o professor.');
+          }
         }
       }
 
-      // Apenas Administradores e Professores acessam por E-mail
-      throw new Error('Apenas Administradores e Professores podem acessar via e-mail. Alunos devem entrar utilizando o CPF.');
-    }
-
-    // 2. Login via CPF (apenas para alunos)
-    if (cleanedCpfInput.length > 0) {
+      if (!authenticatedUser) {
+        // Apenas Administradores e Professores acessam por E-mail
+        throw new Error('Apenas Administradores e Professores podem acessar via e-mail. Alunos devem entrar utilizando o CPF.');
+      }
+    } else if (cleanedCpfInput.length > 0) {
+      // 2. Login via CPF (apenas para alunos)
       const { data: student, error: dbError } = await supabase
         .from('alunos')
         .select('*')
@@ -88,7 +93,7 @@ export class AuthService {
           if (student.status === 'Inativo') {
             throw new Error('Sua conta está inativa. Entre em contato com a administração para reativar seu acesso.');
           }
-          return {
+          authenticatedUser = {
             role: student.role || 'student',
             alunoId: student.id,
             nome: student.nome,
@@ -97,12 +102,52 @@ export class AuthService {
         } else {
           throw new Error('Senha incorreta.');
         }
+      } else {
+        throw new Error('Nenhum aluno encontrado com este CPF.');
       }
-
-      throw new Error('Nenhum aluno encontrado com este CPF.');
+    } else {
+      throw new Error('Por favor, informe um e-mail (Admin/Professor) ou CPF (Aluno) válido.');
     }
 
-    throw new Error('Por favor, informe um e-mail (Admin/Professor) ou CPF (Aluno) válido.');
+    if (authenticatedUser) {
+      // Salva o par Access Token + Refresh Token de forma segura
+      tokenService.saveSession(authenticatedUser);
+      return authenticatedUser;
+    }
+
+    throw new Error('Falha ao autenticar usuário.');
+  }
+
+  /**
+   * Restaura a sessão do usuário utilizando o Refresh Token / Access Token.
+   */
+  async restoreSession(): Promise<LoggedUser | null> {
+    try {
+      const user = await tokenService.restoreSession();
+      if (!user) return null;
+
+      // Validação de aluno ativo ao restaurar sessão
+      if (user.role === 'student' && user.alunoId) {
+        const isActive = await this.checkStudentActive(user.alunoId);
+        if (!isActive) {
+          tokenService.clearSession();
+          return null;
+        }
+      }
+
+      return user;
+    } catch (err) {
+      console.warn('Erro ao restaurar sessao:', err);
+      tokenService.clearSession();
+      return null;
+    }
+  }
+
+  /**
+   * Efetua o logout do usuário revogando os tokens.
+   */
+  logout(): void {
+    tokenService.clearSession();
   }
 
   /**
@@ -110,8 +155,8 @@ export class AuthService {
    * Atribui perfil 'student' e status 'Pendente' (aguardando aprovação).
    * Apenas o CPF é único no cadastro de alunos.
    */
-  async registerStudent(studentData: any): Promise<any> {
-    const cleanCpf = studentData.cpf?.replace(/\D/g, '');
+  async registerStudent(studentData: Record<string, unknown>): Promise<unknown> {
+    const cleanCpf = (studentData.cpf as string | undefined)?.replace(/\D/g, '');
 
     // Verifica se já existe aluno cadastrado com o mesmo CPF
     if (cleanCpf) {
@@ -186,7 +231,7 @@ export class AuthService {
     }
 
     // 1. Tenta buscar em Alunos por CPF ou E-mail
-    let { data: student } = await supabase
+    const { data: student } = await supabase
       .from('alunos')
       .select('*')
       .or(
